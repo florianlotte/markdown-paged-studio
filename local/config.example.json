@@ -5,6 +5,7 @@
   "headerTitle": "ACME Corp",
   "headerName": "Jane Doe",
   "footerText": "Confidential",
+  "language": "en",
   "pageSize": "A4",
   "marginTop": 24,
   "marginRight": 18,

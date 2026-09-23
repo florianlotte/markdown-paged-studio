@@ -181,7 +181,7 @@ test('exports a standalone HTML file that paginates offline', async ({ page, con
   expect(html).not.toContain('window.print');
   expect(html).not.toContain('data-source=');
   expect(html).toContain('class="mermaid-diagram"><svg');
-  expect(html).toContain('<article class="document-content">');
+  expect(html).toContain('<article class="document-content" lang="en">');
 
   const offline = await context.newPage();
   await offline.setContent(html);
@@ -207,7 +207,7 @@ test('print opens the window inside the click and prints once pagination is done
   expect(await page.evaluate(() => window.__print.openedSync)).toBe(true);
   const html = await page.evaluate(() => fetch(window.__print.url).then(r => r.text()));
   expect(html).toContain('after:()=>setTimeout(()=>window.print()');
-  expect(html).toContain('<article class="document-content">');
+  expect(html).toContain('<article class="document-content" lang="en">');
 });
 
 test('saves and loads the configuration as JSON', async ({ page }) => {
@@ -251,4 +251,26 @@ test('sidebar tabs follow the ARIA tabs pattern with keyboard navigation', async
   await expect(page.locator('#panel-content')).toBeVisible();
   await contentTab.press('End');
   await expect(page.locator('#tab-page')).toBeFocused();
+});
+
+test('the document language drives lang attributes and typographic quotes', async ({ page }) => {
+  await openFreshStudio(page);
+  await expect(page.locator('#preview .document-content').first()).toHaveAttribute('lang', 'en');
+
+  await page.locator('#tab-page').click();
+  await page.locator('#language').fill('fr');
+  await appendMarkdown(page, '\n\nIl a dit "bonjour".\n');
+  await expect(page.locator('#preview .document-content').first()).toHaveAttribute('lang', 'fr');
+  await expect(page.locator('#preview .cover-page')).toHaveAttribute('lang', 'fr');
+  await expect(page.locator('#preview')).toContainText('« bonjour »');
+
+  const [download] = await Promise.all([page.waitForEvent('download'), page.locator('#exportHtml').click()]);
+  expect(readFileSync(await download.path(), 'utf8')).toContain('<html lang="fr">');
+
+  // An invalid tag falls back to "en" in the document and is dropped from the saved configuration.
+  await page.locator('#language').fill('not a tag');
+  await expect(page.locator('#preview .document-content').first()).toHaveAttribute('lang', 'en');
+  await page.reload();
+  await expect(status(page)).toHaveText(STATUS_DONE);
+  await expect(page.locator('#language')).toHaveValue('en');
 });

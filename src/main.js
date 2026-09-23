@@ -94,6 +94,19 @@ const STORAGE_KEY = 'markdown-paged-studio:document';
 const PAGE_SIZES = ['A4', 'Letter', 'A5'];
 const MARGIN_MAX_MM = 80;
 const IMAGE_DATA_URL = /^data:image\/[a-z0-9.+-]+(?:;[a-z0-9=-]+)*,[^\s"<>]*$/i;
+// BCP 47 language tag such as "en", "fr", "pt-BR" or "zh-Hant".
+const LANGUAGE_TAG = /^[a-z]{2,3}(?:-[a-z0-9]{2,8})*$/i;
+// Typographic quotes used by markdown-it's typographer, per primary language.
+const QUOTES_BY_LANGUAGE = {
+  en: '\u201c\u201d\u2018\u2019',
+  // Array form: markdown-it only accepts a 4-character string, and French quotes carry a no-break space.
+  fr: ['\u00ab\u00a0', '\u00a0\u00bb', '\u2039\u00a0', '\u00a0\u203a'],
+  de: '\u201e\u201c\u201a\u2018',
+  es: '\u00ab\u00bb\u201c\u201d',
+  it: '\u00ab\u00bb\u201c\u201d',
+  pt: '\u00ab\u00bb\u201c\u201d',
+  nl: '\u201e\u201d\u201a\u2019',
+};
 
 const DEFAULT_MARKDOWN = `# Introduction\n\nWelcome to **Markdown Paged Studio**.\n\nThis app turns your Markdown into a paginated document that is ready to print.\n\n## Features\n\n- configurable cover page;\n- logo;\n- header and footer;\n- Page X / Y counter;\n- custom CSS;\n- live paged preview;\n- Mermaid diagrams;\n- standalone HTML export;\n- print / PDF through the browser.\n\n## Table example\n\n| Item | Value |\n|---|---|\n| Source | Markdown |\n| Rendering | HTML |\n| Pagination | Paged.js |\n\n## Diagram\n\n\`\`\`mermaid\nflowchart LR\n  A[Markdown] --> B[HTML]\n  B --> C[Pages]\n\`\`\`\n\n## Second part\n\nAdd content here to get more pages.\n\n> Custom CSS only applies to the rendered document.\n\n### Code\n\n\`\`\`js\nconsole.log('Markdown → HTML → pages');\n\`\`\`\n`;
 
@@ -103,6 +116,7 @@ const DEFAULT_CSS = `
   color: #202124;
   font-size: 10.5pt;
   line-height: 1.55;
+  hyphens: auto;
 }
 .document-content h1 { font-size: 24pt; margin: 0 0 8mm; }
 .document-content h2 { font-size: 17pt; margin-top: 10mm; }
@@ -122,6 +136,7 @@ const DEFAULT_STATE = {
   headerTitle: 'Architecture Report',
   headerName: 'Jane Doe',
   footerText: 'Confidential',
+  language: 'en',
   pageSize: 'A4',
   marginTop: 24,
   marginRight: 18,
@@ -142,6 +157,7 @@ const CONFIG_SCHEMA = {
   headerTitle: 'string',
   headerName: 'string',
   footerText: 'string',
+  language: 'language',
   pageSize: 'pageSize',
   marginTop: 'margin',
   marginRight: 'margin',
@@ -198,6 +214,9 @@ function sanitizeConfig(input) {
         if (Number.isFinite(n)) out[key] = Math.min(MARGIN_MAX_MM, Math.max(0, n));
         break;
       }
+      case 'language':
+        if (typeof value === 'string' && LANGUAGE_TAG.test(value.trim())) out[key] = value.trim();
+        break;
       case 'imageDataUrl':
         if (value === '' || (typeof value === 'string' && IMAGE_DATA_URL.test(value))) out[key] = value;
         break;
@@ -284,6 +303,18 @@ app.innerHTML = `
           <option value="A5">A5</option>
         </select>
       </label>
+      <label>Language (hyphenation and quotes)
+        <input id="language" list="languageList" placeholder="en" spellcheck="false" autocomplete="off" />
+      </label>
+      <datalist id="languageList">
+        <option value="en">English</option>
+        <option value="fr">Français</option>
+        <option value="de">Deutsch</option>
+        <option value="es">Español</option>
+        <option value="it">Italiano</option>
+        <option value="pt">Português</option>
+        <option value="nl">Nederlands</option>
+      </datalist>
       <div class="grid2">
         <label>Top (mm)<input id="marginTop" type="number" min="0" max="80" /></label>
         <label>Right (mm)<input id="marginRight" type="number" min="0" max="80" /></label>
@@ -401,10 +432,18 @@ ${state.customCss}
 `;
 }
 
+// The language typed by the user, or "en" while it is not a valid tag.
+function documentLanguage() {
+  const value = String(state.language ?? '').trim();
+  return LANGUAGE_TAG.test(value) ? value : 'en';
+}
+
 async function documentHtml() {
+  const lang = documentLanguage();
+  md.set({ quotes: QUOTES_BY_LANGUAGE[lang.split('-')[0].toLowerCase()] ?? QUOTES_BY_LANGUAGE.en });
   const cover = state.cover
     ? `
-    <section class="cover-page">
+    <section class="cover-page" lang="${lang}">
       ${state.logoDataUrl ? `<img class="cover-logo" src="${escapeHtml(state.logoDataUrl)}" alt="Logo">` : ''}
       <h1 class="cover-title">${escapeHtml(state.title)}</h1>
       ${state.subtitle ? `<div class="cover-subtitle">${escapeHtml(state.subtitle)}</div>` : ''}
@@ -415,7 +454,7 @@ async function documentHtml() {
     </section>`
     : '';
   const body = await renderDiagrams(md.render(state.markdown));
-  return `${cover}<article class="document-content">${body}</article>`;
+  return `${cover}<article class="document-content" lang="${lang}">${body}</article>`;
 }
 
 function escapeHtml(value) {
@@ -648,7 +687,7 @@ async function standaloneHtml({ autoPrint = false } = {}) {
   // A literal "</script" inside the inlined library would end the script element early.
   const library = (await loadPagedPolyfill()).replace(/<\/script/gi, '<\\/script');
   const after = autoPrint ? ',after:()=>setTimeout(()=>window.print(),100)' : '';
-  return `<!doctype html>\n<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(state.title)}</title><style>${css}</style><script>window.PagedConfig={auto:true${after}};</script><script>${library}</script></head><body>${content}</body></html>`;
+  return `<!doctype html>\n<html lang="${documentLanguage()}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(state.title)}</title><style>${css}</style><script>window.PagedConfig={auto:true${after}};</script><script>${library}</script></head><body>${content}</body></html>`;
 }
 
 document.getElementById('exportHtml').addEventListener('click', async () => {

@@ -78,7 +78,7 @@ Every diagram type supported by [Mermaid](https://mermaid.js.org) works. Diagram
 
 ### Page setup
 
-The **Page** tab selects the paper size and the four margins in millimetres. The cover page ignores margins and headers.
+The **Page** tab selects the paper size, the four margins in millimetres, and the document language as a BCP 47 tag (`en`, `fr`, `pt-BR`…). The language sets `lang` on the rendered document and on the exported file, which drives hyphenation (`hyphens: auto` in the sample CSS) and the typographic quotes produced by the Markdown parser (« » in French, „ “ in German…). The cover page ignores margins and headers.
 
 ### Custom CSS
 
