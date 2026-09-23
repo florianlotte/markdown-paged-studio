@@ -10,6 +10,7 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/florianlotte/markdown-paged-studio/actions/workflows/ci.yml"><img alt="CI status" src="https://github.com/florianlotte/markdown-paged-studio/actions/workflows/ci.yml/badge.svg" /></a>
   <img alt="Vite 7" src="https://img.shields.io/badge/Vite-7-646CFF?logo=vite&logoColor=white" />
   <img alt="Paged.js 0.4" src="https://img.shields.io/badge/Paged.js-0.4-111827" />
   <img alt="Mermaid 12" src="https://img.shields.io/badge/Mermaid-12-FF3670?logo=mermaid&logoColor=white" />
@@ -178,6 +179,8 @@ docker run --rm -p 8080:80 markdown-paged-studio
 The build context includes the gitignored `local/` folder, so an image built on your machine carries your personal defaults. Keep such images private, or build from a clean checkout for a public image.
 
 ## Development
+
+Every push and pull request runs the GitHub Actions workflow in `.github/workflows/ci.yml`: lint, Prettier check, the Playwright suite, the Vite build, and a Docker build with a smoke test of the container.
 
 | Script                 | What it does                          |
 | ---------------------- | ------------------------------------- |

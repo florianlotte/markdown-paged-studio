@@ -2,8 +2,19 @@ import './ui.css';
 import MarkdownIt from 'markdown-it';
 import { Previewer } from 'pagedjs';
 import logoUrl from './assets/logo.svg';
-// Bundled as a string so the exported HTML paginates offline, with the exact version used by the preview.
-import pagedPolyfill from '../node_modules/pagedjs/dist/paged.polyfill.min.js?raw';
+
+// The Paged.js polyfill is inlined into exports as a string (so they paginate offline with the exact version
+// used by the preview). It only matters for export and print, so it is loaded on first use, not at startup.
+let pagedPolyfillPromise = null;
+function loadPagedPolyfill() {
+  pagedPolyfillPromise ??= import('../node_modules/pagedjs/dist/paged.polyfill.min.js?raw')
+    .then(module => module.default)
+    .catch(error => {
+      pagedPolyfillPromise = null;
+      throw error;
+    });
+  return pagedPolyfillPromise;
+}
 
 const md = new MarkdownIt({ html: false, linkify: true, typographer: true });
 
@@ -205,17 +216,21 @@ function loadStoredConfig() {
   }
 }
 
-let persistTimer;
+let persistTimer = null;
+function persistNow() {
+  clearTimeout(persistTimer);
+  persistTimer = null;
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch (error) {
+    // Quota exceeded (large logo) or storage disabled: the app keeps working without autosave.
+    console.warn('Autosave failed', error);
+  }
+}
+
 function schedulePersist() {
   clearTimeout(persistTimer);
-  persistTimer = setTimeout(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-    } catch (error) {
-      // Quota exceeded (large logo) or storage disabled: the app keeps working without autosave.
-      console.warn('Autosave failed', error);
-    }
-  }, 500);
+  persistTimer = setTimeout(persistNow, 500);
 }
 
 const app = document.querySelector('#app');
@@ -227,13 +242,13 @@ app.innerHTML = `
       <div><strong>Markdown Paged Studio</strong><span>100% in the browser</span></div>
     </div>
 
-    <div class="tabs">
-      <button class="tab active" data-tab="content">Content</button>
-      <button class="tab" data-tab="design">Design</button>
-      <button class="tab" data-tab="page">Page</button>
+    <div class="tabs" role="tablist" aria-label="Settings">
+      <button class="tab active" role="tab" id="tab-content" data-tab="content" aria-selected="true" aria-controls="panel-content">Content</button>
+      <button class="tab" role="tab" id="tab-design" data-tab="design" aria-selected="false" aria-controls="panel-design" tabindex="-1">Design</button>
+      <button class="tab" role="tab" id="tab-page" data-tab="page" aria-selected="false" aria-controls="panel-page" tabindex="-1">Page</button>
     </div>
 
-    <div class="panel active" data-panel="content">
+    <div class="panel active" role="tabpanel" id="panel-content" aria-labelledby="tab-content" data-panel="content">
       <label>Title<input id="title" /></label>
       <label>Subtitle<input id="subtitle" /></label>
       <label>Author<input id="author" /></label>
@@ -249,7 +264,7 @@ app.innerHTML = `
       </div>
     </div>
 
-    <div class="panel" data-panel="design">
+    <div class="panel" role="tabpanel" id="panel-design" aria-labelledby="tab-design" data-panel="design">
       <label>Header title<input id="headerTitle" /></label>
       <label>Header name<input id="headerName" /></label>
       <label>Footer text<input id="footerText" /></label>
@@ -261,7 +276,7 @@ app.innerHTML = `
       </div>
     </div>
 
-    <div class="panel" data-panel="page">
+    <div class="panel" role="tabpanel" id="panel-page" aria-labelledby="tab-page" data-panel="page">
       <label>Page size
         <select id="pageSize">
           <option value="A4">A4</option>
@@ -504,12 +519,29 @@ for (const key of ids) {
   });
 }
 
-document.querySelectorAll('.tab').forEach(tab => {
-  tab.addEventListener('click', () => {
-    document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
-    document.querySelectorAll('.panel').forEach(x => x.classList.remove('active'));
-    tab.classList.add('active');
-    document.querySelector(`[data-panel="${tab.dataset.tab}"]`).classList.add('active');
+const tabs = [...document.querySelectorAll('.tab')];
+
+function activateTab(tab, { focus = false } = {}) {
+  for (const other of tabs) {
+    const selected = other === tab;
+    other.classList.toggle('active', selected);
+    other.setAttribute('aria-selected', String(selected));
+    other.tabIndex = selected ? 0 : -1;
+  }
+  document.querySelectorAll('.panel').forEach(panel => {
+    panel.classList.toggle('active', panel.dataset.panel === tab.dataset.tab);
+  });
+  if (focus) tab.focus();
+}
+
+tabs.forEach((tab, index) => {
+  tab.addEventListener('click', () => activateTab(tab));
+  // Roving focus per the WAI-ARIA tabs pattern: arrows, Home and End move between tabs.
+  tab.addEventListener('keydown', event => {
+    const moves = { ArrowRight: 1, ArrowLeft: -1, Home: -index, End: tabs.length - 1 - index };
+    if (!(event.key in moves)) return;
+    event.preventDefault();
+    activateTab(tabs[(index + moves[event.key] + tabs.length) % tabs.length], { focus: true });
   });
 });
 
@@ -614,7 +646,7 @@ async function standaloneHtml({ autoPrint = false } = {}) {
   const content = await documentHtml();
   const css = documentCss();
   // A literal "</script" inside the inlined library would end the script element early.
-  const library = pagedPolyfill.replace(/<\/script/gi, '<\\/script');
+  const library = (await loadPagedPolyfill()).replace(/<\/script/gi, '<\\/script');
   const after = autoPrint ? ',after:()=>setTimeout(()=>window.print(),100)' : '';
   return `<!doctype html>\n<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(state.title)}</title><style>${css}</style><script>window.PagedConfig={auto:true${after}};</script><script>${library}</script></head><body>${content}</body></html>`;
 }
@@ -659,13 +691,28 @@ function loadView() {
   }
 }
 
-function saveView() {
+let saveViewTimer = null;
+function saveViewNow() {
+  clearTimeout(saveViewTimer);
+  saveViewTimer = null;
   try {
     localStorage.setItem(VIEW_KEY, JSON.stringify(view));
   } catch {
     // Storage unavailable: the view still applies for this session.
   }
 }
+
+// Debounced: in fit mode the ResizeObserver calls applyView() on every frame of a window resize.
+function saveView() {
+  clearTimeout(saveViewTimer);
+  saveViewTimer = setTimeout(saveViewNow, 300);
+}
+
+// Closing or reloading the tab must not lose the last edit or view change still waiting on a debounce.
+window.addEventListener('pagehide', () => {
+  if (persistTimer !== null) persistNow();
+  if (saveViewTimer !== null) saveViewNow();
+});
 
 // Width of one rendered page at zoom 1. getBoundingClientRect() reports the zoomed size, so divide it out.
 function pageNaturalWidth() {

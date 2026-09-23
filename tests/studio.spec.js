@@ -228,3 +228,27 @@ test('saves and loads the configuration as JSON', async ({ page }) => {
   await expect(pages(page).nth(0).locator('.cover-title')).toHaveText('From JSON');
   expect(await marginBoxContent(page, 1, 'bottom-left')).toBe('"Loaded"');
 });
+
+test('sidebar tabs follow the ARIA tabs pattern with keyboard navigation', async ({ page }) => {
+  await openFreshStudio(page);
+  const contentTab = page.locator('#tab-content');
+  const designTab = page.locator('#tab-design');
+  await expect(contentTab).toHaveAttribute('aria-selected', 'true');
+  await expect(page.locator('#panel-content')).toBeVisible();
+  await expect(page.locator('#panel-design')).toBeHidden();
+
+  await designTab.click();
+  await expect(designTab).toHaveAttribute('aria-selected', 'true');
+  await expect(contentTab).toHaveAttribute('aria-selected', 'false');
+  await expect(page.locator('#panel-design')).toBeVisible();
+  await expect(page.locator('#customCss')).toBeVisible();
+
+  await designTab.press('ArrowRight');
+  await expect(page.locator('#tab-page')).toBeFocused();
+  await expect(page.locator('#panel-page')).toBeVisible();
+  await page.locator('#tab-page').press('ArrowRight');
+  await expect(contentTab).toBeFocused();
+  await expect(page.locator('#panel-content')).toBeVisible();
+  await contentTab.press('End');
+  await expect(page.locator('#tab-page')).toBeFocused();
+});

@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    name: Lint, test and build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci --no-audit --no-fund
+
+      - run: npm run lint
+
+      - run: npm run format:check
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps --only-shell chromium
+
+      - run: npm test
+        env:
+          CI: 'true'
+
+      - name: Upload Playwright traces on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-traces
+          path: test-results/
+          if-no-files-found: ignore
+
+      - run: npm run build
+
+  docker:
+    name: Docker image
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build the image
+        run: docker build -t markdown-paged-studio .
+
+      - name: Smoke test the container
+        run: |
+          docker run -d --name studio -p 8080:80 markdown-paged-studio
+          for i in $(seq 1 20); do
+            if curl -fsS http://localhost:8080/ > /dev/null; then break; fi
+            sleep 1
+          done
+          curl -fsS http://localhost:8080/ | grep -q '<div id="app">'
+          docker rm -f studio

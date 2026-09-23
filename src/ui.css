@@ -218,6 +218,8 @@ button:hover {
   flex: 1;
   min-height: 0;
   overflow: auto;
+  /* Reserve the scrollbar space so fit-to-width never reacts to a scrollbar appearing or disappearing. */
+  scrollbar-gutter: stable;
   padding: 26px;
 }
 .preview {
