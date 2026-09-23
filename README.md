@@ -14,6 +14,7 @@
   <img alt="Paged.js 0.4" src="https://img.shields.io/badge/Paged.js-0.4-111827" />
   <img alt="Mermaid 12" src="https://img.shields.io/badge/Mermaid-12-FF3670?logo=mermaid&logoColor=white" />
   <img alt="100% client-side" src="https://img.shields.io/badge/backend-none-2ea44f" />
+  <img alt="MIT license" src="https://img.shields.io/badge/license-MIT-blue" />
 </p>
 
 ![Markdown Paged Studio: the editor on the left, the paged preview on the right](docs/screenshots/studio.png)
@@ -197,4 +198,4 @@ Issues and pull requests are welcome. Before opening a pull request, run `npm ru
 
 ## License
 
-No license has been chosen yet.
+[MIT](LICENSE) © 2026 Florian Lotte
