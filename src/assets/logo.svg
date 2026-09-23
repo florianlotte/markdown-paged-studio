@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-label="Markdown Paged Studio">
+  <rect width="256" height="256" rx="56" fill="#111827"/>
+  <!-- back page: hints at pagination -->
+  <rect x="86" y="62" width="120" height="152" rx="10" fill="#94a3b8"/>
+  <!-- front page with folded corner -->
+  <path d="M60 44h100l36 36v122a10 10 0 0 1-10 10H60a10 10 0 0 1-10-10V54a10 10 0 0 1 10-10z" fill="#ffffff"/>
+  <path d="M160 44v26a10 10 0 0 0 10 10h26z" fill="#cbd5e1"/>
+  <!-- geometric M -->
+  <polyline points="78,150 78,92 105,126 132,92 132,150" fill="none" stroke="#111827" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- text lines -->
+  <rect x="78" y="168" width="70" height="8" rx="4" fill="#94a3b8"/>
+  <rect x="78" y="186" width="46" height="8" rx="4" fill="#cbd5e1"/>
+</svg>

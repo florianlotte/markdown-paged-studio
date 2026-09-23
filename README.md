@@ -1,73 +1,200 @@
-# Markdown Paged Studio
+<p align="center">
+  <img src="src/assets/logo.svg" alt="Markdown Paged Studio logo" width="96" height="96" />
+</p>
 
-Application 100 % JavaScript côté navigateur pour écrire ou importer du Markdown, appliquer une CSS personnalisée et obtenir un aperçu paginé avec page de garde, en-têtes, pieds de page et compteur `Page X / Y`.
+<h1 align="center">Markdown Paged Studio</h1>
 
-## Fonctionnalités
+<p align="center">
+  Write Markdown, add your own CSS, and get a paginated, print-ready document with a cover page, headers, footers, page numbers and Mermaid diagrams.<br />
+  Everything runs in the browser. No backend, no account, no tracking.
+</p>
 
-- éditeur Markdown ;
-- diagrammes Mermaid (blocs de code `mermaid`) rendus en SVG, y compris dans l’export ;
-- import/export `.md` ;
-- import de logo local ;
-- page de garde activable ;
-- titre, sous-titre, auteur et date ;
-- en-tête gauche/droite ;
-- pied de page ;
-- `Page X / Y` ;
-- A4, A5 ou Letter ;
-- marges configurables ;
-- éditeur et import CSS ;
-- configuration exportable/importable en JSON ;
-- export d’un HTML autonome ;
-- impression / export PDF via le navigateur.
+<p align="center">
+  <img alt="Vite 7" src="https://img.shields.io/badge/Vite-7-646CFF?logo=vite&logoColor=white" />
+  <img alt="Paged.js 0.4" src="https://img.shields.io/badge/Paged.js-0.4-111827" />
+  <img alt="Mermaid 12" src="https://img.shields.io/badge/Mermaid-12-FF3670?logo=mermaid&logoColor=white" />
+  <img alt="100% client-side" src="https://img.shields.io/badge/backend-none-2ea44f" />
+</p>
 
-## Lancer le projet
+![Markdown Paged Studio: the editor on the left, the paged preview on the right](docs/screenshots/studio.png)
+
+## Features
+
+- **Live paged preview** powered by [Paged.js](https://pagedjs.org): what you see is what prints.
+- **Cover page** with title, subtitle, author, date and an optional logo.
+- **Running header** (left and right), **footer**, and an automatic `Page X / Y` counter.
+- **A4, Letter or A5** with configurable margins.
+- **Mermaid diagrams** from ` ```mermaid ` code fences, rendered to SVG and embedded in exports.
+- **Custom CSS** editor with import, applied to the document only.
+- **Preview controls**: one page or two pages side by side, zoom, fit to width, Ctrl + wheel.
+- **Autosave** in the browser, plus export and import of the whole configuration as JSON.
+- **Standalone HTML export** that paginates offline, and **print / PDF** through the browser dialog.
+- **Static build** you can host anywhere: GitHub Pages, Netlify, Cloudflare Pages, nginx.
+
+## Quick start
 
 ```bash
 npm install
 npm run dev
 ```
 
-Puis ouvre l’URL indiquée par Vite.
-
-## Build statique
+Open the URL Vite prints. To ship it:
 
 ```bash
-npm run build
+npm run build     # static site in dist/
+npm run preview   # serve dist/ locally to check the build
 ```
 
-Le dossier `dist/` peut être déployé sur GitHub Pages, Netlify, Cloudflare Pages, nginx, etc.
+Node.js 20.19 or newer (or 22.12+) is required by Vite 7.
 
-## Architecture
+## Usage
 
-- `markdown-it` : Markdown → HTML
-- `Paged.js` : pagination CSS dans le navigateur
-- `Vite` : développement et build
-- aucun backend nécessaire
+### Writing
 
-## Ta CSS existante
+The **Content** tab holds the Markdown editor. Import an existing `.md` file or download the current one. The parser is [markdown-it](https://github.com/markdown-it/markdown-it) with CommonMark, tables, automatic links and typographic replacements. Raw HTML inside Markdown is intentionally disabled.
 
-Tu peux la coller dans l’onglet **Design > CSS personnalisée**, ou l’importer via **Importer .css**.
+### Diagrams
 
-Le HTML du contenu est placé dans :
+Any fenced code block tagged `mermaid` becomes an inline SVG:
+
+````markdown
+```mermaid
+flowchart LR
+  A[Markdown] --> B[HTML]
+  B --> C[Pages]
+```
+````
+
+Every diagram type supported by [Mermaid](https://mermaid.js.org) works. Diagrams are rendered before pagination, so Paged.js knows their exact size, and the resulting SVG is part of the exported file. A diagram with a syntax error shows its error message and source in place, without breaking the rest of the document. Mermaid is loaded on demand the first time a document contains a diagram.
+
+![A Mermaid flowchart rendered inside a page](docs/screenshots/diagram.png)
+
+### Cover page, header and footer
+
+- **Content** tab: title, subtitle, author, date, the cover page toggle, and the logo (any image, kept as a data URL).
+- **Design** tab: header title (top left), header name (top right) and footer text (bottom left). The page counter always sits at the bottom right.
+
+### Page setup
+
+The **Page** tab selects the paper size and the four margins in millimetres. The cover page ignores margins and headers.
+
+### Custom CSS
+
+The **Design** tab has a CSS editor. Its content is appended after the built-in styles, so your rules win on equal specificity. The rendered document has this structure:
 
 ```html
-<article class="document-content">...</article>
+<section class="cover-page">
+  <img class="cover-logo" />
+  <h1 class="cover-title">…</h1>
+  <div class="cover-subtitle">…</div>
+  <div class="cover-meta">
+    <div>author</div>
+    <div>date</div>
+  </div>
+</section>
+<article class="document-content">…your Markdown as HTML…</article>
 ```
 
-La page de garde utilise notamment :
+Diagrams live in `.mermaid-diagram`; a failed diagram is a `<pre class="mermaid-error">`. Use print units (`mm`, `pt`) and paged-media properties such as `break-before: page` or `break-inside: avoid`. A minimal example:
 
-- `.cover-page`
-- `.cover-logo`
-- `.cover-title`
-- `.cover-subtitle`
-- `.cover-meta`
+```css
+.document-content {
+  font-family: Georgia, serif;
+  font-size: 11pt;
+}
+.document-content h2 {
+  break-before: page;
+}
+.cover-title {
+  color: #1d4ed8;
+}
+```
 
-Les diagrammes Mermaid sont rendus dans `.mermaid-diagram` (SVG inline) et une erreur de syntaxe s’affiche dans `.mermaid-error`.
+**Sample CSS** restores the default stylesheet.
 
-Tu peux donc adapter facilement ta CSS existante.
+### Preview controls
 
-## PDF
+| Control                         | Effect                                                                                        |
+| ------------------------------- | --------------------------------------------------------------------------------------------- |
+| **1 page** / **2 pages**        | One continuous column, or two pages side by side                                              |
+| **−** / **+**                   | Zoom out or in by 10 %, between 25 % and 300 %                                                |
+| **Fit**                         | Fit the page (or the pair of pages) to the available width, and keep following window resizes |
+| **Ctrl + wheel** (Cmd on macOS) | Zoom with the mouse over the preview                                                          |
 
-Le bouton **Imprimer / PDF** ouvre une version imprimable dans un nouvel onglet puis lance la boîte de dialogue d’impression du navigateur. Choisis ensuite **Enregistrer au format PDF**.
+![Two pages side by side in the preview](docs/screenshots/spread.png)
 
-Pour un export PDF automatique sans boîte de dialogue, il faudrait ajouter un moteur hors navigateur (par exemple Chromium/Puppeteer côté Node). La version actuelle reste volontairement 100 % client.
+Layout and zoom are remembered in the browser, separately from the document.
+
+### Saving your work
+
+The document autosaves in the browser after every change. **Reset** discards it and restores the sample. **Save config** downloads everything (texts, Markdown, CSS, logo, page setup) as one JSON file, and **Load config** restores it. Unknown keys and invalid values in an imported file are ignored.
+
+### Export and print
+
+- **Export HTML** downloads a single self-contained file: content, styles, diagrams and the Paged.js runtime. It paginates on open, offline, in any modern browser.
+- **Print / PDF** opens that same file in a new tab and triggers the browser print dialog once pagination is complete. Choose _Save as PDF_. Allow pop-ups for the site if nothing opens.
+
+Chromium-based browsers give the most faithful print output for paged media.
+
+## How it works
+
+```mermaid
+flowchart LR
+  MD[Markdown] -->|markdown-it| HTML[HTML]
+  HTML -->|Mermaid, on demand| SVG[HTML + inline SVG]
+  CSS[@page rules + custom CSS] --> P
+  SVG --> P[Paged.js Previewer]
+  P -->|hidden stage, then swap| Preview[Preview]
+  SVG --> X[Standalone HTML]
+  CSS --> X
+  X --> Print[Print / PDF]
+```
+
+- `documentHtml()` renders the Markdown and replaces every Mermaid placeholder with its SVG.
+- `documentCss()` builds the `@page` rules (size, margins, margin boxes for header, footer and counter), the cover styles, and appends your CSS.
+- Each render paginates into a hidden container and swaps the pages into the preview in one step, so typing never flashes an empty preview and a newer edit cancels the previous pagination.
+- The export inlines the exact Paged.js build used by the preview, so both always match.
+
+## Development
+
+| Script                 | What it does                          |
+| ---------------------- | ------------------------------------- |
+| `npm run dev`          | Start the Vite dev server             |
+| `npm run build`        | Build the static site into `dist/`    |
+| `npm run preview`      | Serve the build locally               |
+| `npm run lint`         | ESLint (flat config, browser globals) |
+| `npm run format`       | Prettier over the whole repository    |
+| `npm run format:check` | Prettier in check mode                |
+
+Project layout:
+
+```
+index.html          entry point
+src/main.js         the whole application: state, templates, rendering, export
+src/ui.css          studio chrome (sidebar, toolbar, preview frame)
+src/assets/logo.svg logo and favicon
+docs/screenshots/   images used in this README
+```
+
+The rendered document is styled only by the CSS generated in `documentCss()`, never by `src/ui.css`. There is no automated test suite yet: changes are verified in a real browser, since Paged.js needs one to lay out pages.
+
+## Browser support
+
+Recent Chromium-based browsers (Chrome, Edge, Brave, Arc) are the reference for both the preview and printing. Firefox 126+ and Safari 17+ run the studio; the preview zoom relies on the standard CSS `zoom` property. Print output from non-Chromium browsers may differ in margin boxes and page breaks.
+
+## Roadmap
+
+- Table of contents with page numbers (`target-counter`)
+- Running headers taken from headings (`string-set`) and left/right page styles
+- Bundled font so preview, print and export always match
+- Cover page templates and a cover height that follows A5 and Letter
+- Syntax highlighting in code blocks
+- Automated tests (unit tests for the pure helpers, browser tests for pagination)
+
+## Contributing
+
+Issues and pull requests are welcome. Before opening a pull request, run `npm run lint` and `npm run format`, and check the preview, the export and the print flow in a Chromium-based browser.
+
+## License
+
+No license has been chosen yet.

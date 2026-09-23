@@ -12,7 +12,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - 100 % client-side: no backend, no env vars. The document autosaves to localStorage (`STORAGE_KEY`), and every config that enters the state (JSON import, restore) goes through `sanitizeConfig()`, which whitelists keys and coerces values. Extend `CONFIG_SCHEMA` when adding a state key.
 - All app code is in `src/main.js`: `state` object → `documentHtml()` (markdown-it) + `documentCss()` (`@page` rules + user CSS) → Paged.js `Previewer` into `#preview`. Preview layout and zoom live in the separate `view` object (own localStorage key, not part of the config JSON); zoom is the CSS `zoom` property on `#preview`, and `applyView()` must run after every successful render. `src/ui.css` styles the studio chrome only; the rendered document is styled solely by `documentCss()`.
-- Language: existing UI strings and README are French. Write all new UI strings, comments, and docs in English, and migrate old French strings when you touch them. Keep `lang="fr"` and the `fr-FR` date formatting until the UI is fully migrated.
+- Language: UI strings, README, comments and docs are all English. The sample date uses the browser locale (`Intl.DateTimeFormat(undefined, …)`).
 - The CSS class contract for user stylesheets (`.document-content`, `.cover-page`, `.cover-logo`, `.cover-title`, `.cover-subtitle`, `.cover-meta`) is documented in README and is public API. Do not rename those classes. Load the `paged-css` skill before editing layout, `@page`, or export code.
 
 ## Paged.js gotchas

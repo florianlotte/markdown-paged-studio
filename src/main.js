@@ -1,6 +1,7 @@
 import './ui.css';
 import MarkdownIt from 'markdown-it';
 import { Previewer } from 'pagedjs';
+import logoUrl from './assets/logo.svg';
 // Bundled as a string so the exported HTML paginates offline, with the exact version used by the preview.
 import pagedPolyfill from '../node_modules/pagedjs/dist/paged.polyfill.min.js?raw';
 
@@ -83,7 +84,7 @@ const PAGE_SIZES = ['A4', 'Letter', 'A5'];
 const MARGIN_MAX_MM = 80;
 const IMAGE_DATA_URL = /^data:image\/[a-z0-9.+-]+;base64,[a-z0-9+/=\s]+$/i;
 
-const DEFAULT_MARKDOWN = `# Introduction\n\nBienvenue dans **Markdown Paged Studio**.\n\nCette application transforme ton Markdown en document paginé prêt à imprimer.\n\n## Fonctionnalités\n\n- page de garde configurable ;\n- logo ;\n- en-tête et pied de page ;\n- compteur Page X / Y ;\n- CSS personnalisée ;\n- aperçu A4 dynamique ;\n- export HTML ;\n- impression / PDF via le navigateur.\n\n## Exemple de tableau\n\n| Élément | Valeur |\n|---|---|\n| Source | Markdown |\n| Rendu | HTML |\n| Pagination | Paged.js |\n\n## Diagramme\n\n\`\`\`mermaid\nflowchart LR\n  A[Markdown] --> B[HTML]\n  B --> C[Pages]\n\`\`\`\n\n## Deuxième partie\n\nAjoute du contenu ici pour obtenir plusieurs pages.\n\n> La CSS personnalisée est appliquée uniquement au document rendu.\n\n### Code\n\n\`\`\`js\nconsole.log('Markdown → HTML → pages');\n\`\`\`\n`;
+const DEFAULT_MARKDOWN = `# Introduction\n\nWelcome to **Markdown Paged Studio**.\n\nThis app turns your Markdown into a paginated document that is ready to print.\n\n## Features\n\n- configurable cover page;\n- logo;\n- header and footer;\n- Page X / Y counter;\n- custom CSS;\n- live paged preview;\n- Mermaid diagrams;\n- standalone HTML export;\n- print / PDF through the browser.\n\n## Table example\n\n| Item | Value |\n|---|---|\n| Source | Markdown |\n| Rendering | HTML |\n| Pagination | Paged.js |\n\n## Diagram\n\n\`\`\`mermaid\nflowchart LR\n  A[Markdown] --> B[HTML]\n  B --> C[Pages]\n\`\`\`\n\n## Second part\n\nAdd content here to get more pages.\n\n> Custom CSS only applies to the rendered document.\n\n### Code\n\n\`\`\`js\nconsole.log('Markdown → HTML → pages');\n\`\`\`\n`;
 
 const DEFAULT_CSS = `
 .document-content {
@@ -103,13 +104,13 @@ const DEFAULT_CSS = `
 `;
 
 const DEFAULT_STATE = {
-  title: 'Rapport d’architecture',
-  subtitle: 'Document généré depuis Markdown',
-  author: 'Jean Dupont',
-  date: new Intl.DateTimeFormat('fr-FR', { dateStyle: 'long' }).format(new Date()),
-  headerTitle: 'Rapport d’architecture',
-  headerName: 'Jean Dupont',
-  footerText: 'Confidentiel',
+  title: 'Architecture Report',
+  subtitle: 'Generated from Markdown',
+  author: 'Jane Doe',
+  date: new Intl.DateTimeFormat(undefined, { dateStyle: 'long' }).format(new Date()),
+  headerTitle: 'Architecture Report',
+  headerName: 'Jane Doe',
+  footerText: 'Confidential',
   pageSize: 'A4',
   marginTop: 24,
   marginRight: 18,
@@ -201,46 +202,46 @@ app.innerHTML = `
 <div class="shell">
   <aside class="sidebar">
     <div class="brand">
-      <div class="brand-mark">M</div>
-      <div><strong>Markdown Paged Studio</strong><span>100 % navigateur</span></div>
+      <img class="brand-mark" src="${logoUrl}" alt="" width="38" height="38" />
+      <div><strong>Markdown Paged Studio</strong><span>100% in the browser</span></div>
     </div>
 
     <div class="tabs">
-      <button class="tab active" data-tab="content">Contenu</button>
+      <button class="tab active" data-tab="content">Content</button>
       <button class="tab" data-tab="design">Design</button>
       <button class="tab" data-tab="page">Page</button>
     </div>
 
     <div class="panel active" data-panel="content">
-      <label>Titre<input id="title" /></label>
-      <label>Sous-titre<input id="subtitle" /></label>
-      <label>Auteur<input id="author" /></label>
+      <label>Title<input id="title" /></label>
+      <label>Subtitle<input id="subtitle" /></label>
+      <label>Author<input id="author" /></label>
       <label>Date<input id="date" /></label>
-      <label class="check"><input id="cover" type="checkbox" /> Afficher la page de garde</label>
+      <label class="check"><input id="cover" type="checkbox" /> Show cover page</label>
       <label>Logo<input id="logo" type="file" accept="image/*" /></label>
-      <button id="clearLogo" class="secondary">Retirer le logo</button>
+      <button id="clearLogo" class="secondary">Remove logo</button>
       <label>Markdown<textarea id="markdown" class="editor markdown-editor" spellcheck="false"></textarea></label>
       <div class="row-actions">
-        <button id="loadMarkdown" class="secondary">Importer .md</button>
+        <button id="loadMarkdown" class="secondary">Import .md</button>
         <input id="markdownFile" type="file" accept=".md,.markdown,text/markdown,text/plain" hidden />
-        <button id="downloadMarkdown" class="secondary">Télécharger .md</button>
+        <button id="downloadMarkdown" class="secondary">Download .md</button>
       </div>
     </div>
 
     <div class="panel" data-panel="design">
-      <label>Titre d’en-tête<input id="headerTitle" /></label>
-      <label>Nom dans l’en-tête<input id="headerName" /></label>
-      <label>Pied de page<input id="footerText" /></label>
-      <label>CSS personnalisée<textarea id="customCss" class="editor css-editor" spellcheck="false"></textarea></label>
+      <label>Header title<input id="headerTitle" /></label>
+      <label>Header name<input id="headerName" /></label>
+      <label>Footer text<input id="footerText" /></label>
+      <label>Custom CSS<textarea id="customCss" class="editor css-editor" spellcheck="false"></textarea></label>
       <div class="row-actions">
-        <button id="loadCss" class="secondary">Importer .css</button>
+        <button id="loadCss" class="secondary">Import .css</button>
         <input id="cssFile" type="file" accept=".css,text/css" hidden />
-        <button id="resetCss" class="secondary">CSS exemple</button>
+        <button id="resetCss" class="secondary">Sample CSS</button>
       </div>
     </div>
 
     <div class="panel" data-panel="page">
-      <label>Format
+      <label>Page size
         <select id="pageSize">
           <option value="A4">A4</option>
           <option value="Letter">Letter</option>
@@ -248,14 +249,14 @@ app.innerHTML = `
         </select>
       </label>
       <div class="grid2">
-        <label>Haut (mm)<input id="marginTop" type="number" min="0" max="80" /></label>
-        <label>Droite (mm)<input id="marginRight" type="number" min="0" max="80" /></label>
-        <label>Bas (mm)<input id="marginBottom" type="number" min="0" max="80" /></label>
-        <label>Gauche (mm)<input id="marginLeft" type="number" min="0" max="80" /></label>
+        <label>Top (mm)<input id="marginTop" type="number" min="0" max="80" /></label>
+        <label>Right (mm)<input id="marginRight" type="number" min="0" max="80" /></label>
+        <label>Bottom (mm)<input id="marginBottom" type="number" min="0" max="80" /></label>
+        <label>Left (mm)<input id="marginLeft" type="number" min="0" max="80" /></label>
       </div>
       <div class="info-card">
         <strong>Pagination</strong>
-        <p>L’en-tête, le pied de page et le compteur <code>Page X / Y</code> sont calculés par Paged.js.</p>
+        <p>The header, footer and <code>Page X / Y</code> counter are computed by Paged.js.</p>
       </div>
     </div>
   </aside>
@@ -263,28 +264,28 @@ app.innerHTML = `
   <main class="workspace">
     <header class="toolbar">
       <div>
-        <strong>Aperçu paginé</strong>
-        <span id="status">Initialisation…</span>
+        <strong>Paged preview</strong>
+        <span id="status">Starting…</span>
       </div>
       <div class="view-controls">
-        <div class="segmented" role="group" aria-label="Disposition des pages">
-          <button id="layoutSingle" class="active" title="Une page en continu" aria-pressed="true">1 page</button>
-          <button id="layoutSpread" title="Deux pages côte à côte" aria-pressed="false">2 pages</button>
+        <div class="segmented" role="group" aria-label="Page layout">
+          <button id="layoutSingle" class="active" title="One continuous column" aria-pressed="true">1 page</button>
+          <button id="layoutSpread" title="Two pages side by side" aria-pressed="false">2 pages</button>
         </div>
-        <div class="segmented" role="group" aria-label="Zoom de l’aperçu">
-          <button id="zoomOut" title="Zoom arrière (Ctrl + molette)" aria-label="Zoom arrière">−</button>
+        <div class="segmented" role="group" aria-label="Preview zoom">
+          <button id="zoomOut" title="Zoom out (Ctrl + wheel)" aria-label="Zoom out">−</button>
           <span id="zoomValue" class="zoom-value" aria-live="polite">100 %</span>
-          <button id="zoomIn" title="Zoom avant (Ctrl + molette)" aria-label="Zoom avant">+</button>
-          <button id="zoomFit" title="Ajuster à la largeur disponible" aria-pressed="false">Ajuster</button>
+          <button id="zoomIn" title="Zoom in (Ctrl + wheel)" aria-label="Zoom in">+</button>
+          <button id="zoomFit" title="Fit to the available width" aria-pressed="false">Fit</button>
         </div>
       </div>
       <div class="toolbar-actions">
-        <button id="resetDocument" class="secondary">Réinitialiser</button>
-        <button id="saveConfig" class="secondary">Config JSON</button>
-        <button id="loadConfig" class="secondary">Charger config</button>
+        <button id="resetDocument" class="secondary">Reset</button>
+        <button id="saveConfig" class="secondary">Save config</button>
+        <button id="loadConfig" class="secondary">Load config</button>
         <input id="configFile" type="file" accept="application/json,.json" hidden />
-        <button id="exportHtml" class="secondary">Exporter HTML</button>
-        <button id="printPdf" class="primary">Imprimer / PDF</button>
+        <button id="exportHtml" class="secondary">Export HTML</button>
+        <button id="printPdf" class="primary">Print / PDF</button>
       </div>
     </header>
     <section class="preview-shell">
@@ -408,7 +409,7 @@ function renderErrorElement(error) {
   const box = document.createElement('div');
   box.className = 'render-error';
   const title = document.createElement('strong');
-  title.textContent = 'Erreur Paged.js';
+  title.textContent = 'Paged.js error';
   const details = document.createElement('pre');
   details.textContent = error?.stack || error?.message || String(error);
   box.append(title, details);
@@ -422,7 +423,7 @@ async function render() {
   const token = ++renderToken;
   const preview = document.getElementById('preview');
   const status = document.getElementById('status');
-  status.textContent = 'Rendu…';
+  status.textContent = 'Rendering…';
   preview.classList.add('is-rendering');
 
   if (pendingPreviewer) pendingPreviewer.chunker.stop();
@@ -454,7 +455,7 @@ async function render() {
     disposePreviewer(previewer);
     if (token !== renderToken) return;
     console.error(error);
-    status.textContent = 'Erreur de rendu';
+    status.textContent = 'Render error';
     disposePreviewer(activePreviewer);
     activePreviewer = null;
     preview.replaceChildren(renderErrorElement(error));
@@ -568,7 +569,7 @@ document.getElementById('configFile').addEventListener('change', e =>
     try {
       loaded = JSON.parse(text);
     } catch {
-      alert('Fichier JSON invalide.');
+      alert('Invalid JSON file.');
       return;
     }
     applyConfig(loaded);
@@ -576,7 +577,7 @@ document.getElementById('configFile').addEventListener('change', e =>
 );
 
 document.getElementById('resetDocument').addEventListener('click', () => {
-  if (!confirm('Effacer le document en cours et revenir à l’exemple ?')) return;
+  if (!confirm('Discard the current document and restore the sample?')) return;
   try {
     localStorage.removeItem(STORAGE_KEY);
   } catch {
@@ -594,7 +595,7 @@ async function standaloneHtml({ autoPrint = false } = {}) {
   // A literal "</script" inside the inlined library would end the script element early.
   const library = pagedPolyfill.replace(/<\/script/gi, '<\\/script');
   const after = autoPrint ? ',after:()=>setTimeout(()=>window.print(),100)' : '';
-  return `<!doctype html>\n<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(state.title)}</title><style>${css}</style><script>window.PagedConfig={auto:true${after}};</script><script>${library}</script></head><body>${content}</body></html>`;
+  return `<!doctype html>\n<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(state.title)}</title><style>${css}</style><script>window.PagedConfig={auto:true${after}};</script><script>${library}</script></head><body>${content}</body></html>`;
 }
 
 document.getElementById('exportHtml').addEventListener('click', async () => {
@@ -605,7 +606,7 @@ document.getElementById('printPdf').addEventListener('click', async () => {
   // Open the window synchronously, inside the click, so pop-up blockers allow it; fill it once the HTML is ready.
   const win = window.open('', '_blank');
   if (!win) {
-    alert('Le navigateur a bloqué la fenêtre d’impression. Autorise les pop-ups pour ce site.');
+    alert('The browser blocked the print window. Allow pop-ups for this site.');
     return;
   }
   const html = await standaloneHtml({ autoPrint: true });

@@ -23,5 +23,17 @@
     "globals": "^17.12.0",
     "prettier": "^3.9.9",
     "vite": "^7.1.7"
+  },
+  "description": "Write Markdown, add custom CSS and get a paginated, print-ready document with cover page, headers, footers, page numbers and Mermaid diagrams. 100% in the browser.",
+  "keywords": [
+    "markdown",
+    "pagedjs",
+    "print",
+    "pdf",
+    "mermaid",
+    "vite"
+  ],
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
   }
 }
