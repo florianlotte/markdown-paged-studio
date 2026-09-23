@@ -142,13 +142,13 @@ Chromium-based browsers give the most faithful print output for paged media.
 ```mermaid
 flowchart LR
   MD[Markdown] -->|markdown-it| HTML[HTML]
-  HTML -->|Mermaid, on demand| SVG[HTML + inline SVG]
-  CSS[@page rules + custom CSS] --> P
-  SVG --> P[Paged.js Previewer]
+  HTML -->|Mermaid, on demand| SVG["HTML + inline SVG"]
+  CSS["@page rules + custom CSS"] --> P
+  SVG --> P["Paged.js Previewer"]
   P -->|hidden stage, then swap| Preview[Preview]
-  SVG --> X[Standalone HTML]
+  SVG --> X["Standalone HTML"]
   CSS --> X
-  X --> Print[Print / PDF]
+  X --> Print["Print / PDF"]
 ```
 
 - `documentHtml()` renders the Markdown and replaces every Mermaid placeholder with its SVG.
