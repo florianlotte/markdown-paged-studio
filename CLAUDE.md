@@ -6,11 +6,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - `npm run dev` / `npm run build` / `npm run preview` (Vite, no config file, entry is `index.html`).
 - `npm run lint` (ESLint flat config, browser globals) and `npm run format` (Prettier: 2-space, single quotes, semicolons, width 120). Both must pass before you finish.
-- There is no test suite and nothing here is Node-runnable (Paged.js, FileReader, Blob URLs). Verify changes in a real browser with the `/verify-preview` skill.
+- `npm test` runs the Playwright integration tests in `tests/studio.spec.js` (headless Chromium, starts Vite itself; one-time `npx playwright install chromium --only-shell`). Run a single test with `npx playwright test -g "part of its title"`. Nothing here is Node-runnable (Paged.js, FileReader, Blob URLs), so there are no unit tests; use `/verify-preview` for visual checks.
 
 ## Constraints
 
-- 100 % client-side: no backend, no env vars. The document autosaves to localStorage (`STORAGE_KEY`), and every config that enters the state (JSON import, restore) goes through `sanitizeConfig()`, which whitelists keys and coerces values. Extend `CONFIG_SCHEMA` when adding a state key.
+- 100 % client-side: no backend, no env vars. Personal defaults come from the gitignored `local/` folder, read at build time with `import.meta.glob` and merged into `DEFAULTS` (never into `DEFAULT_STATE`); use `DEFAULTS` for anything that resets or initializes the document. The document autosaves to localStorage (`STORAGE_KEY`), and every config that enters the state (JSON import, restore) goes through `sanitizeConfig()`, which whitelists keys and coerces values. Extend `CONFIG_SCHEMA` when adding a state key.
 - All app code is in `src/main.js`: `state` object → `documentHtml()` (markdown-it) + `documentCss()` (`@page` rules + user CSS) → Paged.js `Previewer` into `#preview`. Preview layout and zoom live in the separate `view` object (own localStorage key, not part of the config JSON); zoom is the CSS `zoom` property on `#preview`, and `applyView()` must run after every successful render. `src/ui.css` styles the studio chrome only; the rendered document is styled solely by `documentCss()`.
 - Language: UI strings, README, comments and docs are all English. The sample date uses the browser locale (`Intl.DateTimeFormat(undefined, …)`).
 - The CSS class contract for user stylesheets (`.document-content`, `.cover-page`, `.cover-logo`, `.cover-title`, `.cover-subtitle`, `.cover-meta`) is documented in README and is public API. Do not rename those classes. Load the `paged-css` skill before editing layout, `@page`, or export code.

@@ -13,5 +13,9 @@ export default [
       globals: { ...globals.browser },
     },
   },
+  {
+    files: ['playwright.config.js', 'tests/**/*.js'],
+    languageOptions: { globals: { ...globals.node, ...globals.browser } },
+  },
   prettier,
 ];

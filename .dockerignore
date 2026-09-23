@@ -1,0 +1,14 @@
+node_modules
+dist
+.git
+.github
+test-results
+playwright-report
+.claude
+docs
+tests
+playwright.config.js
+Dockerfile
+compose.yaml
+.dockerignore
+*.md

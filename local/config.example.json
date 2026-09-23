@@ -1,0 +1,14 @@
+{
+  "title": "Quarterly Report",
+  "subtitle": "Prepared for the board",
+  "author": "Jane Doe",
+  "headerTitle": "ACME Corp",
+  "headerName": "Jane Doe",
+  "footerText": "Confidential",
+  "pageSize": "A4",
+  "marginTop": 24,
+  "marginRight": 18,
+  "marginBottom": 20,
+  "marginLeft": 18,
+  "cover": true
+}

@@ -126,6 +126,10 @@ Diagrams live in `.mermaid-diagram`; a failed diagram is a `<pre class="mermaid-
 
 Layout and zoom are remembered in the browser, separately from the document.
 
+### Personal defaults
+
+To start every session with your own name, company logo, stylesheet or document template, put them in the gitignored `local/` folder: `local/config.json` for the text fields and page setup, `local/logo.png` (or `.svg`, `.jpg`, `.webp`, `.gif`) for the cover logo, `local/custom.css` and `local/template.md` for the defaults of the two editors. They apply on first launch and on **Reset**, and a document saved in the browser always takes precedence. See [local/README.md](local/README.md) for details.
+
 ### Saving your work
 
 The document autosaves in the browser after every change. **Reset** discards it and restores the sample. **Save config** downloads everything (texts, Markdown, CSS, logo, page setup) as one JSON file, and **Load config** restores it. Unknown keys and invalid values in an imported file are ignored.
@@ -156,6 +160,23 @@ flowchart LR
 - Each render paginates into a hidden container and swaps the pages into the preview in one step, so typing never flashes an empty preview and a newer edit cancels the previous pagination.
 - The export inlines the exact Paged.js build used by the preview, so both always match.
 
+## Docker
+
+The image builds the static site and serves it with nginx. No runtime configuration is needed.
+
+```bash
+docker compose up --build -d   # then open http://localhost:8080
+```
+
+Or without Compose:
+
+```bash
+docker build -t markdown-paged-studio .
+docker run --rm -p 8080:80 markdown-paged-studio
+```
+
+The build context includes the gitignored `local/` folder, so an image built on your machine carries your personal defaults. Keep such images private, or build from a clean checkout for a public image.
+
 ## Development
 
 | Script                 | What it does                          |
@@ -171,13 +192,14 @@ Project layout:
 
 ```
 index.html          entry point
+Dockerfile          two-stage image: Vite build, then nginx serving dist/
 src/main.js         the whole application: state, templates, rendering, export
 src/ui.css          studio chrome (sidebar, toolbar, preview frame)
 src/assets/logo.svg logo and favicon
 docs/screenshots/   images used in this README
 ```
 
-The rendered document is styled only by the CSS generated in `documentCss()`, never by `src/ui.css`. There is no automated test suite yet: changes are verified in a real browser, since Paged.js needs one to lay out pages.
+The rendered document is styled only by the CSS generated in `documentCss()`, never by `src/ui.css`. The integration tests in `tests/` drive the real studio in a headless Chromium, since Paged.js needs a browser to lay out pages: rendering, scrolling, re-render hygiene, Mermaid, autosave, config validation, layout and zoom, export, print and the JSON round trip. Run `npx playwright install chromium --only-shell` once before `npm test`.
 
 ## Browser support
 
@@ -190,11 +212,10 @@ Recent Chromium-based browsers (Chrome, Edge, Brave, Arc) are the reference for 
 - Bundled font so preview, print and export always match
 - Cover page templates and a cover height that follows A5 and Letter
 - Syntax highlighting in code blocks
-- Automated tests (unit tests for the pure helpers, browser tests for pagination)
 
 ## Contributing
 
-Issues and pull requests are welcome. Before opening a pull request, run `npm run lint` and `npm run format`, and check the preview, the export and the print flow in a Chromium-based browser.
+Issues and pull requests are welcome. Before opening a pull request, run `npm run lint`, `npm run format` and `npm test`, and check the preview, the export and the print flow in a Chromium-based browser.
 
 ## License
 

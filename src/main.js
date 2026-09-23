@@ -82,7 +82,7 @@ async function renderDiagrams(html) {
 const STORAGE_KEY = 'markdown-paged-studio:document';
 const PAGE_SIZES = ['A4', 'Letter', 'A5'];
 const MARGIN_MAX_MM = 80;
-const IMAGE_DATA_URL = /^data:image\/[a-z0-9.+-]+;base64,[a-z0-9+/=\s]+$/i;
+const IMAGE_DATA_URL = /^data:image\/[a-z0-9.+-]+(?:;[a-z0-9=-]+)*,[^\s"<>]*$/i;
 
 const DEFAULT_MARKDOWN = `# Introduction\n\nWelcome to **Markdown Paged Studio**.\n\nThis app turns your Markdown into a paginated document that is ready to print.\n\n## Features\n\n- configurable cover page;\n- logo;\n- header and footer;\n- Page X / Y counter;\n- custom CSS;\n- live paged preview;\n- Mermaid diagrams;\n- standalone HTML export;\n- print / PDF through the browser.\n\n## Table example\n\n| Item | Value |\n|---|---|\n| Source | Markdown |\n| Rendering | HTML |\n| Pagination | Paged.js |\n\n## Diagram\n\n\`\`\`mermaid\nflowchart LR\n  A[Markdown] --> B[HTML]\n  B --> C[Pages]\n\`\`\`\n\n## Second part\n\nAdd content here to get more pages.\n\n> Custom CSS only applies to the rendered document.\n\n### Code\n\n\`\`\`js\nconsole.log('Markdown → HTML → pages');\n\`\`\`\n`;
 
@@ -142,7 +142,28 @@ const CONFIG_SCHEMA = {
   logoDataUrl: 'imageDataUrl',
 };
 
-const state = { ...DEFAULT_STATE };
+// Personal defaults from the gitignored `local/` folder (see local/README.md), resolved at build time by Vite.
+// They apply on first start and on Reset; a document saved in the browser always wins over them.
+const localConfig =
+  Object.values(import.meta.glob('../local/config.json', { eager: true, import: 'default' }))[0] ?? {};
+const localText = import.meta.glob(['../local/custom.css', '../local/template.md'], {
+  eager: true,
+  query: '?raw',
+  import: 'default',
+});
+const localLogo = Object.values(
+  import.meta.glob('../local/logo.{svg,png,jpg,jpeg,webp,gif}', { eager: true, query: '?inline', import: 'default' }),
+)[0];
+
+const DEFAULTS = {
+  ...DEFAULT_STATE,
+  ...sanitizeConfig(localConfig),
+  ...(localText['../local/custom.css'] ? { customCss: localText['../local/custom.css'] } : {}),
+  ...(localText['../local/template.md'] ? { markdown: localText['../local/template.md'] } : {}),
+  ...(localLogo ? { logoDataUrl: localLogo } : {}),
+};
+
+const state = { ...DEFAULTS };
 
 // Returns only the keys of `input` that are known and well-typed, coerced into safe values.
 function sanitizeConfig(input) {
@@ -369,7 +390,7 @@ async function documentHtml() {
   const cover = state.cover
     ? `
     <section class="cover-page">
-      ${state.logoDataUrl ? `<img class="cover-logo" src="${state.logoDataUrl}" alt="Logo">` : ''}
+      ${state.logoDataUrl ? `<img class="cover-logo" src="${escapeHtml(state.logoDataUrl)}" alt="Logo">` : ''}
       <h1 class="cover-title">${escapeHtml(state.title)}</h1>
       ${state.subtitle ? `<div class="cover-subtitle">${escapeHtml(state.subtitle)}</div>` : ''}
       <div class="cover-meta">
@@ -539,8 +560,8 @@ document.getElementById('cssFile').addEventListener('change', e =>
 );
 
 document.getElementById('resetCss').addEventListener('click', () => {
-  state.customCss = DEFAULT_CSS;
-  document.getElementById('customCss').value = DEFAULT_CSS;
+  state.customCss = DEFAULTS.customCss;
+  document.getElementById('customCss').value = DEFAULTS.customCss;
   scheduleRender();
 });
 
@@ -584,7 +605,7 @@ document.getElementById('resetDocument').addEventListener('click', () => {
     // Storage unavailable: nothing to clear.
   }
   document.getElementById('logo').value = '';
-  applyConfig(DEFAULT_STATE);
+  applyConfig(DEFAULTS);
 });
 
 // Self-contained HTML: same content and CSS as the preview, with Paged.js inlined so it works offline.

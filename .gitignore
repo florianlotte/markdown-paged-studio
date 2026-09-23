@@ -2,3 +2,12 @@ node_modules/
 dist/
 .claude/settings.local.json
 CLAUDE.local.md
+
+# Personal defaults (name, company logo, stylesheet, template): see local/README.md
+/local/*
+!/local/README.md
+!/local/config.example.json
+
+# Playwright
+/test-results/
+/playwright-report/
