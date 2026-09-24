@@ -16,6 +16,7 @@
   <img alt="Mermaid 12" src="https://img.shields.io/badge/Mermaid-12-FF3670?logo=mermaid&logoColor=white" />
   <img alt="100% client-side" src="https://img.shields.io/badge/backend-none-2ea44f" />
   <img alt="MIT license" src="https://img.shields.io/badge/license-MIT-blue" />
+  <a href="https://github.com/sponsors/florianlotte"><img alt="Sponsor florianlotte on GitHub" src="https://img.shields.io/badge/Sponsor-%E2%9D%A4-ea4aaa?logo=githubsponsors&logoColor=white" /></a>
 </p>
 
 **Try it online: [florianlotte.github.io/markdown-paged-studio](https://florianlotte.github.io/markdown-paged-studio/)** (deployed from `main` by GitHub Actions; your documents stay in your browser).
@@ -272,6 +273,10 @@ Issues and pull requests are welcome. Before opening a pull request, run `npm ru
 ## About me
 
 **Florian LOTTE**, author and maintainer of Markdown Paged Studio. Feedback, ideas and use cases are welcome, in an issue or directly on [LinkedIn](https://www.linkedin.com/in/florianlotte/).
+
+If the studio saves you time, you can support its development through [GitHub Sponsors](https://github.com/sponsors/florianlotte).
+
+[![Sponsor florianlotte on GitHub](https://img.shields.io/badge/Sponsor%20this%20project-%E2%9D%A4-ea4aaa?style=for-the-badge&logo=githubsponsors&logoColor=white)](https://github.com/sponsors/florianlotte)
 
 ## License
 
