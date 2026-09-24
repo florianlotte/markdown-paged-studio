@@ -3,6 +3,7 @@
 import { clearStoredConfig, DEFAULTS, sanitizeConfig, state } from './config.js';
 import { standaloneHtml } from './document.js';
 import { scheduleRender } from './render.js';
+import { toggleSidebar } from './view.js';
 
 // Every state key has a form control with the same id, except the logo (a file input).
 const ids = Object.keys(state).filter(k => k !== 'logoDataUrl');
@@ -202,6 +203,7 @@ function bindPdf() {
     window.desktop.onCommand(command => {
       if (command === 'export-pdf') exportPdfDirect();
       else if (command === 'print') openPrintWindow();
+      else if (command === 'toggle-sidebar') toggleSidebar();
     });
   } else {
     button.title = 'Opens the print dialog: choose "Save as PDF"';

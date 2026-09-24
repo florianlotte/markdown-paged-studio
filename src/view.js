@@ -7,7 +7,7 @@ const ZOOM_MAX = 3;
 const ZOOM_STEP = 0.1;
 const PAGE_GAP_PX = 24; // must match the `gap` of `.preview .pagedjs_pages` in ui.css
 
-const view = { layout: 'single', zoom: 1, fit: true };
+const view = { layout: 'single', zoom: 1, fit: true, sidebar: true };
 
 function loadView() {
   try {
@@ -16,6 +16,7 @@ function loadView() {
     const zoom = Number(stored.zoom);
     if (Number.isFinite(zoom)) view.zoom = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, zoom));
     if (typeof stored.fit === 'boolean') view.fit = stored.fit;
+    if (typeof stored.sidebar === 'boolean') view.sidebar = stored.sidebar;
   } catch {
     // Storage unavailable or corrupt: keep the defaults.
   }
@@ -64,6 +65,11 @@ function fitZoom() {
 
 // Applies layout and zoom to the preview and the controls. Must run after every successful render.
 export function applyView() {
+  document.querySelector('.shell').classList.toggle('sidebar-hidden', !view.sidebar);
+  const toggle = document.getElementById('toggleSidebar');
+  toggle.setAttribute('aria-expanded', String(view.sidebar));
+  toggle.setAttribute('aria-label', view.sidebar ? 'Hide sidebar' : 'Show sidebar');
+  toggle.title = toggle.getAttribute('aria-label');
   const preview = document.getElementById('preview');
   preview.dataset.layout = view.layout;
   if (view.fit) view.zoom = fitZoom();
@@ -90,6 +96,12 @@ function setLayout(layout) {
   applyView();
 }
 
+// Shows or hides the settings sidebar; in fit mode the ResizeObserver then refits the pages.
+export function toggleSidebar() {
+  view.sidebar = !view.sidebar;
+  applyView();
+}
+
 // Restores the saved view and wires the toolbar controls, Ctrl + wheel and the fit-on-resize behaviour.
 export function initView() {
   document.getElementById('layoutSingle').addEventListener('click', () => setLayout('single'));
@@ -100,6 +112,7 @@ export function initView() {
     view.fit = true;
     applyView();
   });
+  document.getElementById('toggleSidebar').addEventListener('click', toggleSidebar);
 
   // Ctrl + wheel over the preview zooms the pages instead of the whole studio.
   const shell = document.querySelector('.preview-shell');

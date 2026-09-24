@@ -40,8 +40,22 @@ button {
   min-height: 0;
   background: #fff;
   border-right: 1px solid #d8dde4;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+/* Brand and tabs stay put; only the panels scroll when the window is short. */
+.sidebar-header {
+  flex-shrink: 0;
+  padding: 18px 18px 12px;
+  border-bottom: 1px solid #e5e9ef;
+  background: #fff;
+}
+.sidebar-body {
+  flex: 1;
+  min-height: 0;
   overflow: auto;
-  padding: 18px;
+  padding: 4px 18px 18px;
 }
 .brand {
   display: flex;
@@ -71,9 +85,6 @@ button {
   border-radius: 10px;
   padding: 3px;
   gap: 3px;
-  position: sticky;
-  top: 0;
-  z-index: 3;
 }
 .tab {
   border: 0;
@@ -198,11 +209,41 @@ button:hover {
   background: rgba(255, 255, 255, 0.88);
   backdrop-filter: blur(12px);
 }
-.toolbar > div:first-child {
+.toolbar-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  white-space: nowrap;
+}
+.toolbar-title > div {
   display: flex;
   flex-direction: column;
   gap: 3px;
-  white-space: nowrap;
+}
+.icon-button {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #ccd2da;
+  border-radius: 8px;
+  background: #fff;
+  color: #3e4550;
+  flex-shrink: 0;
+}
+.icon-button[aria-expanded='false'] {
+  background: #111827;
+  color: #fff;
+  border-color: #111827;
+}
+/* Sidebar hidden: the preview takes the full width. */
+.shell.sidebar-hidden {
+  grid-template-columns: 1fr;
+}
+.shell.sidebar-hidden .sidebar {
+  display: none;
 }
 .toolbar #status {
   font-size: 12px;
@@ -311,6 +352,16 @@ button:hover {
   .sidebar {
     border-right: 0;
     border-bottom: 1px solid #d8dde4;
+    display: block;
+    overflow: visible;
+  }
+  .sidebar-header {
+    position: sticky;
+    top: 0;
+    z-index: 4;
+  }
+  .sidebar-body {
+    overflow: visible;
   }
   .workspace {
     min-height: 100vh;

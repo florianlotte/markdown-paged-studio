@@ -315,3 +315,47 @@ test('the cover page matches the selected paper height', async ({ page }) => {
     expect(await coverToPageRatio()).toBeCloseTo(1, 1);
   }
 });
+
+test('the sidebar header stays fixed while the settings scroll in a short window', async ({ page }) => {
+  await page.setViewportSize({ width: 1200, height: 520 });
+  await openFreshStudio(page);
+  const body = page.locator('.sidebar-body');
+  expect(await body.evaluate(el => el.scrollHeight > el.clientHeight)).toBe(true);
+  const before = await page.locator('.sidebar-header').boundingBox();
+  const tabsBefore = await page.locator('#tab-design').boundingBox();
+  await body.evaluate(el => {
+    el.scrollTop = 300;
+  });
+  expect(await body.evaluate(el => el.scrollTop)).toBe(300);
+  expect(await page.locator('.sidebar-header').boundingBox()).toEqual(before);
+  expect(await page.locator('#tab-design').boundingBox()).toEqual(tabsBefore);
+  await expect(page.locator('.brand-mark')).toBeInViewport();
+  // The page itself must not scroll: only the panels moved.
+  expect(await page.evaluate(() => document.querySelector('.shell').scrollTop)).toBe(0);
+});
+
+test('the sidebar can be hidden and the choice is remembered', async ({ page }) => {
+  await openFreshStudio(page);
+  const toggle = page.locator('#toggleSidebar');
+  const sidebar = page.locator('#sidebar');
+  const previewWidth = () => page.locator('.preview-shell').evaluate(el => el.clientWidth);
+  const widthBefore = await previewWidth();
+  await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+
+  await toggle.click();
+  await expect(sidebar).toBeHidden();
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+  await expect(toggle).toHaveAttribute('aria-label', 'Show sidebar');
+  await expect.poll(previewWidth).toBeGreaterThan(widthBefore + 300);
+  // Fit mode follows the wider preview.
+  await expect(page.locator('#zoomValue')).not.toHaveText('119 %');
+
+  await page.reload();
+  await expect(status(page)).toHaveText(STATUS_DONE);
+  await expect(sidebar).toBeHidden();
+
+  await toggle.click();
+  await expect(sidebar).toBeVisible();
+  await expect(page.locator('#title')).toBeVisible();
+  expect(await previewWidth()).toBe(widthBefore);
+});

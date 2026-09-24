@@ -118,16 +118,17 @@ Diagrams live in `.mermaid-diagram`; a failed diagram is a `<pre class="mermaid-
 
 ### Preview controls
 
-| Control                         | Effect                                                                                        |
-| ------------------------------- | --------------------------------------------------------------------------------------------- |
-| **1 page** / **2 pages**        | One continuous column, or two pages side by side                                              |
-| **−** / **+**                   | Zoom out or in by 10 %, between 25 % and 300 %                                                |
-| **Fit**                         | Fit the page (or the pair of pages) to the available width, and keep following window resizes |
-| **Ctrl + wheel** (Cmd on macOS) | Zoom with the mouse over the preview                                                          |
+| Control                                  | Effect                                                                                                                           |
+| ---------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| **1 page** / **2 pages**                 | One continuous column, or two pages side by side                                                                                 |
+| **−** / **+**                            | Zoom out or in by 10 %, between 25 % and 300 %                                                                                   |
+| **Fit**                                  | Fit the page (or the pair of pages) to the available width, and keep following window resizes                                    |
+| **Ctrl + wheel** (Cmd on macOS)          | Zoom with the mouse over the preview                                                                                             |
+| **Sidebar toggle** (left of the toolbar) | Hide or show the settings sidebar to give the preview the full width; in the desktop app also **View → Toggle Sidebar** (Ctrl+B) |
 
 ![Two pages side by side in the preview](docs/screenshots/spread.png)
 
-Layout and zoom are remembered in the browser, separately from the document.
+Layout, zoom and the sidebar state are remembered in the browser, separately from the document.
 
 ### Personal defaults
 
