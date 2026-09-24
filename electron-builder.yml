@@ -19,6 +19,9 @@ win:
         - x64
         - arm64
   icon: electron/icons/icon.png
+portable:
+  # One exe per architecture only; skip the combined x64+arm64 exe (twice the size, nothing more).
+  buildUniversalInstaller: false
 linux:
   target: AppImage
   category: Office
