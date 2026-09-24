@@ -10,7 +10,11 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test": "playwright test"
+    "test": "playwright test",
+    "desktop": "vite build && electron .",
+    "desktop:build": "vite build && electron-builder",
+    "desktop:dir": "vite build && electron-builder --dir",
+    "test:desktop": "playwright test --config playwright.desktop.config.js"
   },
   "dependencies": {
     "markdown-it": "^15.0.2",
@@ -20,6 +24,8 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.63.0",
+    "electron": "^44.4.5",
+    "electron-builder": "^26.15.3",
     "eslint": "^10.11.0",
     "eslint-config-prettier": "^10.1.8",
     "globals": "^17.12.0",
@@ -38,5 +44,9 @@
   "engines": {
     "node": "^20.19.0 || >=22.12.0"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "main": "electron/main.js",
+  "author": {
+    "name": "Florian Lotte"
+  }
 }

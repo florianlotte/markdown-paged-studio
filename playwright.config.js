@@ -4,6 +4,7 @@ const PORT = 5173;
 
 export default defineConfig({
   testDir: 'tests',
+  testIgnore: '**/desktop.spec.js',
   timeout: 60_000,
   expect: { timeout: 15_000 },
   workers: 1,

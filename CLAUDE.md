@@ -7,6 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `npm run dev` / `npm run build` / `npm run preview` (Vite, no config file, entry is `index.html`).
 - `npm run lint` (ESLint flat config, browser globals) and `npm run format` (Prettier: 2-space, single quotes, semicolons, width 120). Both must pass before you finish.
 - `npm test` runs the Playwright integration tests in `tests/studio.spec.js` (headless Chromium, starts Vite itself; one-time `npx playwright install chromium --only-shell`). Run a single test with `npx playwright test -g "part of its title"`. Nothing here is Node-runnable (Paged.js, FileReader, Blob URLs), so there are no unit tests; use `/verify-preview` for visual checks.
+- Desktop build: `electron/main.js` (ESM) serves `dist/` over the private `app://studio` scheme and exposes only `window.desktop.exportPdf` through `electron/preload.cjs` (sandboxed renderer). `standaloneHtml({ mode })` takes `export`, `print` or `pdf`; the desktop test is `npm run test:desktop` (needs `npm run build` first, own config `playwright.desktop.config.js`). Packaging: `electron-builder.yml`, output in `release/`.
 
 ## Constraints
 

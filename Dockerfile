@@ -5,6 +5,8 @@ FROM node:22-alpine AS build
 WORKDIR /app
 
 # Install dependencies first so this layer is cached until package files change.
+# The desktop toolchain is a devDependency; the web image never needs the Electron binary.
+ENV ELECTRON_SKIP_BINARY_DOWNLOAD=1
 COPY package.json package-lock.json ./
 RUN npm ci --no-audit --no-fund
 

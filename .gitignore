@@ -11,3 +11,6 @@ CLAUDE.local.md
 # Playwright
 /test-results/
 /playwright-report/
+
+# Electron packaging output
+/release/

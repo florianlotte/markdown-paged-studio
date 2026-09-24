@@ -1,0 +1,26 @@
+appId: dev.florianlotte.markdown-paged-studio
+productName: Markdown Paged Studio
+directories:
+  buildResources: electron/icons
+  output: release
+# Everything the app needs at runtime is in dist/ (Vite bundles the dependencies) and electron/.
+files:
+  - dist/**
+  - electron/**
+  - package.json
+  - '!node_modules/**'
+artifactName: ${name}-${version}-${os}-${arch}.${ext}
+npmRebuild: false
+win:
+  target: portable
+  icon: electron/icons/icon.png
+linux:
+  target: AppImage
+  category: Office
+  icon: electron/icons/icon.png
+mac:
+  target:
+    - dmg
+    - zip
+  category: public.app-category.productivity
+  icon: electron/icons/icon.png

@@ -161,6 +161,22 @@ flowchart LR
 - Each render paginates into a hidden container and swaps the pages into the preview in one step, so typing never flashes an empty preview and a newer edit cancels the previous pagination.
 - The export inlines the exact Paged.js build used by the preview, so both always match.
 
+## Desktop app
+
+The same application ships as a portable desktop app built with Electron, with Chromium embedded so the preview and the PDF output are identical on every platform. Binaries are attached to each [GitHub Release](https://github.com/florianlotte/markdown-paged-studio/releases): a portable `.exe` for Windows (no installation; the saved document and view settings live in a `markdown-paged-studio-data` folder next to the executable), an `AppImage` for Linux, and a `dmg` / `zip` for macOS. The binaries are not code-signed, so Windows SmartScreen and macOS Gatekeeper will ask for confirmation on first launch.
+
+The desktop app adds one button, **Export PDF**, which writes the PDF directly through the embedded Chromium engine, with no print dialog. Everything else works exactly as in the browser, including the personal defaults from `local/` baked in at build time.
+
+From the sources:
+
+```bash
+npm run desktop         # build dist/ and open the app
+npm run desktop:build   # package for the current OS into release/
+npm run test:desktop    # Playwright smoke test of the Electron app (run npm run build first)
+```
+
+Binaries are built by the `Desktop release` workflow (`.github/workflows/release-desktop.yml`). Run it manually from the **Actions** tab with **Run workflow**: the three binaries are attached to the run as downloadable artifacts, and ticking **publish** also creates the GitHub Release `v<version>` with them. Pushing a tag `v*` publishes the release automatically. Bump `version` in `package.json` first, since it names the artifacts and the release.
+
 ## Docker
 
 The image builds the static site and serves it with nginx. No runtime configuration is needed.
@@ -196,6 +212,8 @@ Project layout:
 ```
 index.html          entry point
 Dockerfile          two-stage image: Vite build, then nginx serving dist/
+electron/            Electron main process, sandboxed preload and app icon
+electron-builder.yml packaging targets: Windows portable exe, Linux AppImage, macOS dmg and zip
 src/main.js         the whole application: state, templates, rendering, export
 src/ui.css          studio chrome (sidebar, toolbar, preview frame)
 src/assets/logo.svg logo and favicon

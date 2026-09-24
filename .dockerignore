@@ -12,3 +12,7 @@ Dockerfile
 compose.yaml
 .dockerignore
 *.md
+electron
+release
+electron-builder.yml
+playwright.desktop.config.js

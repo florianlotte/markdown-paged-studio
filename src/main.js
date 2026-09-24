@@ -353,6 +353,7 @@ app.innerHTML = `
         <input id="configFile" type="file" accept="application/json,.json" hidden />
         <button id="exportHtml" class="secondary">Export HTML</button>
         <button id="printPdf" class="primary">Print / PDF</button>
+        <button id="exportPdf" class="primary" hidden>Export PDF</button>
       </div>
     </header>
     <section class="preview-shell">
@@ -680,13 +681,22 @@ document.getElementById('resetDocument').addEventListener('click', () => {
 });
 
 // Self-contained HTML: same content and CSS as the preview, with Paged.js inlined so it works offline.
-// With `autoPrint`, the print dialog opens once Paged.js reports pagination is complete.
-async function standaloneHtml({ autoPrint = false } = {}) {
+// `mode` selects what happens once Paged.js reports pagination is complete:
+//   'export' nothing (the file is meant to be opened later),
+//   'print'  the print dialog opens,
+//   'pdf'    a `data-paged-ready` flag is set for the desktop app, which then renders the page to PDF.
+const AFTER_PAGINATION = {
+  export: '',
+  print: ',after:()=>setTimeout(()=>window.print(),100)',
+  pdf: ',after:()=>{document.documentElement.dataset.pagedReady="true"}',
+};
+
+async function standaloneHtml({ mode = 'export' } = {}) {
   const content = await documentHtml();
   const css = documentCss();
   // A literal "</script" inside the inlined library would end the script element early.
   const library = (await loadPagedPolyfill()).replace(/<\/script/gi, '<\\/script');
-  const after = autoPrint ? ',after:()=>setTimeout(()=>window.print(),100)' : '';
+  const after = AFTER_PAGINATION[mode] ?? '';
   return `<!doctype html>\n<html lang="${documentLanguage()}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(state.title)}</title><style>${css}</style><script>window.PagedConfig={auto:true${after}};</script><script>${library}</script></head><body>${content}</body></html>`;
 }
 
@@ -701,11 +711,28 @@ document.getElementById('printPdf').addEventListener('click', async () => {
     alert('The browser blocked the print window. Allow pop-ups for this site.');
     return;
   }
-  const html = await standaloneHtml({ autoPrint: true });
+  const html = await standaloneHtml({ mode: 'print' });
   const url = URL.createObjectURL(new Blob([html], { type: 'text/html' }));
   win.location = url;
   // The opened page prints itself when Paged.js finishes; the URL only needs to outlive the load.
   setTimeout(() => URL.revokeObjectURL(url), 30000);
+});
+
+// Direct PDF export, only in the desktop app: the preload script exposes `window.desktop.exportPdf`,
+// which renders the standalone HTML in a hidden Chromium window and writes the PDF where the user chooses.
+const exportPdfButton = document.getElementById('exportPdf');
+exportPdfButton.hidden = !window.desktop;
+exportPdfButton.addEventListener('click', async () => {
+  exportPdfButton.disabled = true;
+  try {
+    const result = await window.desktop.exportPdf(await standaloneHtml({ mode: 'pdf' }));
+    if (!result.canceled) document.getElementById('status').textContent = 'PDF saved';
+  } catch (error) {
+    console.error(error);
+    alert(`PDF export failed: ${error?.message || error}`);
+  } finally {
+    exportPdfButton.disabled = false;
+  }
 });
 
 // ---- Preview view settings: page layout and zoom. Stored apart from the document, they are not part

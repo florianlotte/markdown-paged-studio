@@ -1,0 +1,78 @@
+name: Desktop release
+
+# Builds the portable desktop binaries for Windows, Linux and macOS.
+# - Manually from the Actions tab ("Run workflow"): the binaries are attached to the run as artifacts;
+#   tick "publish" to also create or update the GitHub Release tagged v<version from package.json>.
+# - Automatically on a tag push starting with "v": binaries are attached to that tag's release.
+on:
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: 'Also publish a GitHub Release tagged v<package.json version> with the binaries'
+        type: boolean
+        default: false
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            label: linux
+          - os: windows-latest
+            label: windows
+          - os: macos-latest
+            label: macos
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci --no-audit --no-fund
+
+      - name: Read the package version
+        id: version
+        shell: bash
+        run: echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Build the desktop app
+        run: npm run desktop:build
+        env:
+          # Unsigned builds: electron-builder must not try to sign or notarize.
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+
+      - name: Upload the binaries as run artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: markdown-paged-studio-${{ steps.version.outputs.version }}-${{ matrix.label }}
+          path: |
+            release/*.exe
+            release/*.AppImage
+            release/*.dmg
+            release/*.zip
+          if-no-files-found: error
+
+      - name: Attach the binaries to the GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v') || inputs.publish
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || format('v{0}', steps.version.outputs.version) }}
+          name: Markdown Paged Studio ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || format('v{0}', steps.version.outputs.version) }}
+          generate_release_notes: true
+          files: |
+            release/*.exe
+            release/*.AppImage
+            release/*.dmg
+            release/*.zip

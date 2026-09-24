@@ -14,8 +14,12 @@ export default [
     },
   },
   {
-    files: ['playwright.config.js', 'tests/**/*.js'],
+    files: ['playwright.config.js', 'playwright.desktop.config.js', 'tests/**/*.js', 'electron/**/*.js'],
     languageOptions: { globals: { ...globals.node, ...globals.browser } },
+  },
+  {
+    files: ['electron/**/*.cjs'],
+    languageOptions: { sourceType: 'commonjs', globals: { ...globals.node } },
   },
   prettier,
 ];

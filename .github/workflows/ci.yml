@@ -41,6 +41,11 @@ jobs:
 
       - run: npm run build
 
+      - name: Package the desktop app (unpacked) and smoke-test it
+        run: |
+          npx electron-builder --dir
+          xvfb-run -a npm run test:desktop
+
   docker:
     name: Docker image
     runs-on: ubuntu-latest
