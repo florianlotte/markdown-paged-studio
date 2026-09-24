@@ -259,6 +259,10 @@ Recent Chromium-based browsers (Chrome, Edge, Brave, Arc) are the reference for 
 
 Issues and pull requests are welcome. Before opening a pull request, run `npm run lint`, `npm run format` and `npm test`, and check the preview, the export and the print flow in a Chromium-based browser.
 
+## About me
+
+**Florian LOTTE**, author and maintainer of Markdown Paged Studio. Feedback, ideas and use cases are welcome, in an issue or directly on [LinkedIn](https://www.linkedin.com/in/florianlotte/).
+
 ## License
 
 [MIT](LICENSE) © 2026 Florian Lotte
