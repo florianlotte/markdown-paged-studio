@@ -12,8 +12,8 @@
     "format:check": "prettier --check .",
     "test": "playwright test",
     "desktop": "vite build && electron .",
-    "desktop:build": "vite build && electron-builder",
-    "desktop:dir": "vite build && electron-builder --dir",
+    "desktop:build": "vite build && electron-builder --publish never",
+    "desktop:dir": "vite build && electron-builder --dir --publish never",
     "test:desktop": "playwright test --config playwright.desktop.config.js"
   },
   "dependencies": {
