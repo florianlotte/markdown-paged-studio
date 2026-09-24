@@ -7,7 +7,9 @@ const ZOOM_MAX = 3;
 const ZOOM_STEP = 0.1;
 const PAGE_GAP_PX = 24; // must match the `gap` of `.preview .pagedjs_pages` in ui.css
 
-const view = { layout: 'single', zoom: 1, fit: true, sidebar: true };
+// On phones the settings are a drawer over the preview, closed until the user opens it.
+const NARROW = matchMedia('(max-width: 760px)');
+const view = { layout: 'single', zoom: 1, fit: true, sidebar: !NARROW.matches };
 
 function loadView() {
   try {
@@ -113,6 +115,7 @@ export function initView() {
     applyView();
   });
   document.getElementById('toggleSidebar').addEventListener('click', toggleSidebar);
+  document.getElementById('closeSidebar').addEventListener('click', toggleSidebar);
 
   // Ctrl + wheel over the preview zooms the pages instead of the whole studio.
   const shell = document.querySelector('.preview-shell');

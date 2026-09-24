@@ -359,3 +359,29 @@ test('the sidebar can be hidden and the choice is remembered', async ({ page }) 
   await expect(page.locator('#title')).toBeVisible();
   expect(await previewWidth()).toBe(widthBefore);
 });
+
+test('on a phone the settings are a closed drawer and the preview fits the screen', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await openFreshStudio(page);
+  const sidebar = page.locator('#sidebar');
+  await expect(sidebar).toBeHidden();
+  await expect(page.locator('#toggleSidebar')).toHaveAttribute('aria-expanded', 'false');
+  // The page fits the width of the phone and the toolbar does not push the preview off-screen.
+  const pageBox = await page.locator('#preview .pagedjs_page').first().boundingBox();
+  expect(pageBox.width).toBeLessThanOrEqual(390);
+  expect(pageBox.y).toBeLessThan(200);
+  await expect(page.locator('#exportPdf')).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+
+  await page.locator('#toggleSidebar').click();
+  await expect(sidebar).toBeVisible();
+  const drawer = await sidebar.boundingBox();
+  expect(drawer.x).toBe(0);
+  expect(drawer.width).toBe(390);
+  await expect(page.locator('#title')).toBeVisible();
+  await expect(page.locator('#closeSidebar')).toBeVisible();
+
+  await page.locator('#closeSidebar').click();
+  await expect(sidebar).toBeHidden();
+  await expect(page.locator('#preview .pagedjs_page').first()).toBeVisible();
+});

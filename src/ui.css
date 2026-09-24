@@ -63,6 +63,10 @@ button {
   gap: 12px;
   margin-bottom: 18px;
 }
+.sidebar-close {
+  display: none;
+  margin-left: auto;
+}
 .brand-mark {
   width: 38px;
   height: 38px;
@@ -343,37 +347,53 @@ button:hover {
     align-items: flex-start;
   }
 }
+/* Phones and narrow windows: the preview is the main view and the settings become a full-screen drawer. */
 @media (max-width: 760px) {
   .shell {
-    display: block;
-    height: auto;
-    overflow: visible;
+    grid-template-columns: 1fr;
+    height: 100dvh;
   }
   .sidebar {
+    position: fixed;
+    inset: 0;
+    z-index: 20;
     border-right: 0;
-    border-bottom: 1px solid #d8dde4;
-    display: block;
-    overflow: visible;
   }
-  .sidebar-header {
-    position: sticky;
-    top: 0;
-    z-index: 4;
-  }
-  .sidebar-body {
-    overflow: visible;
-  }
-  .workspace {
-    min-height: 100vh;
+  .sidebar-close {
+    display: inline-flex;
   }
   .toolbar {
-    position: sticky;
-    top: 0;
-    z-index: 5;
-    flex-direction: column;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 8px 10px;
   }
   .toolbar-actions {
+    width: 100%;
     justify-content: flex-start;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 2px;
+    scrollbar-width: thin;
+  }
+  .toolbar-actions button {
+    flex-shrink: 0;
+  }
+  .preview-shell {
+    padding: 10px;
+  }
+  .preview .pagedjs_pages {
+    gap: 12px;
+  }
+  /* Touch targets and no iOS zoom-on-focus (fields under 16px trigger it). */
+  .segmented button,
+  .icon-button,
+  .toolbar-actions button {
+    min-height: 40px;
+  }
+  input,
+  select,
+  textarea {
+    font-size: 16px;
   }
 }
 @media print {

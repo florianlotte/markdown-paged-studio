@@ -261,7 +261,7 @@ The rendered document is styled only by the CSS generated in `documentCss()`, ne
 
 ## Browser support
 
-Recent Chromium-based browsers (Chrome, Edge, Brave, Arc) are the reference for both the preview and printing. Firefox 126+ and Safari 17+ run the studio; the preview zoom relies on the standard CSS `zoom` property. Print output from non-Chromium browsers may differ in margin boxes and page breaks.
+Recent Chromium-based browsers (Chrome, Edge, Brave, Arc) are the reference for both the preview and printing. On phones and narrow windows the settings open as a full-screen drawer over the preview, and the toolbar actions scroll horizontally. Firefox 126+ and Safari 17+ run the studio; the preview zoom relies on the standard CSS `zoom` property. Print output from non-Chromium browsers may differ in margin boxes and page breaks.
 
 ## Roadmap
 
