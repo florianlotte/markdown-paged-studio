@@ -11,7 +11,7 @@
 
 <p align="center">
   <a href="https://github.com/florianlotte/markdown-paged-studio/actions/workflows/ci.yml"><img alt="CI status" src="https://github.com/florianlotte/markdown-paged-studio/actions/workflows/ci.yml/badge.svg" /></a>
-  <img alt="Vite 7" src="https://img.shields.io/badge/Vite-7-646CFF?logo=vite&logoColor=white" />
+  <img alt="Vite 8" src="https://img.shields.io/badge/Vite-8-646CFF?logo=vite&logoColor=white" />
   <img alt="Paged.js 0.4" src="https://img.shields.io/badge/Paged.js-0.4-111827" />
   <img alt="Mermaid 12" src="https://img.shields.io/badge/Mermaid-12-FF3670?logo=mermaid&logoColor=white" />
   <img alt="100% client-side" src="https://img.shields.io/badge/backend-none-2ea44f" />
@@ -47,7 +47,7 @@ npm run build     # static site in dist/
 npm run preview   # serve dist/ locally to check the build
 ```
 
-Node.js 20.19 or newer (or 22.12+) is required by Vite 7.
+Node.js 20.19 or newer (or 22.12+) is required by Vite 8.
 
 ## Usage
 
