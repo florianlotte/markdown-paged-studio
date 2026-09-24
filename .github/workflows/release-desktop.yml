@@ -82,7 +82,7 @@ jobs:
 
       - name: Attach the binaries to the GitHub Release
         if: startsWith(github.ref, 'refs/tags/v') || inputs.publish
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || format('v{0}', steps.version.outputs.version) }}
           name: Markdown Paged Studio ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || format('v{0}', steps.version.outputs.version) }}
