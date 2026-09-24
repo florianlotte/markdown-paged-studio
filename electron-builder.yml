@@ -12,7 +12,12 @@ files:
 artifactName: ${name}-${version}-${os}-${arch}.${ext}
 npmRebuild: false
 win:
-  target: portable
+  # One portable exe per architecture: markdown-paged-studio-<version>-win-x64.exe and -win-arm64.exe
+  target:
+    - target: portable
+      arch:
+        - x64
+        - arm64
   icon: electron/icons/icon.png
 linux:
   target: AppImage
