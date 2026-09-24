@@ -1,6 +1,6 @@
 ---
 name: verify-preview
-description: Launch the Vite dev server, open Markdown Paged Studio in Chrome, and confirm the Paged.js preview renders with no console errors. Use after any change to src/main.js, src/ui.css, or index.html, since the project has no automated tests.
+description: Launch the Vite dev server, open Markdown Paged Studio in Chrome, and confirm the Paged.js preview renders with no console errors. Use after any change to src/*.js, src/ui.css, or index.html, since the project has no automated tests.
 ---
 
 Verify a change in the real browser. Paged.js only runs in a browser, so this replaces a test run.

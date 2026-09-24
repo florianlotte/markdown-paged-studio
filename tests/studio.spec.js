@@ -287,3 +287,31 @@ test('the document language drives lang attributes and typographic quotes', asyn
   await expect(status(page)).toHaveText(STATUS_DONE);
   await expect(page.locator('#language')).toHaveValue('en');
 });
+
+test('the cover page matches the selected paper height', async ({ page }) => {
+  await openFreshStudio(page);
+  await page.locator('#tab-page').click();
+  const pageHeightMm = () =>
+    page.evaluate(() => {
+      const box = document.querySelector('#preview .pagedjs_page');
+      const zoom = Number(document.getElementById('preview').style.zoom) || 1;
+      return box ? (box.getBoundingClientRect().height / zoom) * (25.4 / 96) : null;
+    });
+  const coverToPageRatio = () =>
+    page.evaluate(() => {
+      const cover = document.querySelector('#preview .cover-page');
+      const pageBox = cover?.closest('.pagedjs_page');
+      return cover && pageBox ? cover.getBoundingClientRect().height / pageBox.getBoundingClientRect().height : null;
+    });
+  for (const [size, expectedMm] of [
+    ['A5', 210],
+    ['Letter', 279.4],
+    ['A4', 297],
+  ]) {
+    await page.locator('#pageSize').selectOption(size);
+    // The change re-renders after a debounce: wait for pages of the new size before measuring the cover.
+    await expect.poll(pageHeightMm).toBeCloseTo(expectedMm, 0);
+    await expect(status(page)).toHaveText(STATUS_DONE);
+    expect(await coverToPageRatio()).toBeCloseTo(1, 1);
+  }
+});

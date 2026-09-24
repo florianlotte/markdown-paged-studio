@@ -18,6 +18,14 @@ jobs:
           node-version: 22
           cache: npm
 
+      - name: Cache the Playwright and Electron downloads
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/ms-playwright
+            ~/.cache/electron
+          key: browsers-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
       - run: npm ci --no-audit --no-fund
 
       - run: npm run lint

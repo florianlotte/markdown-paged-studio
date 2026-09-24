@@ -40,6 +40,12 @@ jobs:
           node-version: 22
           cache: npm
 
+      - name: Cache the Electron downloads
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/electron
+          key: electron-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
       - run: npm ci --no-audit --no-fund
 
       - name: Read the package version
@@ -53,6 +59,14 @@ jobs:
           # Unsigned builds: electron-builder must not try to sign or notarize.
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
 
+      - name: Write SHA-256 checksums
+        shell: bash
+        run: |
+          cd release
+          files=$(ls *.exe *.AppImage *.dmg *.zip 2>/dev/null)
+          if command -v sha256sum >/dev/null; then sha256sum $files > "SHA256SUMS-${{ matrix.label }}.txt"; else shasum -a 256 $files > "SHA256SUMS-${{ matrix.label }}.txt"; fi
+          cat "SHA256SUMS-${{ matrix.label }}.txt"
+
       - name: Upload the binaries as run artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -62,6 +76,8 @@ jobs:
             release/*.AppImage
             release/*.dmg
             release/*.zip
+            release/SHA256SUMS-*.txt
+            release/SHA256SUMS-*.txt
           if-no-files-found: error
 
       - name: Attach the binaries to the GitHub Release
@@ -76,3 +92,4 @@ jobs:
             release/*.AppImage
             release/*.dmg
             release/*.zip
+            release/SHA256SUMS-*.txt

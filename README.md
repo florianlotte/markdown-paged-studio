@@ -18,6 +18,8 @@
   <img alt="MIT license" src="https://img.shields.io/badge/license-MIT-blue" />
 </p>
 
+**Try it online: [florianlotte.github.io/markdown-paged-studio](https://florianlotte.github.io/markdown-paged-studio/)** (deployed from `main` by GitHub Actions; your documents stay in your browser).
+
 ![Markdown Paged Studio: the editor on the left, the paged preview on the right](docs/screenshots/studio.png)
 
 ## Features
@@ -166,7 +168,7 @@ flowchart LR
 
 ## Desktop app
 
-The same application ships as a portable desktop app built with Electron, with Chromium embedded so the preview and the PDF output are identical on every platform. Binaries are attached to each [GitHub Release](https://github.com/florianlotte/markdown-paged-studio/releases): portable `.exe` files for Windows x64 and ARM64, plus `.zip` archives of the same app folder for company PCs that block downloaded executables (unzip, then run `Markdown Paged Studio.exe` inside) (no installation; the saved document and view settings live in a `markdown-paged-studio-data` folder next to the executable), an `AppImage` for Linux, and a `dmg` / `zip` for macOS. The binaries are not code-signed, so Windows SmartScreen and macOS Gatekeeper will ask for confirmation on first launch.
+The same application ships as a portable desktop app built with Electron, with Chromium embedded so the preview and the PDF output are identical on every platform. Binaries are attached to each [GitHub Release](https://github.com/florianlotte/markdown-paged-studio/releases): portable `.exe` files for Windows x64 and ARM64, plus `.zip` archives of the same app folder for company PCs that block downloaded executables (unzip, then run `Markdown Paged Studio.exe` inside) (no installation; the saved document and view settings live in a `markdown-paged-studio-data` folder next to the executable), an `AppImage` for Linux, and a `dmg` / `zip` for macOS (Apple Silicon and Intel). Each release also carries `SHA256SUMS-<os>.txt` files to verify the downloads. The binaries are not code-signed, so Windows SmartScreen and macOS Gatekeeper will ask for confirmation on first launch.
 
 In the desktop app, **Export PDF** writes the file directly through the embedded Chromium engine instead of going through a print dialog, and **File → Print…** (Ctrl+P) prints on paper. Everything else works exactly as in the browser, including the personal defaults from `local/` baked in at build time.
 
@@ -230,14 +232,21 @@ Every push and pull request runs the GitHub Actions workflow in `.github/workflo
 Project layout:
 
 ```
-index.html          entry point
-Dockerfile          two-stage image: Vite build, then nginx serving dist/
-electron/            Electron main process, sandboxed preload and app icon
-mcp/                 MCP server (stdio) rendering reports headlessly through dist/
-electron-builder.yml packaging targets: Windows portable exe, Linux AppImage, macOS dmg and zip
-src/main.js         the whole application: state, templates, rendering, export
+index.html          entry point and the studio markup
+src/main.js         wires the modules: restore, UI, view, first render
+src/config.js       defaults (built-in and local/), state, validation, autosave
+src/markdown.js     markdown-it and Mermaid diagrams
+src/document.js     document CSS and HTML, standalone export
+src/render.js       Paged.js preview lifecycle
+src/view.js         layout and zoom of the preview
+src/ui.js           form, tabs, files, export and print
+src/automation.js   headless API used by the MCP server
 src/ui.css          studio chrome (sidebar, toolbar, preview frame)
 src/assets/logo.svg logo and favicon
+electron/           Electron main process, sandboxed preload and app icon
+electron-builder.yml packaging targets: Windows portable exe and zip, Linux AppImage, macOS dmg and zip
+mcp/                MCP server (stdio) rendering reports headlessly through dist/
+Dockerfile          two-stage image: Vite build, then nginx serving dist/
 docs/screenshots/   images used in this README
 ```
 
@@ -252,7 +261,7 @@ Recent Chromium-based browsers (Chrome, Edge, Brave, Arc) are the reference for 
 - Table of contents with page numbers (`target-counter`)
 - Running headers taken from headings (`string-set`) and left/right page styles
 - Bundled font so preview, print and export always match
-- Cover page templates and a cover height that follows A5 and Letter
+- Cover page templates
 - Syntax highlighting in code blocks
 
 ## Contributing

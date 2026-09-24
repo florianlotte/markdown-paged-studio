@@ -63,6 +63,11 @@ The assistant calls `describe_config` to learn the defaults, drafts the Markdown
 diagram if useful), then calls `render_pdf` with `{ title, author, date, language: "fr" }` and an
 `output_path`. The reply carries the path and the page count.
 
+## Safety
+
+- An existing file is never replaced unless the call passes `overwrite: true`.
+- Set `MPS_OUTPUT_DIR=/some/folder` in the server's environment to confine every write to that folder; relative `output_path` values are then resolved inside it. Without it, any path the server process can write to is accepted.
+
 ## Notes
 
 - Each call renders in a fresh browser context; the browser itself is launched once and closed when

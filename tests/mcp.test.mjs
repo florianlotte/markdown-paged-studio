@@ -73,6 +73,32 @@ test('render_html returns a standalone document with the diagram and French quot
   assert.doesNotMatch(html, /unpkg\.com/);
 });
 
+test('refuses to overwrite an existing file unless asked', async () => {
+  const output = path.join(dir, 'twice.pdf');
+  const first = await client.callTool({ name: 'render_pdf', arguments: { markdown: '# One', output_path: output } });
+  assert.equal(first.isError, undefined);
+  const second = await client.callTool({ name: 'render_pdf', arguments: { markdown: '# Two', output_path: output } });
+  assert.equal(second.isError, true);
+  assert.match(second.content[0].text, /already exists/);
+  const third = await client.callTool({
+    name: 'render_pdf',
+    arguments: { markdown: '# Two', output_path: output, overwrite: true },
+  });
+  assert.equal(third.isError, undefined);
+});
+
+test('the cover page fills exactly one page on every paper size', async () => {
+  for (const pageSize of ['A4', 'A5', 'Letter']) {
+    const output = path.join(dir, `cover-${pageSize}.pdf`);
+    const result = await client.callTool({
+      name: 'render_pdf',
+      arguments: { markdown: '# Short\n\nOne paragraph.', config: { pageSize, cover: true }, output_path: output },
+    });
+    assert.equal(result.isError, undefined);
+    assert.equal(JSON.parse(result.content[0].text).pages, 2, pageSize);
+  }
+});
+
 test('rejects an empty document without crashing the server', async () => {
   // Depending on the SDK version, invalid arguments come back as a JSON-RPC error or as an isError result.
   const result = await client

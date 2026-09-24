@@ -73,7 +73,7 @@ async function withStudio(fn) {
     await serveDist(context);
     const page = await context.newPage();
     page.setDefaultTimeout(RENDER_TIMEOUT_MS);
-    await page.goto(`${ORIGIN}/`);
+    await page.goto(`${ORIGIN}/?automation=1`);
     await page.waitForFunction(() => typeof window.studio?.render === 'function');
     return await fn(page, context);
   } finally {
@@ -103,10 +103,25 @@ async function renderPdf(config) {
   });
 }
 
-async function writeOutput(outputPath, data) {
-  const target = path.resolve(outputPath);
+// Where the tools may write. MPS_OUTPUT_DIR confines every output to one folder; without it, any path the
+// server process can write to is accepted. Existing files are never overwritten unless asked.
+const OUTPUT_DIR = process.env.MPS_OUTPUT_DIR ? path.resolve(process.env.MPS_OUTPUT_DIR) : null;
+
+function resolveOutput(outputPath) {
+  const target = path.resolve(OUTPUT_DIR ?? process.cwd(), outputPath);
+  if (OUTPUT_DIR && !target.startsWith(OUTPUT_DIR + path.sep)) {
+    throw new Error(`output_path must stay inside ${OUTPUT_DIR} (MPS_OUTPUT_DIR)`);
+  }
+  return target;
+}
+
+async function writeOutput(outputPath, data, { overwrite = false } = {}) {
+  const target = resolveOutput(outputPath);
   await mkdir(path.dirname(target), { recursive: true });
-  await writeFile(target, data);
+  await writeFile(target, data, { flag: overwrite ? 'w' : 'wx' }).catch(error => {
+    if (error.code === 'EEXIST') throw new Error(`${target} already exists; pass overwrite: true to replace it`);
+    throw error;
+  });
   return target;
 }
 
@@ -162,13 +177,17 @@ server.registerTool(
     inputSchema: {
       markdown: markdownField,
       config: configField,
-      output_path: z.string().min(1).describe('Where to write the PDF (absolute, or relative to the server cwd)'),
+      output_path: z
+        .string()
+        .min(1)
+        .describe('Where to write the PDF (absolute, or relative to MPS_OUTPUT_DIR or the server cwd)'),
+      overwrite: z.boolean().optional().describe('Replace the file if it already exists (default: refuse)'),
     },
   },
-  async ({ markdown, config, output_path }) => {
+  async ({ markdown, config, output_path, overwrite }) => {
     try {
       const { pdf, pages } = await renderPdf({ ...config, markdown });
-      const target = await writeOutput(output_path, pdf);
+      const target = await writeOutput(output_path, pdf, { overwrite });
       const result = { path: target, pages, bytes: pdf.length };
       return { content: [{ type: 'text', text: JSON.stringify(result) }], structuredContent: result };
     } catch (error) {
@@ -189,13 +208,14 @@ server.registerTool(
       markdown: markdownField,
       config: configField,
       output_path: z.string().min(1).optional().describe('Where to write the HTML file'),
+      overwrite: z.boolean().optional().describe('Replace the file if it already exists (default: refuse)'),
     },
   },
-  async ({ markdown, config, output_path }) => {
+  async ({ markdown, config, output_path, overwrite }) => {
     try {
       const html = await withStudio(page => renderHtml(page, { ...config, markdown }, 'export'));
       if (output_path) {
-        const target = await writeOutput(output_path, html);
+        const target = await writeOutput(output_path, html, { overwrite });
         const result = { path: target, bytes: Buffer.byteLength(html) };
         return { content: [{ type: 'text', text: JSON.stringify(result) }], structuredContent: result };
       }
