@@ -31,6 +31,16 @@ test('the desktop app renders the document and exports a PDF directly', async ()
     expect(pdf.subarray(0, 5).toString()).toBe('%PDF-');
     expect(pdf.length).toBeGreaterThan(10_000);
     expect((pdf.toString('latin1').match(/\/Type\s*\/Page(?![a-z])/gi) || []).length).toBe(3);
+    await expect(page.locator('#printPdf')).toHaveCount(0);
+
+    // The File menu drives the same export through an IPC command.
+    const viaMenu = path.join(dir, 'via-menu.pdf');
+    await app.evaluate(({ dialog, BrowserWindow }, filePath) => {
+      dialog.showSaveDialog = async () => ({ canceled: false, filePath });
+      BrowserWindow.getAllWindows()[0].webContents.send('command', 'export-pdf');
+    }, viaMenu);
+    await expect.poll(() => existsSync(viaMenu), { timeout: 30_000 }).toBe(true);
+    expect(readFileSync(viaMenu).subarray(0, 5).toString()).toBe('%PDF-');
   } finally {
     await app.close();
   }

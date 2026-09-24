@@ -14,7 +14,7 @@ Verify a change in the real browser. Paged.js only runs in a browser, so this re
 6. Check `read_console_messages` with `pattern: "error|Error|paged"`. Any uncaught error or Paged.js error is a failure.
 7. Take a screenshot with `computer` and look at it: the cover page must appear first when the cover checkbox is on, the header and footer margin boxes must show the configured text, and the page counter must read `Page X / Y`.
 8. If the change touched `documentCss()`, `standaloneHtml()`, or `.cover-page`, also switch the page size to A5 and Letter via the `Page` tab and re-check the render, because the cover height is hard-coded to A4.
-9. Do not click `Print / PDF`: it calls `window.print()`, which opens a blocking dialog that stalls the browser session. Check the export path by reading the generated HTML string instead.
+9. Do not click `Export PDF` in the browser: it calls `window.print()`, which opens a blocking dialog that stalls the browser session. Check the export path by reading the generated HTML string instead.
 10. Close the tab with `tabs_close_mcp` and stop the dev server.
 
 Report: page count, console errors (or none), and what the screenshot showed. If anything failed, quote the console error text in a code block.

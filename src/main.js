@@ -352,8 +352,7 @@ app.innerHTML = `
         <button id="loadConfig" class="secondary">Load config</button>
         <input id="configFile" type="file" accept="application/json,.json" hidden />
         <button id="exportHtml" class="secondary">Export HTML</button>
-        <button id="printPdf" class="primary">Print / PDF</button>
-        <button id="exportPdf" class="primary" hidden>Export PDF</button>
+        <button id="exportPdf" class="primary">Export PDF</button>
       </div>
     </header>
     <section class="preview-shell">
@@ -704,8 +703,10 @@ document.getElementById('exportHtml').addEventListener('click', async () => {
   download('document.html', await standaloneHtml(), 'text/html;charset=utf-8');
 });
 
-document.getElementById('printPdf').addEventListener('click', async () => {
-  // Open the window synchronously, inside the click, so pop-up blockers allow it; fill it once the HTML is ready.
+// Opens the print-ready document in a new window; it prints itself once Paged.js is done. In the browser
+// this is also how a PDF is produced ("Save as PDF" in the print dialog), so it must run inside a user
+// gesture (click or key press) or pop-up blockers stop it: window.open comes before the first await.
+async function openPrintWindow() {
   const win = window.open('', '_blank');
   if (!win) {
     alert('The browser blocked the print window. Allow pop-ups for this site.');
@@ -716,13 +717,12 @@ document.getElementById('printPdf').addEventListener('click', async () => {
   win.location = url;
   // The opened page prints itself when Paged.js finishes; the URL only needs to outlive the load.
   setTimeout(() => URL.revokeObjectURL(url), 30000);
-});
+}
 
-// Direct PDF export, only in the desktop app: the preload script exposes `window.desktop.exportPdf`,
-// which renders the standalone HTML in a hidden Chromium window and writes the PDF where the user chooses.
+// Desktop only: the preload script exposes `window.desktop.exportPdf`, which renders the standalone HTML in
+// a hidden Chromium window and writes the PDF where the user chooses, without any dialog in between.
 const exportPdfButton = document.getElementById('exportPdf');
-exportPdfButton.hidden = !window.desktop;
-exportPdfButton.addEventListener('click', async () => {
+async function exportPdfDirect() {
   exportPdfButton.disabled = true;
   try {
     const result = await window.desktop.exportPdf(await standaloneHtml({ mode: 'pdf' }));
@@ -733,7 +733,31 @@ exportPdfButton.addEventListener('click', async () => {
   } finally {
     exportPdfButton.disabled = false;
   }
-});
+}
+
+// One "Export PDF" button everywhere: direct file in the desktop app, print dialog in the browser.
+function exportPdf() {
+  return window.desktop ? exportPdfDirect() : openPrintWindow();
+}
+
+exportPdfButton.addEventListener('click', exportPdf);
+
+if (window.desktop) {
+  // File menu entries of the desktop app.
+  window.desktop.onCommand(command => {
+    if (command === 'export-pdf') exportPdfDirect();
+    else if (command === 'print') openPrintWindow();
+  });
+} else {
+  exportPdfButton.title = 'Opens the print dialog: choose "Save as PDF"';
+  // Ctrl/Cmd+P prints the document rather than the studio page. On desktop the menu accelerator does this.
+  document.addEventListener('keydown', event => {
+    if ((event.ctrlKey || event.metaKey) && !event.altKey && event.key.toLowerCase() === 'p') {
+      event.preventDefault();
+      openPrintWindow();
+    }
+  });
+}
 
 // ---- Preview view settings: page layout and zoom. Stored apart from the document, they are not part
 // ---- of the config JSON. Zoom uses the CSS `zoom` property so the scrollable area follows the scale.

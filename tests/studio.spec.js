@@ -189,25 +189,38 @@ test('exports a standalone HTML file that paginates offline', async ({ page, con
   await expect(offline.locator('.cover-title')).toHaveText('Architecture Report');
 });
 
-test('print opens the window inside the click and prints once pagination is done', async ({ page }) => {
+test('Export PDF in the browser opens the print window inside the gesture and prints when paginated', async ({
+  page,
+}) => {
   await openFreshStudio(page);
-  await page.evaluate(() => {
-    window.__print = { openedSync: false, url: null };
-    window.open = () => {
-      window.__print.openedSync = true;
-      return {
-        set location(value) {
-          window.__print.url = value;
-        },
+  await expect(page.locator('#printPdf')).toHaveCount(0);
+  await expect(page.locator('#exportPdf')).toBeVisible();
+  const stubWindowOpen = () =>
+    page.evaluate(() => {
+      window.__print = { openedSync: false, url: null };
+      window.open = () => {
+        window.__print.openedSync = true;
+        return {
+          set location(value) {
+            window.__print.url = value;
+          },
+        };
       };
-    };
-  });
-  await page.locator('#printPdf').click();
+    });
+
+  await stubWindowOpen();
+  await page.locator('#exportPdf').click();
   await expect.poll(() => page.evaluate(() => window.__print.url)).toMatch(/^blob:/);
   expect(await page.evaluate(() => window.__print.openedSync)).toBe(true);
   const html = await page.evaluate(() => fetch(window.__print.url).then(r => r.text()));
   expect(html).toContain('after:()=>setTimeout(()=>window.print()');
   expect(html).toContain('<article class="document-content" lang="en">');
+
+  // Ctrl+P prints the document, not the studio page.
+  await stubWindowOpen();
+  await page.locator('#title').focus();
+  await page.keyboard.press('Control+p');
+  await expect.poll(() => page.evaluate(() => window.__print.url)).toMatch(/^blob:/);
 });
 
 test('saves and loads the configuration as JSON', async ({ page }) => {

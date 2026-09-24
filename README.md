@@ -138,7 +138,10 @@ The document autosaves in the browser after every change. **Reset** discards it 
 ### Export and print
 
 - **Export HTML** downloads a single self-contained file: content, styles, diagrams and the Paged.js runtime. It paginates on open, offline, in any modern browser.
-- **Print / PDF** opens that same file in a new tab and triggers the browser print dialog once pagination is complete. Choose _Save as PDF_. Allow pop-ups for the site if nothing opens.
+- **Export PDF** is the same button everywhere, with the best implementation available:
+  - in the browser it opens the print-ready document in a new tab and triggers the print dialog once pagination is complete; choose _Save as PDF_. Allow pop-ups for the site if nothing opens. Ctrl+P (Cmd+P on macOS) does the same;
+  - in the desktop app it writes the PDF directly through the embedded Chromium engine, no dialog other than the file picker.
+- **Printing on paper**: in the browser, the same print dialog; in the desktop app, **File → Print…** (Ctrl+P).
 
 Chromium-based browsers give the most faithful print output for paged media.
 
@@ -153,7 +156,7 @@ flowchart LR
   P -->|hidden stage, then swap| Preview[Preview]
   SVG --> X["Standalone HTML"]
   CSS --> X
-  X --> Print["Print / PDF"]
+  X --> PDF["Export PDF / print"]
 ```
 
 - `documentHtml()` renders the Markdown and replaces every Mermaid placeholder with its SVG.
@@ -165,7 +168,7 @@ flowchart LR
 
 The same application ships as a portable desktop app built with Electron, with Chromium embedded so the preview and the PDF output are identical on every platform. Binaries are attached to each [GitHub Release](https://github.com/florianlotte/markdown-paged-studio/releases): a portable `.exe` for Windows (no installation; the saved document and view settings live in a `markdown-paged-studio-data` folder next to the executable), an `AppImage` for Linux, and a `dmg` / `zip` for macOS. The binaries are not code-signed, so Windows SmartScreen and macOS Gatekeeper will ask for confirmation on first launch.
 
-The desktop app adds one button, **Export PDF**, which writes the PDF directly through the embedded Chromium engine, with no print dialog. Everything else works exactly as in the browser, including the personal defaults from `local/` baked in at build time.
+In the desktop app, **Export PDF** writes the file directly through the embedded Chromium engine instead of going through a print dialog, and **File → Print…** (Ctrl+P) prints on paper. Everything else works exactly as in the browser, including the personal defaults from `local/` baked in at build time.
 
 From the sources:
 

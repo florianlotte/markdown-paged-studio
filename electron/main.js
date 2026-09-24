@@ -98,10 +98,24 @@ function createWindow() {
   return win;
 }
 
+// Menu entries reach the page as commands handled next to the toolbar buttons (see preload.cjs).
+function sendCommand(command) {
+  const win = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0];
+  win?.webContents.send('command', command);
+}
+
 function buildMenu() {
   const template = [
     ...(isMac ? [{ role: 'appMenu' }] : []),
-    { role: 'fileMenu' },
+    {
+      label: 'File',
+      submenu: [
+        { label: 'Export PDF…', accelerator: 'CmdOrCtrl+Shift+E', click: () => sendCommand('export-pdf') },
+        { label: 'Print…', accelerator: 'CmdOrCtrl+P', click: () => sendCommand('print') },
+        { type: 'separator' },
+        { role: isMac ? 'close' : 'quit' },
+      ],
+    },
     { role: 'editMenu' },
     {
       label: 'View',
