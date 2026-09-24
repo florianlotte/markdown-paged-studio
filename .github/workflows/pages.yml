@@ -1,7 +1,8 @@
 name: Deploy to GitHub Pages
 
 # Publishes the web app at https://florianlotte.github.io/markdown-paged-studio/ on every push to main.
-# The repository's Pages source must be "GitHub Actions" (configure-pages enables it when it can).
+# One-time setup: in the repository Settings > Pages, set Source to "GitHub Actions". The workflow token
+# cannot create the Pages site itself ("Resource not accessible by integration").
 on:
   push:
     branches: [main]

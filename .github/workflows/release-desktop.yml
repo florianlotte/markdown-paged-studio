@@ -63,8 +63,10 @@ jobs:
         shell: bash
         run: |
           cd release
-          files=$(ls *.exe *.AppImage *.dmg *.zip 2>/dev/null)
-          if command -v sha256sum >/dev/null; then sha256sum $files > "SHA256SUMS-${{ matrix.label }}.txt"; else shasum -a 256 $files > "SHA256SUMS-${{ matrix.label }}.txt"; fi
+          # nullglob: each OS only produces some of these extensions, and bash runs with -e here.
+          shopt -s nullglob
+          files=(*.exe *.AppImage *.dmg *.zip)
+          if command -v sha256sum >/dev/null; then sha256sum "${files[@]}" > "SHA256SUMS-${{ matrix.label }}.txt"; else shasum -a 256 "${files[@]}" > "SHA256SUMS-${{ matrix.label }}.txt"; fi
           cat "SHA256SUMS-${{ matrix.label }}.txt"
 
       - name: Upload the binaries as run artifacts
