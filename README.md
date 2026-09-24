@@ -16,6 +16,7 @@
   <img alt="Mermaid 12" src="https://img.shields.io/badge/Mermaid-12-FF3670?logo=mermaid&logoColor=white" />
   <img alt="100% client-side" src="https://img.shields.io/badge/backend-none-2ea44f" />
   <img alt="MIT license" src="https://img.shields.io/badge/license-MIT-blue" />
+  <a href="https://github.com/florianlotte/markdown-paged-studio/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/florianlotte/markdown-paged-studio?label=release&color=111827" /></a>
   <a href="https://github.com/sponsors/florianlotte"><img alt="Sponsor florianlotte on GitHub" src="https://img.shields.io/badge/Sponsor-%E2%9D%A4-ea4aaa?logo=githubsponsors&logoColor=white" /></a>
 </p>
 
@@ -30,11 +31,15 @@
 - **Running header** (left and right), **footer**, and an automatic `Page X / Y` counter.
 - **A4, Letter or A5** with configurable margins.
 - **Mermaid diagrams** from ` ```mermaid ` code fences, rendered to SVG and embedded in exports.
+- **Document language** (BCP 47 tag) driving hyphenation and typographic quotes (« » in French, „ “ in German…).
 - **Custom CSS** editor with import, applied to the document only.
-- **Preview controls**: one page or two pages side by side, zoom, fit to width, Ctrl + wheel.
+- **Preview controls**: one page or two pages side by side, zoom, fit to width, Ctrl + wheel, and a collapsible sidebar.
 - **Autosave** in the browser, plus export and import of the whole configuration as JSON.
-- **Standalone HTML export** that paginates offline, and **print / PDF** through the browser dialog.
-- **Static build** you can host anywhere: GitHub Pages, Netlify, Cloudflare Pages, nginx.
+- **Personal defaults** (your name, company logo, stylesheet, template) from a gitignored `local/` folder.
+- **Standalone HTML export** that paginates offline, and **Export PDF**: the print dialog in the browser, a direct file in the desktop app.
+- **Desktop app** for Windows (x64 and ARM64), Linux and macOS (Apple Silicon and Intel), portable, no installation.
+- **MCP server** so a local AI assistant can generate reports through the same rendering pipeline.
+- **Static build** you can host anywhere: GitHub Pages, Netlify, Cloudflare Pages, nginx, or the provided Docker image.
 
 ## Quick start
 
@@ -214,7 +219,7 @@ The build context includes the gitignored `local/` folder, so an image built on 
 
 ## Development
 
-Every push and pull request runs the GitHub Actions workflow in `.github/workflows/ci.yml`: lint, Prettier check, the Playwright suite, the Vite build, and a Docker build with a smoke test of the container.
+GitHub Actions workflows in `.github/workflows/`: `ci.yml` runs on every push and pull request (lint, Prettier check, the web, desktop and MCP test suites, the Vite build, a Docker build with a smoke test of the container); `release-desktop.yml` builds and publishes the desktop binaries on `v*` tags or on demand; `pages.yml` deploys the web app to GitHub Pages from `main`. Dependabot keeps npm packages and the actions up to date.
 
 | Script                  | What it does                                                                            |
 | ----------------------- | --------------------------------------------------------------------------------------- |
@@ -265,6 +270,7 @@ Recent Chromium-based browsers (Chrome, Edge, Brave, Arc) are the reference for 
 - Bundled font so preview, print and export always match
 - Cover page templates
 - Syntax highlighting in code blocks
+- Code signing of the desktop binaries (Windows and macOS)
 
 ## Contributing
 
