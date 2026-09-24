@@ -395,6 +395,7 @@ function documentCss() {
 @page {
   size: ${state.pageSize};
   margin: ${state.marginTop}mm ${state.marginRight}mm ${state.marginBottom}mm ${state.marginLeft}mm;
+  font-family: Inter, Arial, sans-serif;
   @top-left { content: "${escCssString(state.headerTitle)}"; font-size: 8.5pt; color: #5f6368; }
   @top-right { content: "${escCssString(state.headerName)}"; font-size: 8.5pt; color: #5f6368; }
   @bottom-left { content: "${escCssString(state.footerText)}"; font-size: 8pt; color: #6f7378; }
@@ -879,3 +880,15 @@ loadView();
 applyView();
 
 render();
+
+// ---- Automation API for headless rendering, used by the MCP server (mcp/server.mjs). It builds a
+// ---- document from a config object without touching the UI; it is not part of the browser UX.
+window.studio = {
+  defaults: () => ({ ...DEFAULTS }),
+  schema: () => ({ kinds: { ...CONFIG_SCHEMA }, pageSizes: [...PAGE_SIZES], marginMaxMm: MARGIN_MAX_MM }),
+  // Resolves to the standalone HTML for `config` (validated like a JSON import) in the given mode.
+  async render(config = {}, mode = 'pdf') {
+    Object.assign(state, DEFAULTS, sanitizeConfig(config));
+    return standaloneHtml({ mode });
+  },
+};

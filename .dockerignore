@@ -16,3 +16,4 @@ electron
 release
 electron-builder.yml
 playwright.desktop.config.js
+mcp

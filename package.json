@@ -1,6 +1,6 @@
 {
   "name": "markdown-paged-studio",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -14,12 +14,17 @@
     "desktop": "vite build && electron .",
     "desktop:build": "vite build && electron-builder --publish never",
     "desktop:dir": "vite build && electron-builder --dir --publish never",
-    "test:desktop": "playwright test --config playwright.desktop.config.js"
+    "test:desktop": "playwright test --config playwright.desktop.config.js",
+    "mcp": "node mcp/server.mjs",
+    "test:mcp": "node --test tests/mcp.test.mjs"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.1",
     "markdown-it": "^15.0.2",
     "mermaid": "^12.0.0",
-    "pagedjs": "^0.4.3"
+    "pagedjs": "^0.4.3",
+    "playwright": "^1.63.0",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
@@ -48,5 +53,8 @@
   "main": "electron/main.js",
   "author": {
     "name": "Florian Lotte"
+  },
+  "bin": {
+    "markdown-paged-studio-mcp": "mcp/server.mjs"
   }
 }

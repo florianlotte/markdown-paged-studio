@@ -14,7 +14,13 @@ export default [
     },
   },
   {
-    files: ['playwright.config.js', 'playwright.desktop.config.js', 'tests/**/*.js', 'electron/**/*.js'],
+    files: [
+      'playwright.config.js',
+      'playwright.desktop.config.js',
+      'tests/**/*.{js,mjs}',
+      'electron/**/*.js',
+      'mcp/**/*.mjs',
+    ],
     languageOptions: { globals: { ...globals.node, ...globals.browser } },
   },
   {

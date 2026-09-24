@@ -180,6 +180,17 @@ npm run test:desktop    # Playwright smoke test of the Electron app (run npm run
 
 Binaries are built by the `Desktop release` workflow (`.github/workflows/release-desktop.yml`). Run it manually from the **Actions** tab with **Run workflow**: the three binaries are attached to the run as downloadable artifacts, and ticking **publish** also creates the GitHub Release `v<version>` with them. Pushing a tag `v*` publishes the release automatically. Bump `version` in `package.json` first, since it names the artifacts and the release.
 
+## MCP server for AI assistants
+
+`mcp/server.mjs` is a [Model Context Protocol](https://modelcontextprotocol.io) server (stdio) that lets a local AI assistant generate reports with the real rendering pipeline: it exposes `render_pdf`, `render_html` and `describe_config`, plus a resource documenting the CSS contract. Build the app once, then register the server in your client:
+
+```bash
+npm run build
+claude mcp add markdown-paged-studio -- node /absolute/path/to/markdown-paged-studio/mcp/server.mjs
+```
+
+See [mcp/README.md](mcp/README.md) for the Claude Desktop configuration, the tool inputs and the personal defaults handling.
+
 ## Docker
 
 The image builds the static site and serves it with nginx. No runtime configuration is needed.
@@ -201,14 +212,20 @@ The build context includes the gitignored `local/` folder, so an image built on 
 
 Every push and pull request runs the GitHub Actions workflow in `.github/workflows/ci.yml`: lint, Prettier check, the Playwright suite, the Vite build, and a Docker build with a smoke test of the container.
 
-| Script                 | What it does                          |
-| ---------------------- | ------------------------------------- |
-| `npm run dev`          | Start the Vite dev server             |
-| `npm run build`        | Build the static site into `dist/`    |
-| `npm run preview`      | Serve the build locally               |
-| `npm run lint`         | ESLint (flat config, browser globals) |
-| `npm run format`       | Prettier over the whole repository    |
-| `npm run format:check` | Prettier in check mode                |
+| Script                  | What it does                                                                            |
+| ----------------------- | --------------------------------------------------------------------------------------- |
+| `npm run dev`           | Start the Vite dev server                                                               |
+| `npm run build`         | Build the static site into `dist/`                                                      |
+| `npm run preview`       | Serve the build locally                                                                 |
+| `npm run lint`          | ESLint (flat config, browser globals)                                                   |
+| `npm run format`        | Prettier over the whole repository                                                      |
+| `npm run format:check`  | Prettier in check mode                                                                  |
+| `npm test`              | Playwright integration tests of the web app in a headless Chromium (starts Vite itself) |
+| `npm run desktop`       | Build and open the Electron desktop app                                                 |
+| `npm run desktop:build` | Package the desktop app for the current OS into `release/`                              |
+| `npm run test:desktop`  | Playwright smoke test of the desktop app (after `npm run build`)                        |
+| `npm run mcp`           | Start the MCP server on stdio (after `npm run build`)                                   |
+| `npm run test:mcp`      | End-to-end test of the MCP server with a real MCP client (after `npm run build`)        |
 
 Project layout:
 
@@ -216,6 +233,7 @@ Project layout:
 index.html          entry point
 Dockerfile          two-stage image: Vite build, then nginx serving dist/
 electron/            Electron main process, sandboxed preload and app icon
+mcp/                 MCP server (stdio) rendering reports headlessly through dist/
 electron-builder.yml packaging targets: Windows portable exe, Linux AppImage, macOS dmg and zip
 src/main.js         the whole application: state, templates, rendering, export
 src/ui.css          studio chrome (sidebar, toolbar, preview frame)
