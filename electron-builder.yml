@@ -12,9 +12,14 @@ files:
 artifactName: ${name}-${version}-${os}-${arch}.${ext}
 npmRebuild: false
 win:
-  # One portable exe per architecture: markdown-paged-studio-<version>-win-x64.exe and -win-arm64.exe
+  # Per architecture (x64 and arm64): a portable exe, and a zip of the unpacked app folder for
+  # environments where downloaded executables are blocked (unzip, then run the exe inside).
   target:
     - target: portable
+      arch:
+        - x64
+        - arm64
+    - target: zip
       arch:
         - x64
         - arm64
