@@ -94,7 +94,7 @@ flowchart LR
 | `width`   | `10%` to `100%`, or a size in `mm` | Width as a share of the text column, or absolute; the height follows |
 | `align`   | `left`, `center`, `right`          | Horizontal position, centered by default                             |
 
-You rarely need to type them: hover or click a diagram in the preview to get size presets (25, 50, 75, 100 %, natural size), alignment buttons and a handle to drag, which also answers to the arrow keys in 5 % steps. A clicked diagram keeps its tools open, also on touch screens, until you click elsewhere or press Escape, so several adjustments can follow one another. Every change is written back to that opening line as an ordinary edit of the editor: Ctrl+Z undoes it, in the editor or, with the pointer in the preview, straight from there (also when the sidebar is hidden), so the size travels with the Markdown into exports, the desktop app and the MCP server. Without attributes a diagram keeps its natural size, and it is never taller than the text area of a page.
+You rarely need to type them: hover or click a diagram in the preview to get size presets (25, 50, 75, 100 %, natural size), alignment buttons and a handle to drag, which also answers to the arrow keys in 5 % steps. A clicked diagram keeps its tools open, also on touch screens, until you click elsewhere or press Escape, so several adjustments can follow one another. Every change is written back to that opening line as an ordinary edit of the editor, like what the insert buttons write: Ctrl+Z undoes it, in the editor or, with the pointer in the preview, straight from there (also when the sidebar is hidden), so the size travels with the Markdown into exports, the desktop app and the MCP server. Without attributes a diagram keeps its natural size, and it is never taller than the text area of a page.
 
 Every diagram type supported by [Mermaid](https://mermaid.js.org) works. Diagrams are rendered before pagination, so Paged.js knows their exact size, and the resulting SVG is part of the exported file. A diagram with a syntax error shows its error message and source in place, without breaking the rest of the document. Mermaid is loaded on demand the first time a document contains a diagram.
 
@@ -151,6 +151,8 @@ Good to know:
 
 ### Cover page, header and footer
 
+![The four cover templates: classic, centered, colour band and minimal](docs/screenshots/covers.png)
+
 - **Content** tab: title, subtitle, author, date, the cover page toggle, the logo (any image; wider than 1200 px it is scaled down), and the cover template (classic, centered, colour band, minimal) with its accent colour.
 - **Design** tab: header title (top left), header name (top right) and footer text (bottom left). The page counter always sits at the bottom right. With **Use the current chapter as header title**, the header shows the first-level heading the page belongs to.
 
@@ -203,11 +205,17 @@ Diagrams live in `.mermaid-diagram` (with `.is-sized` and the `--diagram-width` 
 | **Sidebar toggle** (left of the toolbar) | Hide or show the settings sidebar to give the preview the full width; in the desktop app also **View → Toggle Sidebar** (Ctrl+B) |
 | **Links** of the document                | Open in a new tab (the system browser in the desktop app), so the studio stays in place                                          |
 
-![Two pages side by side in the preview](docs/screenshots/spread.png)
+![Two pages side by side in the preview: table of contents, highlighted code and a captioned diagram](docs/screenshots/spread.png)
 
 Layout, zoom and the sidebar state are remembered in the browser, separately from the document.
 
 The footer of the sidebar shows which build is running, for example `v1.6.0 · 31ee325`: the version links to its release notes and the commit to the exact source. It tells apart two deployments of the online demo made between two releases.
+
+### Interface language
+
+The studio speaks English and French. It follows the language of the browser and the selector at the bottom of the sidebar changes it; the choice is remembered on that device. It is a setting of the studio, not of the document: the language of the document, which drives hyphenation and quotes, is set in the **Page** tab.
+
+![The studio in French](docs/screenshots/french.png)
 
 ### Personal defaults
 
@@ -310,6 +318,7 @@ GitHub Actions workflows in `.github/workflows/`: `ci.yml` runs on every push an
 | `npm run test:desktop`  | Playwright smoke test of the desktop app (after `npm run build`)                        |
 | `npm run mcp`           | Start the MCP server on stdio (after `npm run build`)                                   |
 | `npm run test:mcp`      | End-to-end test of the MCP server with a real MCP client (after `npm run build`)        |
+| `npm run screenshots`   | Retake the screenshots of this README from the build (after `npm run build`)            |
 | `npm run test:unit`     | Unit tests of the Markdown, image and font helpers, and of the changelog (Node runner)  |
 
 Project layout:
@@ -322,6 +331,7 @@ src/config.js       defaults (built-in and local/), state, validation, autosave
 src/markdown.js     markdown-it and Mermaid diagrams, fence attributes
 src/images.js       image library: matching by file name, storage, upload; logo storage
 src/i18n.js         interface language: French translations, applied to the markup
+src/editor.js       edits of the Markdown editor that keep its undo history
 src/fonts.js        bundled document font: loaded for the preview, inlined in exports
 src/font-faces.js   which font subsets a text needs (pure helpers)
 src/resize-controls.js resize controls on the diagrams and images of the preview
@@ -337,7 +347,8 @@ electron/           Electron main process, sandboxed preload and app icon
 electron-builder.yml packaging targets: Windows portable exe and zip, Linux AppImage, macOS dmg and zip
 mcp/                MCP server (stdio) rendering reports headlessly through dist/
 Dockerfile          two-stage image: Vite build, then nginx serving dist/
-docs/screenshots/   images used in this README
+docs/screenshots/   images used in this README, taken by scripts/screenshots.mjs
+scripts/            release notes from the changelog, README screenshots
 ```
 
 The rendered document is styled only by the CSS generated in `documentCss()`, never by `src/ui.css`. The integration tests in `tests/studio-*.spec.js` (one file per domain, shared helpers in `tests/helpers/studio.mjs`) drive the real studio in a headless Chromium, since Paged.js needs a browser to lay out pages: rendering, scrolling, re-render hygiene, Mermaid, autosave, config validation, layout and zoom, export, print and the JSON round trip. Run `npx playwright install chromium --only-shell` once before `npm test`.

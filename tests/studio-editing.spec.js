@@ -1,5 +1,6 @@
 // Integration tests of what the preview does to the editor: links, undo, keyboard resizing.
 import { test, expect } from '@playwright/test';
+import { png } from './helpers/png.mjs';
 import {
   appendMarkdown,
   diagramGeometry,
@@ -135,4 +136,41 @@ test('a change made with the editor hidden is undone and redone from the preview
   await page.locator('#preview').click({ position: { x: 5, y: 5 } });
   await page.keyboard.press('Control+z');
   await expect(editor).toHaveValue(/```mermaid width=50%\n[^]*Typed since\.\n$/);
+});
+
+test('what the insert buttons and pasted images write can be undone in the editor', async ({ page }) => {
+  await openFreshStudio(page);
+  const editor = page.locator('#markdown');
+  await editor.focus();
+  await page.keyboard.press('Control+End');
+  await page.keyboard.type('Typed.');
+  await expect(editor).toHaveValue(/Typed\.$/);
+
+  await page.locator('#insertPageBreak').click();
+  await expect(editor).toHaveValue(/Typed\.\n\n\\newpage\n$/);
+  // The cursor sits after the inserted block: the next insertion follows it.
+  await page.locator('#insertToc').click();
+  await expect(editor).toHaveValue(/\\newpage\n\n\[\[toc\]\]\n$/);
+  await page.locator('#imageFiles').setInputFiles({ name: 'plan.png', mimeType: 'image/png', buffer: png(30, 20) });
+  await page.locator('#imageList button', { hasText: 'Insert' }).click();
+  await expect(editor).toHaveValue(/\[\[toc\]\]\n\n!\[plan\]\(plan\.png\)\n$/);
+  await expect(page.locator('#preview .document-image')).toHaveCount(1);
+
+  await editor.focus();
+  await page.keyboard.press('Control+z');
+  await expect(editor).toHaveValue(/\[\[toc\]\]\n$/);
+  await page.keyboard.press('Control+z');
+  await expect(editor).toHaveValue(/Typed\.\n\n\\newpage\n$/);
+  await page.keyboard.press('Control+z');
+  await expect(editor).toHaveValue(/Typed\.$/);
+  await expect(page.locator('#preview .page-break')).toHaveCount(0);
+  await page.keyboard.press('Control+Shift+z');
+  await expect(editor).toHaveValue(/Typed\.\n\n\\newpage\n$/);
+
+  // With the editor out of sight the text is still written.
+  await page.getByRole('tab', { name: 'Design' }).click();
+  await editor.evaluate(el => el.setSelectionRange(el.value.length, el.value.length));
+  await page.evaluate(() => document.getElementById('insertToc').click());
+  await expect(editor).toHaveValue(/\\newpage\n\n\[\[toc\]\]\n$/);
+  await expect(page.locator('#preview .toc')).toHaveCount(1);
 });

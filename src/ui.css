@@ -294,6 +294,12 @@ button:hover {
   flex-wrap: wrap;
   justify-content: flex-end;
 }
+/* Compact labels: the five actions fit on one line beside the view controls, also in French. */
+.toolbar-actions button {
+  padding: 8px 10px;
+  font-size: 13px;
+  white-space: nowrap;
+}
 .preview-shell {
   flex: 1;
   min-height: 0;

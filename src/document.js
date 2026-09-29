@@ -140,7 +140,7 @@ export function documentCss() {
 .toc { margin: 4mm 0 8mm; }
 .toc-list { list-style: none; margin: 0; padding: 0; }
 .toc-item { margin: 1.4mm 0; break-inside: avoid; }
-.toc-item a { display: flex; align-items: baseline; gap: 2mm; color: inherit; text-decoration: none; }
+.toc-item a { display: flex; align-items: last baseline; gap: 2mm; color: inherit; text-decoration: none; }
 .toc-item a::after { content: target-counter(attr(href), page); font-variant-numeric: tabular-nums; }
 .toc-dots { flex: 1; min-width: 8mm; border-bottom: .25mm dotted #9aa0a6; }
 .toc-level-1 { font-weight: 600; margin-top: 3mm; }

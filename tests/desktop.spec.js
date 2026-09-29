@@ -85,6 +85,23 @@ test('the desktop app renders the document and exports a PDF directly', async ()
     expect((illustrated.match(/\/Subtype\s*\/Image/g) || []).length).toBeGreaterThanOrEqual(2);
     expect(illustrated).toMatch(/\/FontName\s*\/[A-Z]{6}\+Inter/);
 
+    // Undo from the preview: the Edit menu of the application must not swallow the shortcut.
+    const editor = page.locator('#markdown');
+    const picture = page.locator('#preview .document-image');
+    await picture.scrollIntoViewIfNeeded();
+    await picture.click();
+    await picture.getByRole('button', { name: 'Width 25 %' }).click();
+    await expect(editor).toHaveValue(/\{width=25%\}/);
+    await expect(page.locator('#preview')).not.toHaveClass(/is-stale/);
+    await page.locator('.preview-shell').click({ position: { x: 5, y: 5 } });
+    await page.keyboard.press('ControlOrMeta+z');
+    await expect(editor).toHaveValue(/\{width=50%\}/);
+    await editor.focus();
+    await page.keyboard.press('ControlOrMeta+z');
+    await expect(editor).not.toHaveValue(/\{width=50%\}\n$/);
+    await page.locator('#markdown').fill('# Pictures\n\n![Plan](plan.png){width=50%}\n');
+    await expect(page.locator('#preview')).not.toHaveClass(/is-stale/);
+
     // After a restart the image and the logo are still there.
     await page.reload();
     await expect.poll(() => image.evaluate(el => el.naturalWidth)).toBe(600);

@@ -2,7 +2,7 @@
 // highlighting, running header, facing pages and cover templates.
 import { test, expect } from '@playwright/test';
 import { readFileSync } from 'node:fs';
-import { marginBoxContent, openDocument, pages, status } from './helpers/studio.mjs';
+import { marginBoxContent, openDocument, pages, setMarkdown, status } from './helpers/studio.mjs';
 
 const REPORT = [
   '# Report',
@@ -42,6 +42,28 @@ test('page breaks split the document and the table of contents shows the page nu
   const entries = page.locator('#preview .toc-item a');
   await expect(entries.locator('.toc-text')).toHaveText(['First chapter', 'Details', 'Second chapter']);
   expect(await tocNumbers(entries)).toEqual([3, 3, 4]);
+
+  // The page number of an entry on several lines sits on its last line.
+  await setMarkdown(page, `${REPORT}\n\n## ${'A long heading that wraps in the table of contents. '.repeat(3)}\n`);
+  await expect(entries).toHaveCount(4);
+  await expect(page.locator('#preview')).not.toHaveClass(/is-stale/);
+  const long = await entries.nth(3).evaluate(link => {
+    const text = link.querySelector('.toc-text');
+    const range = document.createRange();
+    range.selectNodeContents(text);
+    const lines = [...range.getClientRects()];
+    const dots = link.querySelector('.toc-dots').getBoundingClientRect();
+    return {
+      lines: new Set(lines.map(line => Math.round(line.top))).size,
+      last: lines.at(-1).bottom,
+      dots: dots.bottom,
+    };
+  });
+  expect(long.lines).toBeGreaterThan(1);
+  expect(Math.abs(long.dots - long.last)).toBeLessThan(6);
+  await setMarkdown(page, REPORT);
+  await expect(entries).toHaveCount(3);
+  await expect(page.locator('#preview')).not.toHaveClass(/is-stale/);
 
   // The entries and the cross-references lead to their heading; the studio stays in place.
   const shell = page.locator('.preview-shell');

@@ -2,6 +2,7 @@
 // The markup itself lives in index.html.
 import { clearStoredConfig, DEFAULTS, sanitizeConfig, state } from './config.js';
 import { standaloneHtml } from './document.js';
+import { insertBlock } from './editor.js';
 import {
   addImageFiles,
   clearImages,
@@ -276,11 +277,7 @@ function imageReference(name) {
 }
 
 function insertIntoEditor(text) {
-  const editor = document.getElementById('markdown');
-  const before = editor.value.slice(0, editor.selectionStart);
-  const lead = before && !before.endsWith('\n\n') ? (before.endsWith('\n') ? '\n' : '\n\n') : '';
-  editor.setRangeText(`${lead}${text}\n`, editor.selectionStart, editor.selectionEnd, 'end');
-  editor.dispatchEvent(new Event('input'));
+  insertBlock(document.getElementById('markdown'), text);
 }
 
 function reportImages(results) {

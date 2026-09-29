@@ -7,6 +7,7 @@ import { schedulePersist, state } from './config.js';
 import { setMissingImages } from './images.js';
 import { enhanceResizables } from './resize-controls.js';
 import { documentCss, documentHtml } from './document.js';
+import { editInPlace } from './editor.js';
 import { loadPreviewFonts } from './fonts.js';
 import { t } from './i18n.js';
 import { applyView } from './view.js';
@@ -94,39 +95,6 @@ export async function render() {
     if (token === renderToken) preview.classList.remove('is-rendering');
     setTimeout(() => URL.revokeObjectURL(styleUrl), 1000);
   }
-}
-
-// Writes `next` into the editor as an edit of its smallest changed range, through the browser's editing
-// command: unlike assigning `value`, this keeps the undo history, so Ctrl+Z reverts the change and what was
-// typed before it. Returns false when the editor cannot take the edit (hidden sidebar or panel).
-function editInPlace(editor, next) {
-  const current = editor.value;
-  if (!editor.checkVisibility?.({ visibilityProperty: true })) return false;
-
-  let start = 0;
-  const limit = Math.min(current.length, next.length);
-  while (start < limit && current[start] === next[start]) start++;
-  let tail = 0;
-  while (tail < limit - start && current[current.length - 1 - tail] === next[next.length - 1 - tail]) tail++;
-  const end = current.length - tail;
-  const inserted = next.slice(start, next.length - tail);
-
-  const focused = document.activeElement;
-  const { selectionStart, selectionEnd, scrollTop } = editor;
-  // A caret after the edited range moves with the text; inside the range it goes to its end.
-  const shift = offset =>
-    offset <= start ? offset : Math.max(start + inserted.length, offset + next.length - current.length);
-
-  editor.focus({ preventScroll: true });
-  if (document.activeElement !== editor) return false;
-  editor.setSelectionRange(start, end);
-  // Deprecated but without replacement: no other API records an edit in the undo history of a textarea.
-  const command = inserted ? 'insertText' : 'delete';
-  const done = document.execCommand(command, false, inserted) && editor.value === next;
-  if (done) editor.setSelectionRange(shift(selectionStart), shift(selectionEnd));
-  editor.scrollTop = scrollTop;
-  if (focused instanceof HTMLElement && focused !== editor) focused.focus({ preventScroll: true });
-  return done;
 }
 
 // Changes made from the preview, so they can be undone from the preview too: Ctrl+Z in the editor only works

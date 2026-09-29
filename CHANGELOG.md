@@ -7,6 +7,23 @@ All notable changes to Markdown Paged Studio are listed here, newest first. The 
 
 ## [Unreleased]
 
+## [1.13.0] - 2026-09-29
+
+### Added
+
+- `npm run screenshots` retakes the screenshots of the README from the build.
+
+### Changed
+
+- The actions of the toolbar are more compact and fit on one line.
+- The page number of a table of contents entry written on several lines sits on its last line.
+- README screenshots show the table of contents, the cover templates and the French interface.
+
+### Fixed
+
+- What the **Page break**, **Table of contents** and image **Insert** buttons write, and pasted or dropped
+  images, can be undone with Ctrl+Z in the editor.
+
 ## [1.12.0] - 2026-09-29
 
 ### Added
@@ -183,7 +200,8 @@ All notable changes to Markdown Paged Studio are listed here, newest first. The 
 - Portable desktop app for Windows, Linux and macOS with direct PDF export.
 - Docker image, Playwright integration tests and CI.
 
-[Unreleased]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.12.0...HEAD
+[Unreleased]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.13.0...HEAD
+[1.13.0]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.12.0...v1.13.0
 [1.12.0]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.11.0...v1.12.0
 [1.11.0]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.10.0...v1.11.0
 [1.10.0]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.9.0...v1.10.0
