@@ -49,6 +49,19 @@ test('the desktop app renders the document and exports a PDF directly', async ()
     }, viaMenu);
     await expect.poll(() => existsSync(viaMenu), { timeout: 30_000 }).toBe(true);
     expect(readFileSync(viaMenu).subarray(0, 5).toString()).toBe('%PDF-');
+
+    // A link of the document goes to the system browser and the studio stays in place.
+    await app.evaluate(({ shell }) => {
+      globalThis.openedExternally = [];
+      shell.openExternal = async url => void globalThis.openedExternally.push(url);
+    });
+    await page.locator('#markdown').fill('# Links\n\n[External](https://example.com/page)\n');
+    const link = page.locator('#preview .document-content a');
+    await expect(link).toHaveText('External');
+    await link.click();
+    await expect.poll(() => app.evaluate(() => globalThis.openedExternally)).toEqual(['https://example.com/page']);
+    expect(page.url()).toBe('app://studio/');
+    expect(app.windows()).toHaveLength(1);
   } finally {
     await app.close();
   }

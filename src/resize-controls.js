@@ -45,6 +45,9 @@ const ALIGNMENT_BUTTONS = {
 // renders: attribute changes never move a diagram or an image to another line.
 let selectedKey = null;
 let listening = false;
+// Key of the element whose handle was driven from the keyboard: the render that follows replaces the
+// handle, and the new one takes the focus so the arrow keys can go on.
+let keyboardKey = null;
 
 function applySelection(preview) {
   for (const element of preview.querySelectorAll('.resizable')) {
@@ -61,13 +64,18 @@ function select(preview, key) {
 function listenForDeselection(preview) {
   if (listening) return;
   listening = true;
-  const clear = () => select(preview, null);
+  const clear = () => {
+    keyboardKey = null;
+    select(preview, null);
+  };
   (preview.closest('.preview-shell') ?? preview).addEventListener('pointerdown', event => {
     if (!event.target.closest('.resizable')) clear();
   });
   document.addEventListener('keydown', event => {
     if (event.key === 'Escape' && selectedKey !== null) clear();
   });
+  // Any click ends the keyboard session of a handle.
+  document.addEventListener('pointerdown', () => (keyboardKey = null), true);
 }
 
 const clamp = percent => Math.min(DIAGRAM_WIDTH_MAX, Math.max(DIAGRAM_WIDTH_MIN, Math.round(percent)));
@@ -226,6 +234,13 @@ function enhance(diagram, target, commit, onSelect) {
     if (!direction) return;
     event.preventDefault();
     commit({ width: `${clamp(currentPercent(diagram, drawing) + direction * KEYBOARD_STEP)}%` });
+    // After the commit: writing the change into the editor takes the focus away for an instant.
+    keyboardKey = diagram.dataset.resizeKey;
+  });
+  handle.addEventListener('blur', event => {
+    // Moving the focus elsewhere ends the keyboard session. A handle replaced by a render also loses the
+    // focus, but to nothing.
+    if (event.relatedTarget) keyboardKey = null;
   });
 
   diagram.addEventListener('pointerdown', onSelect);
@@ -260,4 +275,12 @@ export function enhanceResizables(preview, getMarkdown, applyMarkdown) {
   }
   applySelection(preview);
   listenForDeselection(preview);
+  // Once selected, the handle is visible and can take the focus.
+  if (keyboardKey !== null) {
+    const handle = [...preview.querySelectorAll('.resizable')]
+      .find(element => element.dataset.resizeKey === keyboardKey)
+      ?.querySelector(':scope > .diagram-handle');
+    if (handle) handle.focus({ preventScroll: true });
+    else keyboardKey = null;
+  }
 }

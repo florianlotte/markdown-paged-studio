@@ -4,6 +4,8 @@ on:
   push:
     branches: [main]
   pull_request:
+  # Called by the desktop release, which builds nothing until these checks pass.
+  workflow_call:
 
 jobs:
   check:

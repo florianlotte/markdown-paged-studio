@@ -1,10 +1,13 @@
 name: Deploy to GitHub Pages
 
-# Publishes the web app at https://florianlotte.github.io/markdown-paged-studio/ on every push to main.
+# Publishes the web app at https://florianlotte.github.io/markdown-paged-studio/ once the CI workflow has
+# passed on main, so a commit that fails the tests is never deployed. "Run workflow" deploys main by hand.
 # One-time setup: in the repository Settings > Pages, set Source to "GitHub Actions". The workflow token
 # cannot create the Pages site itself ("Resource not accessible by integration").
 on:
-  push:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
     branches: [main]
   workflow_dispatch:
 
@@ -19,6 +22,10 @@ concurrency:
 
 jobs:
   deploy:
+    # CI also runs for pull requests and is called by the release: only its pushes to main deploy.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     environment:
@@ -26,6 +33,9 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v5
+        with:
+          # The commit that was tested, not whatever main points to by now.
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
       - uses: actions/setup-node@v7
         with:

@@ -90,7 +90,7 @@ flowchart LR
 | `width`   | `10%` to `100%`, or a size in `mm` | Width as a share of the text column, or absolute; the height follows |
 | `align`   | `left`, `center`, `right`          | Horizontal position, centered by default                             |
 
-You rarely need to type them: hover or click a diagram in the preview to get size presets (25, 50, 75, 100 %, natural size), alignment buttons and a handle to drag, which also answers to the arrow keys in 5 % steps. A clicked diagram keeps its tools open, also on touch screens, until you click elsewhere or press Escape, so several adjustments can follow one another. Every change is written back to that opening line, so the size travels with the Markdown into exports, the desktop app and the MCP server. Without attributes a diagram keeps its natural size, and it is never taller than the text area of a page.
+You rarely need to type them: hover or click a diagram in the preview to get size presets (25, 50, 75, 100 %, natural size), alignment buttons and a handle to drag, which also answers to the arrow keys in 5 % steps. A clicked diagram keeps its tools open, also on touch screens, until you click elsewhere or press Escape, so several adjustments can follow one another. Every change is written back to that opening line as an ordinary edit of the editor (Ctrl+Z undoes it), so the size travels with the Markdown into exports, the desktop app and the MCP server. Without attributes a diagram keeps its natural size, and it is never taller than the text area of a page.
 
 Every diagram type supported by [Mermaid](https://mermaid.js.org) works. Diagrams are rendered before pagination, so Paged.js knows their exact size, and the resulting SVG is part of the exported file. A diagram with a syntax error shows its error message and source in place, without breaking the rest of the document. Mermaid is loaded on demand the first time a document contains a diagram.
 
@@ -186,6 +186,7 @@ Diagrams live in `.mermaid-diagram` (with `.is-sized` and the `--diagram-width` 
 | **Fit**                                  | Fit the page (or the pair of pages) to the available width, and keep following window resizes                                    |
 | **Ctrl + wheel** (Cmd on macOS)          | Zoom with the mouse over the preview                                                                                             |
 | **Sidebar toggle** (left of the toolbar) | Hide or show the settings sidebar to give the preview the full width; in the desktop app also **View → Toggle Sidebar** (Ctrl+B) |
+| **Links** of the document                | Open in a new tab (the system browser in the desktop app), so the studio stays in place                                          |
 
 ![Two pages side by side in the preview](docs/screenshots/spread.png)
 
@@ -278,7 +279,7 @@ The build context includes the gitignored `local/` folder, so an image built on 
 
 ## Development
 
-GitHub Actions workflows in `.github/workflows/`: `ci.yml` runs on every push and pull request (lint, Prettier check, the web, desktop and MCP test suites, the Vite build, a Docker build with a smoke test of the container); `release-desktop.yml` builds and publishes the desktop binaries on `v*` tags or on demand; `pages.yml` deploys the web app to GitHub Pages from `main`. Dependabot keeps npm packages and the actions up to date.
+GitHub Actions workflows in `.github/workflows/`: `ci.yml` runs on every push and pull request (lint, Prettier check, the web, desktop and MCP test suites, the Vite build, a Docker build with a smoke test of the container); `release-desktop.yml` builds and publishes the desktop binaries on `v*` tags or on demand, after running the same checks; `pages.yml` deploys the web app to GitHub Pages once `ci.yml` has passed on `main`. A commit that fails the tests is neither deployed nor released. Dependabot keeps npm packages and the actions up to date.
 
 | Script                  | What it does                                                                            |
 | ----------------------- | --------------------------------------------------------------------------------------- |

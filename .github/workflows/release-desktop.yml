@@ -18,8 +18,16 @@ permissions:
   contents: write
 
 jobs:
+  # Lint, tests and builds of ci.yml: no binary is built or published from a commit that fails them.
+  checks:
+    name: Checks
+    uses: ./.github/workflows/ci.yml
+    permissions:
+      contents: read
+
   build:
     name: ${{ matrix.os }}
+    needs: checks
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     strategy:
@@ -78,7 +86,6 @@ jobs:
             release/*.AppImage
             release/*.dmg
             release/*.zip
-            release/SHA256SUMS-*.txt
             release/SHA256SUMS-*.txt
           if-no-files-found: error
 

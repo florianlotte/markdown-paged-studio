@@ -391,8 +391,25 @@ function bindImages() {
   renderImageList();
 }
 
+// Links of the document open outside the studio (new tab, or the system browser in the desktop app):
+// following them in place would replace the studio. The exported document keeps ordinary links.
+function bindPreviewLinks() {
+  document.getElementById('preview').addEventListener('click', event => {
+    const link = event.target.closest?.('a[href]');
+    if (!link) return;
+    // Already handled: selecting an image that sits inside a link.
+    const handled = event.defaultPrevented;
+    event.preventDefault();
+    // Anchors and relative links would resolve against the studio address: they have nowhere to go here.
+    const href = link.getAttribute('href');
+    if (handled || !/^(https?|mailto):/i.test(href)) return;
+    window.open(href, '_blank', 'noopener');
+  });
+}
+
 export function initUi() {
   showVersion();
+  bindPreviewLinks();
   syncInputs();
   bindInputs();
   bindTabs();

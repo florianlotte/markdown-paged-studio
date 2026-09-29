@@ -86,7 +86,7 @@ function createWindow() {
         },
       };
     }
-    if (/^https?:/.test(url)) shell.openExternal(url);
+    if (/^(https?|mailto):/i.test(url)) shell.openExternal(url);
     return { action: 'deny' };
   });
 

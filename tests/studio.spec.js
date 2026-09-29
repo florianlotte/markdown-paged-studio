@@ -919,3 +919,96 @@ test('every image can be sized and aligned: same paragraph, table cell, link', a
   await expect.poll(async () => (await imageGeometry(page, '#preview a .document-image'))?.percent).toBe(25);
   expect(page.url()).not.toContain('example.com');
 });
+
+test('links of the preview open in a new tab and never replace the studio', async ({ page, context }) => {
+  await context.route('https://example.com/**', route => route.fulfill({ contentType: 'text/html', body: 'ok' }));
+  await openFreshStudio(page);
+  await setMarkdown(
+    page,
+    '# Links\n\n[External](https://example.com/page) and [anchor](#links) and [file](other.md).\n',
+  );
+  const links = page.locator('#preview .document-content a');
+  await expect(links).toHaveCount(3);
+  await expect(page.locator('#preview')).not.toHaveClass(/is-stale/);
+  const studio = page.url();
+
+  const [opened] = await Promise.all([context.waitForEvent('page'), links.nth(0).click()]);
+  await expect(opened).toHaveURL('https://example.com/page');
+  expect(await opened.evaluate(() => window.opener)).toBeNull();
+  await opened.close();
+  expect(page.url()).toBe(studio);
+
+  // Anchors and relative links have no destination in the preview: nothing opens, nothing navigates.
+  await links.nth(1).click();
+  await links.nth(2).click();
+  await expect(pages(page)).not.toHaveCount(0);
+  expect(page.url()).toBe(studio);
+  expect(context.pages()).toHaveLength(1);
+});
+
+test('a change made from the preview can be undone in the editor, with what was typed before', async ({ page }) => {
+  await openDiagramDocument(page, 'Undo');
+  const editor = page.locator('#markdown');
+  const diagram = page.locator('#preview .mermaid-diagram');
+  await editor.focus();
+  await page.keyboard.press('Control+End');
+  await page.keyboard.type('Typed words');
+  await expect(page.locator('#preview .document-content')).toContainText('Typed words');
+  await expect(page.locator('#preview')).not.toHaveClass(/is-stale/);
+
+  await editor.evaluate(el => {
+    el.setSelectionRange(2, 6);
+    el.scrollTop = 0;
+  });
+  await diagram.scrollIntoViewIfNeeded();
+  await diagram.hover();
+  await diagram.getByRole('button', { name: 'Width 75 %' }).click();
+  await expect(editor).toHaveValue(/```mermaid width=75%\n[^]*Typed words$/);
+  await expect.poll(async () => (await diagramGeometry(page))?.percent).toBe(75);
+  // The caret of the editor stays where it was, and the focus stays in the preview.
+  expect(await editor.evaluate(el => [el.selectionStart, el.selectionEnd])).toEqual([2, 6]);
+  await expect(editor).not.toBeFocused();
+
+  await editor.focus();
+  await page.keyboard.press('Control+z');
+  await expect(editor).toHaveValue(/```mermaid\n[^]*Typed words$/);
+  await expect.poll(async () => (await diagramGeometry(page))?.percent).not.toBe(75);
+  await page.keyboard.press('Control+Shift+z');
+  await expect(editor).toHaveValue(/```mermaid width=75%\n/);
+  await page.keyboard.press('Control+z');
+  await page.keyboard.press('Control+z');
+  await expect(editor).not.toHaveValue(/Typed words/);
+  await expect(page.locator('#preview .document-content')).not.toContainText('Typed words');
+});
+
+test('the resize handle keeps the focus across renders, and works with the sidebar hidden', async ({ page }) => {
+  await openDiagramDocument(page, 'Keyboard');
+  const editor = page.locator('#markdown');
+  const diagram = page.locator('#preview .mermaid-diagram');
+  const handle = diagram.locator('.diagram-handle');
+  await diagram.hover();
+  await diagram.getByRole('button', { name: 'Width 50 %' }).click();
+  await expect.poll(async () => (await diagramGeometry(page))?.percent).toBe(50);
+  await expect(page.locator('#preview')).not.toHaveClass(/is-stale/);
+
+  await handle.focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(editor).toHaveValue(/width=55%/);
+  await expect.poll(async () => (await diagramGeometry(page))?.percent).toBe(55);
+  await expect(page.locator('#preview')).not.toHaveClass(/is-stale/);
+  await expect(handle).toBeFocused();
+  await page.keyboard.press('ArrowRight');
+  await expect(editor).toHaveValue(/width=60%/);
+  await expect.poll(async () => (await diagramGeometry(page))?.percent).toBe(60);
+  await expect(handle).toBeFocused();
+
+  // Hidden sidebar: the editor cannot take the edit, the source is replaced directly.
+  await page.locator('#toggleSidebar').click();
+  await expect(page.locator('#sidebar')).toBeHidden();
+  await expect(page.locator('#preview')).not.toHaveClass(/is-stale/);
+  await diagram.scrollIntoViewIfNeeded();
+  await diagram.hover();
+  await diagram.getByRole('button', { name: 'Width 25 %' }).click();
+  await expect.poll(async () => (await diagramGeometry(page))?.percent).toBe(25);
+  await expect(editor).toHaveValue(/width=25%/);
+});
