@@ -7,6 +7,12 @@ All notable changes to Markdown Paged Studio are listed here, newest first. The 
 
 ## [Unreleased]
 
+## [1.13.1] - 2026-09-29
+
+### Changed
+
+- The default accent colour of the cover templates is `#2c2f73`.
+
 ## [1.13.0] - 2026-09-29
 
 ### Added
@@ -200,7 +206,8 @@ All notable changes to Markdown Paged Studio are listed here, newest first. The 
 - Portable desktop app for Windows, Linux and macOS with direct PDF export.
 - Docker image, Playwright integration tests and CI.
 
-[Unreleased]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.13.0...HEAD
+[Unreleased]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.13.1...HEAD
+[1.13.1]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.13.0...v1.13.1
 [1.13.0]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.12.0...v1.13.0
 [1.12.0]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.11.0...v1.12.0
 [1.11.0]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.10.0...v1.11.0

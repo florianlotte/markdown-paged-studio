@@ -56,7 +56,7 @@ const DEFAULT_STATE = {
   runningHeader: false,
   mirrorMargins: false,
   coverTemplate: 'classic',
-  accentColor: '#1d4ed8',
+  accentColor: '#2c2f73',
 };
 
 // Value kind per config key. Anything not listed here is dropped on import.

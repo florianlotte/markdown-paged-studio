@@ -181,7 +181,7 @@ test('cover templates rearrange the same cover with the accent colour', async ({
   const title = page.locator('#preview .cover-title');
   const style = (locator, property) => locator.evaluate((el, name) => getComputedStyle(el)[name], property);
   expect(await style(cover, 'textAlign')).not.toBe('center');
-  await expect(page.locator('#accentColor')).toHaveValue('#1d4ed8');
+  await expect(page.locator('#accentColor')).toHaveValue('#2c2f73');
 
   await page.locator('#coverTemplate').selectOption('centered');
   await expect.poll(() => style(cover, 'textAlign')).toBe('center');
