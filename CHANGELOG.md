@@ -7,6 +7,16 @@ All notable changes to Markdown Paged Studio are listed here, newest first. The 
 
 ## [Unreleased]
 
+## [1.14.0] - 2026-09-29
+
+### Added
+
+- `docs/markdown-support.md`: what Markdown the studio understands, its four deliberate differences with
+  CommonMark, what is not supported, and the conformance measured on the official examples (all of CommonMark
+  apart from those differences).
+- `npm run conformance` measures the parser against the CommonMark and GFM examples, and a unit test fails when
+  a rule of the studio changes a basic syntax.
+
 ## [1.13.2] - 2026-09-29
 
 ### Changed
@@ -213,7 +223,8 @@ All notable changes to Markdown Paged Studio are listed here, newest first. The 
 - Portable desktop app for Windows, Linux and macOS with direct PDF export.
 - Docker image, Playwright integration tests and CI.
 
-[Unreleased]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.13.2...HEAD
+[Unreleased]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.14.0...HEAD
+[1.14.0]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.13.2...v1.14.0
 [1.13.2]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.13.1...v1.13.2
 [1.13.1]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.13.0...v1.13.1
 [1.13.0]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.12.0...v1.13.0

@@ -66,7 +66,7 @@ Node.js 20.19 or newer (or 22.12+) is required by Vite 8.
 
 ### Writing
 
-The **Content** tab holds the Markdown editor. Import an existing `.md` file or download the current one. The parser is [markdown-it](https://github.com/markdown-it/markdown-it) with CommonMark, tables, automatic links and typographic replacements. Raw HTML inside Markdown is intentionally disabled.
+The **Content** tab holds the Markdown editor. Import an existing `.md` file or download the current one. The parser is [markdown-it](https://github.com/markdown-it/markdown-it): all of [CommonMark](https://commonmark.org), plus tables, strikethrough, automatic links and typographic replacements. Raw HTML inside Markdown is intentionally disabled. [Markdown support](docs/markdown-support.md) lists what is understood, the four deliberate differences with the specification, what is not supported (task lists, footnotes…), and the conformance measured on the official examples.
 
 Whatever the studio writes into the editor for you (the insert buttons, a pasted image, a size set from the preview) is an ordinary edit: Ctrl+Z undoes it like something you typed.
 
@@ -344,22 +344,23 @@ The build context includes the gitignored `local/` folder, so an image built on 
 
 GitHub Actions workflows in `.github/workflows/`: `ci.yml` runs on every push and pull request (lint, Prettier check, the web, desktop and MCP test suites, the Vite build, a Docker build with a smoke test of the container); `release-desktop.yml` builds and publishes the desktop binaries on `v*` tags or on demand, once the same checks have passed on that commit (it waits for the CI run of the commit and only runs the checks itself when there is none), with release notes taken from `CHANGELOG.md`; `pages.yml` deploys the web app to GitHub Pages once `ci.yml` has passed on `main`. A commit that fails the tests is neither deployed nor released. Dependabot keeps npm packages and the actions up to date.
 
-| Script                  | What it does                                                                            |
-| ----------------------- | --------------------------------------------------------------------------------------- |
-| `npm run dev`           | Start the Vite dev server                                                               |
-| `npm run build`         | Build the static site into `dist/`                                                      |
-| `npm run preview`       | Serve the build locally                                                                 |
-| `npm run lint`          | ESLint (flat config, browser globals)                                                   |
-| `npm run format`        | Prettier over the whole repository                                                      |
-| `npm run format:check`  | Prettier in check mode                                                                  |
-| `npm test`              | Playwright integration tests of the web app in a headless Chromium (starts Vite itself) |
-| `npm run test:unit`     | Unit tests of the Markdown, image and font helpers, and of the changelog (Node runner)  |
-| `npm run desktop`       | Build and open the Electron desktop app                                                 |
-| `npm run desktop:build` | Package the desktop app for the current OS into `release/`                              |
-| `npm run test:desktop`  | Playwright smoke test of the desktop app (after `npm run build`)                        |
-| `npm run mcp`           | Start the MCP server on stdio (after `npm run build`)                                   |
-| `npm run test:mcp`      | End-to-end test of the MCP server with a real MCP client (after `npm run build`)        |
-| `npm run screenshots`   | Retake the screenshots of this README from the build (after `npm run build`)            |
+| Script                  | What it does                                                                              |
+| ----------------------- | ----------------------------------------------------------------------------------------- |
+| `npm run dev`           | Start the Vite dev server                                                                 |
+| `npm run build`         | Build the static site into `dist/`                                                        |
+| `npm run preview`       | Serve the build locally                                                                   |
+| `npm run lint`          | ESLint (flat config, browser globals)                                                     |
+| `npm run format`        | Prettier over the whole repository                                                        |
+| `npm run format:check`  | Prettier in check mode                                                                    |
+| `npm test`              | Playwright integration tests of the web app in a headless Chromium (starts Vite itself)   |
+| `npm run test:unit`     | Unit tests of the helpers, of the Markdown conformance and of the changelog (Node runner) |
+| `npm run desktop`       | Build and open the Electron desktop app                                                   |
+| `npm run desktop:build` | Package the desktop app for the current OS into `release/`                                |
+| `npm run test:desktop`  | Playwright smoke test of the desktop app (after `npm run build`)                          |
+| `npm run mcp`           | Start the MCP server on stdio (after `npm run build`)                                     |
+| `npm run test:mcp`      | End-to-end test of the MCP server with a real MCP client (after `npm run build`)          |
+| `npm run conformance`   | Measure the parser against the CommonMark and GFM examples (`-- --write` updates the doc) |
+| `npm run screenshots`   | Retake the screenshots of this README from the build (after `npm run build`)              |
 
 Project layout:
 
@@ -389,7 +390,8 @@ electron-builder.yml packaging targets: Windows portable exe and zip, Linux AppI
 mcp/                MCP server (stdio) rendering reports headlessly through dist/
 Dockerfile          two-stage image: Vite build, then nginx serving dist/
 docs/screenshots/   images used in this README, taken by scripts/screenshots.mjs
-scripts/            release notes from the changelog, README screenshots
+scripts/            release notes from the changelog, README screenshots, Markdown conformance
+docs/markdown-support.md supported Markdown, deliberate differences, measured conformance
 tests/              web (studio-*.spec.js), desktop, MCP and unit tests
 .github/            workflows, Dependabot, issue forms and pull request template
 ```
@@ -424,4 +426,4 @@ If the studio saves you time, you can support its development through [GitHub Sp
 
 [MIT](LICENSE) © 2026 Florian Lotte
 
-Code highlighting uses [highlight.js](https://highlightjs.org) (BSD 3-Clause). The bundled font, [Inter](https://rsms.me/inter/), is licensed under the [SIL Open Font License 1.1](https://openfontlicense.org).
+The specification examples used by the conformance tests ([CommonMark](https://spec.commonmark.org), [GFM](https://github.github.com/gfm/)) are under CC BY-SA 4.0 and are not part of the application. Code highlighting uses [highlight.js](https://highlightjs.org) (BSD 3-Clause). The bundled font, [Inter](https://rsms.me/inter/), is licensed under the [SIL Open Font License 1.1](https://openfontlicense.org).
