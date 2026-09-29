@@ -10,7 +10,8 @@ import { png } from './helpers/png.mjs';
 test('the desktop app renders the document and exports a PDF directly', async () => {
   const dir = mkdtempSync(path.join(tmpdir(), 'mps-desktop-'));
   const app = await electron.launch({
-    args: ['.'],
+    // The interface follows the system language: the test reads English labels.
+    args: ['.', '--lang=en-US'],
     env: { ...process.env, MPS_USER_DATA: path.join(dir, 'user-data') },
   });
   try {

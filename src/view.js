@@ -1,6 +1,8 @@
 // Preview view settings: page layout (one column or two pages side by side) and zoom. Stored apart from the
 // document, they are not part of the config JSON. Zoom uses the CSS `zoom` property so the scrollable area
 // follows the scale.
+import { t } from './i18n.js';
+
 const VIEW_KEY = 'markdown-paged-studio:view';
 const ZOOM_MIN = 0.25;
 const ZOOM_MAX = 3;
@@ -70,7 +72,7 @@ export function applyView() {
   document.querySelector('.shell').classList.toggle('sidebar-hidden', !view.sidebar);
   const toggle = document.getElementById('toggleSidebar');
   toggle.setAttribute('aria-expanded', String(view.sidebar));
-  toggle.setAttribute('aria-label', view.sidebar ? 'Hide sidebar' : 'Show sidebar');
+  toggle.setAttribute('aria-label', t(view.sidebar ? 'Hide sidebar' : 'Show sidebar'));
   toggle.title = toggle.getAttribute('aria-label');
   const preview = document.getElementById('preview');
   preview.dataset.layout = view.layout;

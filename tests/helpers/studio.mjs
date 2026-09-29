@@ -86,7 +86,7 @@ export const imageItems = page => page.locator('#imageList li');
 export async function openDocument(page, markdown, title) {
   await openFreshStudio(page);
   await setMarkdown(page, markdown);
-  await expect(page.locator('#preview .document-content h1')).toHaveText(title);
+  await expect(page.locator('#preview .document-content h1').first()).toHaveText(title);
   await expect(page.locator('#preview')).not.toHaveClass(/is-stale/);
 }
 

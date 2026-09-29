@@ -16,9 +16,10 @@ import {
   replaceImages,
   sanitizeImages,
 } from './images.js';
+import { currentLanguage, LANGUAGES, onLanguageChange, setLanguage, t } from './i18n.js';
 import { scheduleRender } from './render.js';
 import { APP_COMMIT, APP_VERSION, COMMIT_URL, RELEASE_URL } from './version.js';
-import { toggleSidebar } from './view.js';
+import { applyView, toggleSidebar } from './view.js';
 
 // Every state key has a form control with the same id, except the logo (a file input).
 const ids = Object.keys(state).filter(k => k !== 'logoDataUrl');
@@ -110,7 +111,7 @@ function bindFiles() {
     } catch (error) {
       console.error(error);
       e.target.value = '';
-      alert(`The logo could not be read: ${error?.message || error}`);
+      alert(t('The logo could not be read: {error}', { error: error?.message || error }));
     }
   });
 
@@ -119,6 +120,9 @@ function bindFiles() {
     document.getElementById('logo').value = '';
     scheduleRender();
   });
+
+  document.getElementById('insertPageBreak').addEventListener('click', () => insertIntoEditor('\\newpage'));
+  document.getElementById('insertToc').addEventListener('click', () => insertIntoEditor('[[toc]]'));
 
   document
     .getElementById('loadMarkdown')
@@ -163,7 +167,7 @@ function bindFiles() {
       try {
         loaded = JSON.parse(text);
       } catch {
-        alert('Invalid JSON file.');
+        alert(t('Invalid JSON file.'));
         return;
       }
       // A configuration saved before images existed has no `images` key: keep the current ones.
@@ -173,7 +177,7 @@ function bindFiles() {
   );
 
   document.getElementById('resetDocument').addEventListener('click', () => {
-    if (!confirm('Discard the current document and its images, and restore the sample?')) return;
+    if (!confirm(t('Discard the current document and its images, and restore the sample?'))) return;
     clearStoredConfig();
     clearImages();
     document.getElementById('logo').value = '';
@@ -191,7 +195,7 @@ function bindFiles() {
 async function openPrintWindow() {
   const win = window.open('', '_blank');
   if (!win) {
-    alert('The browser blocked the print window. Allow pop-ups for this site.');
+    alert(t('The browser blocked the print window. Allow pop-ups for this site.'));
     return;
   }
   const html = await standaloneHtml({ mode: 'print' });
@@ -208,10 +212,10 @@ async function exportPdfDirect() {
   button.disabled = true;
   try {
     const result = await window.desktop.exportPdf(await standaloneHtml({ mode: 'pdf' }));
-    if (!result.canceled) document.getElementById('status').textContent = 'PDF saved';
+    if (!result.canceled) document.getElementById('status').textContent = t('PDF saved');
   } catch (error) {
     console.error(error);
-    alert(`PDF export failed: ${error?.message || error}`);
+    alert(t('PDF export failed: {error}', { error: error?.message || error }));
   } finally {
     button.disabled = false;
   }
@@ -230,7 +234,9 @@ function bindPdf() {
       else if (command === 'toggle-sidebar') toggleSidebar();
     });
   } else {
-    button.title = 'Opens the print dialog: choose "Save as PDF"';
+    const describe = () => (button.title = t('Opens the print dialog: choose "Save as PDF"'));
+    describe();
+    onLanguageChange(describe);
     // Ctrl/Cmd+P prints the document rather than the studio page. On desktop the menu accelerator does this.
     document.addEventListener('keydown', event => {
       if ((event.ctrlKey || event.metaKey) && !event.altKey && event.key.toLowerCase() === 'p') {
@@ -281,8 +287,8 @@ function reportImages(results) {
   const status = document.getElementById('imagesStatus');
   status.textContent = results
     .map(result => {
-      if (result.error) return `${result.name}: ${result.error}.`;
-      return result.resized ? `${result.name} added, scaled down to ${result.width} px wide.` : `${result.name} added.`;
+      if (result.error) return t('{name}: {error}.', { name: result.name, error: t(result.error) });
+      return t(result.resized ? '{name} added, scaled down to {width} px wide.' : '{name} added.', result);
     })
     .join(' ');
   status.hidden = results.length === 0;
@@ -318,21 +324,21 @@ function imageListItem(image) {
   const details = document.createElement('span');
   details.className = 'image-details';
   const size = image.width && image.height ? `${image.width} × ${image.height} · ` : '';
-  details.textContent = `${size}${formatBytes(image.bytes)}${image.builtin ? ' · built in' : ''}`;
+  details.textContent = `${size}${formatBytes(image.bytes)}${image.builtin ? t(' · built in') : ''}`;
   text.append(name, details);
   const insert = document.createElement('button');
   insert.type = 'button';
   insert.className = 'secondary';
-  insert.textContent = 'Insert';
-  insert.title = `Insert ${image.name} at the cursor`;
+  insert.textContent = t('Insert');
+  insert.title = t('Insert {name} at the cursor', image);
   insert.addEventListener('click', () => insertIntoEditor(imageReference(image.name)));
   item.append(thumb, text, insert);
   if (!image.builtin) {
     const remove = document.createElement('button');
     remove.type = 'button';
     remove.className = 'secondary';
-    remove.textContent = 'Remove';
-    remove.title = `Remove ${image.name}`;
+    remove.textContent = t('Remove');
+    remove.title = t('Remove {name}', image);
     remove.addEventListener('click', () => removeImage(image.key));
     item.append(remove);
   }
@@ -349,7 +355,7 @@ function missingListItem(name) {
   label.textContent = name;
   const details = document.createElement('span');
   details.className = 'image-details';
-  details.textContent = 'Used in the document, not uploaded yet';
+  details.textContent = t('Used in the document, not uploaded yet');
   text.append(label, details);
   item.append(text);
   return item;
@@ -403,6 +409,14 @@ function bindPreviewLinks() {
   document.getElementById('preview').addEventListener('click', event => {
     const link = event.target.closest?.('a[href]');
     if (!link) return;
+    const anchor = link.getAttribute('href');
+    if (anchor.startsWith('#') && anchor.length > 1 && !event.defaultPrevented) {
+      // Table of contents and cross-references: show the page that holds the target.
+      event.preventDefault();
+      const target = [...event.currentTarget.querySelectorAll('[id]')].find(element => `#${element.id}` === anchor);
+      target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      return;
+    }
     // Already handled: selecting an image that sits inside a link.
     const handled = event.defaultPrevented;
     event.preventDefault();
@@ -413,8 +427,23 @@ function bindPreviewLinks() {
   });
 }
 
+// Footer selector of the interface language. What was written through t() is rebuilt on a change.
+function bindLanguage() {
+  const select = document.getElementById('uiLanguage');
+  select.replaceChildren(...Object.entries(LANGUAGES).map(([value, label]) => new Option(label, value)));
+  select.value = currentLanguage();
+  select.addEventListener('change', () => setLanguage(select.value));
+  onLanguageChange(() => {
+    applyView();
+    renderImageList();
+    document.getElementById('imagesStatus').hidden = true;
+    scheduleRender();
+  });
+}
+
 export function initUi() {
   showVersion();
+  bindLanguage();
   bindPreviewLinks();
   syncInputs();
   bindInputs();

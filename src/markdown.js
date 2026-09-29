@@ -10,21 +10,23 @@ export const md = new MarkdownIt({ html: false, linkify: true, typographer: true
 const WIDTH_PERCENT = /^(\d{1,3}(?:\.\d+)?)%$/;
 const WIDTH_MM = /^(\d{1,3}(?:\.\d+)?)mm$/;
 const ALIGNMENTS = ['left', 'center', 'right'];
+const CAPTION_MAX_LENGTH = 300;
+// One attribute: key=value or key="a value with spaces"; or a bare word.
+const ATTRIBUTE = /([\w-]+)=("[^"]*"|\S+)|\S+/g;
 export const DIAGRAM_WIDTH_MIN = 10;
 export const DIAGRAM_WIDTH_MAX = 100;
 
 // Attributes after the language on the fence line: "width=60% align=left" -> { width: '60%', align: 'left' }.
-// `width` is a share of the text column (10 to 100 %) or an absolute size in mm; anything else is ignored.
+// `width` is a share of the text column (10 to 100 %) or an absolute size in mm, `caption` a text shown
+// under the drawing (in double quotes when it holds spaces); anything else is ignored.
 export function parseDiagramAttributes(text) {
   const out = {};
-  for (const part of String(text ?? '')
-    .trim()
-    .split(/\s+/)) {
-    const separator = part.indexOf('=');
-    if (separator < 1) continue;
-    const key = part.slice(0, separator);
-    const value = part.slice(separator + 1);
-    if (key === 'width') {
+  for (const [, key, value] of String(text ?? '').matchAll(ATTRIBUTE)) {
+    if (!key) continue;
+    if (key === 'caption') {
+      const caption = value.replace(/^"|"$/g, '').trim().slice(0, CAPTION_MAX_LENGTH);
+      if (caption) out.caption = caption;
+    } else if (key === 'width') {
       const percent = WIDTH_PERCENT.exec(value);
       const mm = WIDTH_MM.exec(value);
       if (percent) out.width = `${Math.min(DIAGRAM_WIDTH_MAX, Math.max(DIAGRAM_WIDTH_MIN, Number(percent[1])))}%`;
@@ -57,10 +59,7 @@ export function updateFenceAttributes(markdown, line, changes) {
 // A change of null removes the attribute; attributes that are not changed are kept as written.
 function mergeAttributes(text, changes) {
   const attributes = new Map();
-  for (const part of String(text ?? '')
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean)) {
+  for (const [part] of String(text ?? '').matchAll(ATTRIBUTE)) {
     const separator = part.indexOf('=');
     attributes.set(separator < 1 ? part : part.slice(0, separator), separator < 1 ? null : part.slice(separator + 1));
   }
@@ -182,6 +181,107 @@ md.core.ruler.after('inline', 'image_attributes', state => {
   }
 });
 
+// ---- Page breaks and table of contents: a line holding only \\newpage or [[toc]] (or [[toc depth=2]]).
+
+const PAGE_BREAK = /^\\newpage$/;
+const TOC = /^\[\[toc(?:\s+depth=([1-6]))?\]\]$/i;
+const TOC_DEPTH = 3;
+// Prefix of the heading ids: the preview lives in the page of the studio, whose own ids must stay unique.
+export const ANCHOR_PREFIX = 'sec-';
+
+// Block rule for a marker alone on its line; `build` fills the token from the match.
+function markerRule(name, pattern, build) {
+  md.block.ruler.before(
+    'paragraph',
+    name,
+    (state, startLine, endLine, silent) => {
+      if (state.sCount[startLine] - state.blkIndent >= 4) return false;
+      const start = state.bMarks[startLine] + state.tShift[startLine];
+      const match = pattern.exec(state.src.slice(start, state.eMarks[startLine]).trim());
+      if (!match) return false;
+      if (silent) return true;
+      state.line = startLine + 1;
+      const token = state.push(name, 'div', 0);
+      token.map = [startLine, state.line];
+      token.markup = match[0];
+      build?.(token, match);
+      return true;
+    },
+    { alt: ['paragraph', 'reference', 'blockquote', 'list'] },
+  );
+}
+
+markerRule('page_break', PAGE_BREAK);
+markerRule('toc', TOC, (token, match) => {
+  token.meta = { depth: Number(match[1]) || TOC_DEPTH };
+});
+
+md.renderer.rules.page_break = () => '<div class="page-break"></div>\n';
+
+// "Étude & coûts (2026)" -> "etude-couts-2026", the way GitHub names its anchors.
+export function slugify(text) {
+  const slug = String(text)
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, '-')
+    .replace(/^-+|-+$/g, '');
+  return slug || 'section';
+}
+
+// Gives every heading an id, lists the headings for the table of contents, and points the links written
+// as [text](#my-heading) to the prefixed id.
+md.core.ruler.push('heading_anchors', state => {
+  const used = new Set();
+  const headings = [];
+  state.tokens.forEach((token, index) => {
+    if (token.type !== 'heading_open') return;
+    const text = (state.tokens[index + 1]?.children ?? [])
+      .filter(child => child.type === 'text' || child.type === 'code_inline')
+      .map(child => child.content)
+      .join('')
+      .trim();
+    const base = slugify(text);
+    let slug = base;
+    for (let n = 2; used.has(slug); n++) slug = `${base}-${n}`;
+    used.add(slug);
+    token.attrSet('id', `${ANCHOR_PREFIX}${slug}`);
+    headings.push({
+      level: Number(token.tag.slice(1)),
+      id: `${ANCHOR_PREFIX}${slug}`,
+      text,
+      line: token.map?.[0] ?? 0,
+    });
+  });
+  state.env.headings = headings;
+  for (const block of state.tokens) {
+    for (const child of block.children ?? []) {
+      const href = child.type === 'link_open' ? child.attrGet('href') : null;
+      if (!href?.startsWith('#')) continue;
+      let target = href.slice(1);
+      try {
+        target = decodeURIComponent(target);
+      } catch {
+        // Not valid percent-encoding: use the text as written.
+      }
+      if (used.has(target.toLowerCase())) child.attrSet('href', `#${ANCHOR_PREFIX}${target.toLowerCase()}`);
+    }
+  }
+});
+
+// The table lists the headings that follow it, down to its depth. Page numbers are added by the stylesheet
+// (target-counter), which Paged.js resolves once the pages exist.
+md.renderer.rules.toc = (tokens, idx, options, env) => {
+  const { meta, map } = tokens[idx];
+  const items = (env.headings ?? [])
+    .filter(heading => heading.line >= (map?.[1] ?? 0) && heading.level <= meta.depth)
+    .map(
+      heading =>
+        `<li class="toc-item toc-level-${heading.level}"><a href="#${escapeHtml(heading.id)}"><span class="toc-text">${escapeHtml(heading.text)}</span><span class="toc-dots"></span></a></li>`,
+    );
+  return `<nav class="toc"><ol class="toc-list">${items.join('')}</ol></nav>\n`;
+};
+
 md.renderer.rules.image = (tokens, idx, options, env, self) => {
   const token = tokens[idx];
   const source = token.attrGet('src') ?? '';
@@ -195,7 +295,14 @@ md.renderer.rules.image = (tokens, idx, options, env, self) => {
     }
     resolved = image.dataUrl;
   }
-  const classes = ['document-image', meta.width ? 'is-sized' : '', meta.alone ? 'is-block' : ''];
+  // The caption is the title of the image, ![Alt](photo.png "Caption"), or the caption attribute.
+  const caption = meta.caption ?? token.attrGet('title')?.trim().slice(0, CAPTION_MAX_LENGTH);
+  const classes = [
+    'document-image',
+    meta.width ? 'is-sized' : '',
+    meta.alone ? 'is-block' : '',
+    caption ? 'has-caption' : '',
+  ];
   const attributes = [
     `class="${classes.filter(Boolean).join(' ')}"`,
     Number.isInteger(meta.line) ? `data-line="${meta.line}" data-line-end="${meta.lineEnd}"` : '',
@@ -203,10 +310,10 @@ md.renderer.rules.image = (tokens, idx, options, env, self) => {
     meta.width ? `style="--image-width: ${meta.width}"` : '',
     meta.align ? `data-align="${meta.align}"` : '',
   ];
-  const title = token.attrGet('title');
   const alt = self.renderInlineAsText(token.children ?? [], options, env);
-  const image = `<img src="${escapeHtml(resolved)}" alt="${escapeHtml(alt)}"${title ? ` title="${escapeHtml(title)}"` : ''}>`;
-  return `<span ${attributes.filter(Boolean).join(' ')}>${image}</span>`;
+  const image = `<img src="${escapeHtml(resolved)}" alt="${escapeHtml(alt)}">`;
+  const legend = caption ? `<span class="image-caption">${escapeHtml(caption)}</span>` : '';
+  return `<span ${attributes.filter(Boolean).join(' ')}>${image}${legend}</span>`;
 };
 
 // ```mermaid fences become placeholders; renderDiagrams() turns them into inline SVG. The placeholder keeps
@@ -216,13 +323,14 @@ md.renderer.rules.fence = (tokens, idx, options, env, self) => {
   const token = tokens[idx];
   const [language = '', ...rest] = token.info.trim().split(/\s+/);
   if (language.toLowerCase() === 'mermaid') {
-    const { width, align } = parseDiagramAttributes(rest.join(' '));
+    const { width, align, caption } = parseDiagramAttributes(rest.join(' '));
     const attributes = [
       `class="mermaid-diagram${width ? ' is-sized' : ''}"`,
       `data-source="${escapeHtml(token.content)}"`,
       token.map ? `data-line="${token.map[0]}"` : '',
       width ? `style="--diagram-width: ${width}"` : '',
       align ? `data-align="${align}"` : '',
+      caption ? `data-caption="${escapeHtml(caption)}"` : '',
     ];
     return `<div ${attributes.filter(Boolean).join(' ')}></div>\n`;
   }
@@ -286,6 +394,43 @@ export async function renderDiagrams(html) {
     const source = node.dataset.source ?? '';
     delete node.dataset.source;
     node.innerHTML = await diagramSvg(mermaid, source);
+    if (node.dataset.caption) {
+      const caption = document.createElement('div');
+      caption.className = 'diagram-caption';
+      caption.textContent = node.dataset.caption;
+      delete node.dataset.caption;
+      node.append(caption);
+    }
+  }
+  return wrap.innerHTML;
+}
+
+// ---- Syntax highlighting of code blocks
+
+let highlighterPromise = null;
+// Loaded the first time a document holds a code block with a language.
+function loadHighlighter() {
+  highlighterPromise ??= import('highlight.js/lib/common')
+    .then(module => module.default)
+    .catch(error => {
+      highlighterPromise = null;
+      throw error;
+    });
+  return highlighterPromise;
+}
+
+// Colours the code blocks whose language is known (```js, ```python...). The theme is a class on the <pre>;
+// its colours come from documentCss(). Blocks without a language, or with an unknown one, stay plain.
+export async function highlightCode(html, theme = 'light') {
+  if (!['light', 'dark'].includes(theme) || !html.includes('<code class="language-')) return html;
+  const highlighter = await loadHighlighter();
+  const wrap = document.createElement('div');
+  wrap.innerHTML = html;
+  for (const code of wrap.querySelectorAll('pre > code[class*="language-"]')) {
+    const language = /(?:^|\s)language-(\S+)/.exec(code.className)?.[1];
+    if (!language || !highlighter.getLanguage(language)) continue;
+    code.innerHTML = highlighter.highlight(code.textContent, { language, ignoreIllegals: true }).value;
+    code.parentElement.classList.add('code-block', `code-${theme}`);
   }
   return wrap.innerHTML;
 }

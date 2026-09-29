@@ -70,6 +70,14 @@ button {
   color: #747b85;
   font-variant-numeric: tabular-nums;
 }
+.sidebar-footer .language-select {
+  width: auto;
+  margin: 0 0 0 auto;
+  padding: 3px 6px;
+  border-radius: 6px;
+  font-size: 11px;
+  color: inherit;
+}
 .sidebar-footer a {
   color: inherit;
   text-decoration: none;
@@ -148,6 +156,11 @@ textarea {
   padding: 9px 10px;
   margin-top: 5px;
   color: #1f2328;
+}
+input[type='color'] {
+  height: 38px;
+  padding: 4px;
+  cursor: pointer;
 }
 input:focus,
 select:focus,
@@ -305,6 +318,9 @@ button:hover {
 }
 .preview[data-layout='spread'] .pagedjs_pages {
   grid-template-columns: repeat(2, max-content);
+}
+.preview[data-layout='spread'][data-facing] .pagedjs_page:first-child {
+  grid-column: 2;
 }
 .view-controls {
   display: flex;

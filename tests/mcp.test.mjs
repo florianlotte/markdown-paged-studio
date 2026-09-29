@@ -250,3 +250,30 @@ test('rejects an empty document without crashing the server', async () => {
   const again = await client.callTool({ name: 'describe_config', arguments: {} });
   assert.equal(again.isError, undefined);
 });
+
+test('render_html supports the table of contents, page breaks, captions, highlighting and cover options', async () => {
+  const result = await client.callTool({
+    name: 'render_html',
+    arguments: {
+      markdown:
+        '# Report\n\n[[toc]]\n\n\\newpage\n\n# Chapter\n\n```js\nconst a = 1;\n```\n\n' +
+        '```mermaid caption="The flow"\nflowchart LR\n  A --> B\n```\n',
+      config: {
+        coverTemplate: 'band',
+        accentColor: '#AA3366',
+        codeTheme: 'dark',
+        runningHeader: true,
+        mirrorMargins: true,
+      },
+    },
+  });
+  assert.equal(result.isError, undefined, JSON.stringify(result.content));
+  const html = result.content.map(part => part.text ?? '').join('');
+  assert.match(html, /<nav class="toc">.*href="#sec-chapter"/s);
+  assert.match(html, /<div class="page-break"><\/div>/);
+  assert.match(html, /<pre class="code-block code-dark">/);
+  assert.match(html, /<div class="diagram-caption">The flow<\/div>/);
+  assert.match(html, /#aa3366 22mm/);
+  assert.match(html, /@page :left/);
+  assert.match(html, /string-set: chapter/);
+});

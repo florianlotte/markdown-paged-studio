@@ -87,11 +87,27 @@
               <label>Author<input id="author" /></label>
               <label>Date<input id="date" /></label>
               <label class="check"><input id="cover" type="checkbox" /> Show cover page</label>
+              <div class="grid2">
+                <label
+                  >Cover template
+                  <select id="coverTemplate">
+                    <option value="classic">Classic</option>
+                    <option value="centered">Centered</option>
+                    <option value="band">Colour band</option>
+                    <option value="minimal">Minimal</option>
+                  </select>
+                </label>
+                <label>Accent colour<input id="accentColor" type="color" /></label>
+              </div>
               <label>Logo<input id="logo" type="file" accept="image/*" /></label>
               <button id="clearLogo" class="secondary">Remove logo</button>
               <label
                 >Markdown<textarea id="markdown" class="editor markdown-editor" spellcheck="false"></textarea>
               </label>
+              <div class="row-actions">
+                <button id="insertPageBreak" class="secondary" title="Insert \newpage at the cursor">Page break</button>
+                <button id="insertToc" class="secondary" title="Insert [[toc]] at the cursor">Table of contents</button>
+              </div>
               <div class="row-actions">
                 <button id="loadMarkdown" class="secondary">Import .md</button>
                 <input id="markdownFile" type="file" accept=".md,.markdown,text/markdown,text/plain" hidden />
@@ -115,8 +131,20 @@
 
             <div class="panel" role="tabpanel" id="panel-design" aria-labelledby="tab-design" data-panel="design">
               <label>Header title<input id="headerTitle" /></label>
+              <label class="check"
+                ><input id="runningHeader" type="checkbox" /> Use the current chapter (first-level heading) as header
+                title</label
+              >
               <label>Header name<input id="headerName" /></label>
               <label>Footer text<input id="footerText" /></label>
+              <label
+                >Code highlighting
+                <select id="codeTheme">
+                  <option value="light">Light</option>
+                  <option value="dark">Dark</option>
+                  <option value="none">None</option>
+                </select>
+              </label>
               <label>Custom CSS<textarea id="customCss" class="editor css-editor" spellcheck="false"></textarea></label>
               <div class="row-actions">
                 <button id="loadCss" class="secondary">Import .css</button>
@@ -138,7 +166,7 @@
                 >Language (hyphenation and quotes)
                 <input id="language" list="languageList" placeholder="en" spellcheck="false" autocomplete="off" />
               </label>
-              <datalist id="languageList">
+              <datalist id="languageList" data-no-i18n>
                 <option value="en">English</option>
                 <option value="fr">Français</option>
                 <option value="de">Deutsch</option>
@@ -153,6 +181,9 @@
                 <label>Bottom (mm)<input id="marginBottom" type="number" min="0" max="80" /></label>
                 <label>Left (mm)<input id="marginLeft" type="number" min="0" max="80" /></label>
               </div>
+              <label class="check"
+                ><input id="mirrorMargins" type="checkbox" /> Facing pages: mirror the left and right margins</label
+              >
               <div class="info-card">
                 <strong>Pagination</strong>
                 <p>The header, footer and <code>Page X / Y</code> counter are computed by Paged.js.</p>
@@ -164,6 +195,7 @@
             <a id="appVersion" target="_blank" rel="noopener" title="Release notes"></a>
             <span id="appCommitSeparator" aria-hidden="true" hidden>·</span>
             <a id="appCommit" target="_blank" rel="noopener" title="Commit this build was made from" hidden></a>
+            <select id="uiLanguage" class="language-select" aria-label="Interface language"></select>
           </footer>
         </aside>
 

@@ -1,7 +1,7 @@
 // Unit tests of the pure Markdown helpers behind diagram sizing (no browser needed).
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { md, parseDiagramAttributes, updateFenceAttributes } from '../src/markdown.js';
+import { md, parseDiagramAttributes, slugify, updateFenceAttributes } from '../src/markdown.js';
 
 test('parseDiagramAttributes keeps valid sizes and alignments only', () => {
   assert.deepEqual(parseDiagramAttributes('width=60% align=left'), { width: '60%', align: 'left' });
@@ -54,5 +54,72 @@ test('updateFenceAttributes keeps indentation, tildes, quotes prefixes and CRLF'
   assert.equal(
     updateFenceAttributes('```mermaid\r\na\r\n```', 0, { width: '50%' }),
     '```mermaid width=50%\r\na\r\n```',
+  );
+});
+
+test('a line holding only \\newpage becomes a page break', () => {
+  assert.equal(
+    md.render('Before.\n\\newpage\nAfter.\n'),
+    '<p>Before.</p>\n<div class="page-break"></div>\n<p>After.</p>\n',
+  );
+  // Inside a sentence or a code block it is ordinary text.
+  assert.doesNotMatch(md.render('Write \\newpage alone.\n'), /page-break/);
+  assert.doesNotMatch(md.render('```\n\\newpage\n```\n'), /page-break/);
+  assert.doesNotMatch(md.render('    \\newpage\n'), /page-break/);
+});
+
+test('headings get unique ids and anchor links follow them', () => {
+  assert.equal(slugify('Étude & coûts (2026)'), 'etude-couts-2026');
+  assert.equal(slugify('***'), 'section');
+  const html = md.render('# Part\n\n## Part\n\n## `code` and *more*\n\n[a](#part) [b](#Part-2) [c](#unknown)\n');
+  assert.match(html, /<h1 id="sec-part">/);
+  assert.match(html, /<h2 id="sec-part-2">/);
+  assert.match(html, /<h2 id="sec-code-and-more">/);
+  assert.match(html, /<a href="#sec-part">a<\/a> <a href="#sec-part-2">b<\/a> <a href="#unknown">c<\/a>/);
+});
+
+test('[[toc]] lists the headings that follow it, down to its depth', () => {
+  const source = '# Title\n\n[[toc]]\n\n# One\n\n## Two <b>\n\n### Three\n\n#### Four\n';
+  const html = md.render(source);
+  const items = [
+    ...html.matchAll(/<li class="toc-item toc-level-(\d)"><a href="#([^"]+)"><span class="toc-text">([^<]*)</g),
+  ];
+  assert.deepEqual(
+    items.map(([, level, id, text]) => [level, id, text]),
+    [
+      ['1', 'sec-one', 'One'],
+      ['2', 'sec-two-b', 'Two &lt;b&gt;'],
+      ['3', 'sec-three', 'Three'],
+    ],
+  );
+  assert.equal([...md.render(source.replace('[[toc]]', '[[toc depth=1]]')).matchAll(/toc-item/g)].length, 1);
+  assert.equal([...md.render(source.replace('[[toc]]', '[[TOC depth=6]]')).matchAll(/toc-item/g)].length, 4);
+  // Not alone on its line: ordinary text.
+  assert.doesNotMatch(md.render('See [[toc]] here.\n'), /class="toc"/);
+});
+
+test('captions come from the image title or the caption attribute', () => {
+  const titled = md.render('![Plan](https://example.com/plan.png "The <plan>")\n');
+  assert.match(titled, /class="document-image is-block has-caption"/);
+  assert.match(
+    titled,
+    /<img src="https:\/\/example.com\/plan.png" alt="Plan"><span class="image-caption">The &lt;plan&gt;<\/span>/,
+  );
+  assert.doesNotMatch(titled, /title=/);
+  const braces = md.render('![Plan](https://example.com/plan.png){width=50% caption="Two words"}\n');
+  assert.match(braces, /<span class="image-caption">Two words<\/span>/);
+  assert.match(braces, /--image-width: 50%/);
+  assert.doesNotMatch(md.render('![Plan](https://example.com/plan.png)\n'), /caption/);
+
+  assert.deepEqual(parseDiagramAttributes('caption="Flow of data" width=40%'), {
+    caption: 'Flow of data',
+    width: '40%',
+  });
+  assert.deepEqual(parseDiagramAttributes('caption=Flow'), { caption: 'Flow' });
+  assert.match(md.render('```mermaid caption="A & B"\nflowchart LR\n```\n'), /data-caption="A &amp; B"/);
+  // Rewriting the size keeps a caption with spaces in one piece.
+  assert.equal(
+    updateFenceAttributes('```mermaid caption="Flow of data" width=30%', 0, { width: '60%', align: 'left' }),
+    '```mermaid caption="Flow of data" width=60% align=left',
   );
 });

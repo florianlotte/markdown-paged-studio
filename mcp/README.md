@@ -49,8 +49,15 @@ current `dist/`.
 
 `config` accepts the same keys as `local/config.json`: `title`, `subtitle`, `author`, `date`,
 `headerTitle`, `headerName`, `footerText`, `language`, `pageSize` (`A4`, `Letter`, `A5`), `marginTop`,
-`marginRight`, `marginBottom`, `marginLeft` (mm), `cover`, `customCss`, `logoDataUrl`. Invalid values
-are ignored, like a JSON import in the app.
+`marginRight`, `marginBottom`, `marginLeft` (mm), `cover`, `customCss`, `logoDataUrl`, `coverTemplate`
+(`classic`, `centered`, `band`, `minimal`), `accentColor` (`#rrggbb`), `codeTheme` (`light`, `dark`,
+`none`), `runningHeader` and `mirrorMargins` (booleans). Invalid values are ignored, like a JSON import
+in the app.
+
+Also in `markdown`: a line holding only `\newpage` starts a new page, a line holding only `[[toc]]` (or
+`[[toc depth=2]]`) becomes the table of contents of the headings that follow it, a caption is the title
+of an image (`![Alt](photo.png "Caption")`) or `caption="..."` on a mermaid fence line, and code fences
+with a language are syntax-highlighted.
 
 In `markdown`, a diagram is sized on its opening line: ` ```mermaid width=60% align=left ` (`width` from `10%` to `100%` or in `mm`; `align` is `left`, `center` or `right`).
 

@@ -8,6 +8,7 @@ import { setMissingImages } from './images.js';
 import { enhanceResizables } from './resize-controls.js';
 import { documentCss, documentHtml } from './document.js';
 import { loadPreviewFonts } from './fonts.js';
+import { t } from './i18n.js';
 import { applyView } from './view.js';
 
 let renderTimer;
@@ -32,7 +33,7 @@ function renderErrorElement(error) {
   const box = document.createElement('div');
   box.className = 'render-error';
   const title = document.createElement('strong');
-  title.textContent = 'Paged.js error';
+  title.textContent = t('Paged.js error');
   const details = document.createElement('pre');
   details.textContent = error?.stack || error?.message || String(error);
   box.append(title, details);
@@ -43,7 +44,7 @@ export async function render() {
   const token = ++renderToken;
   const preview = document.getElementById('preview');
   const status = document.getElementById('status');
-  status.textContent = 'Rendering…';
+  status.textContent = t('Rendering…');
   preview.classList.add('is-rendering');
 
   if (pendingPreviewer) pendingPreviewer.chunker.stop();
@@ -70,10 +71,12 @@ export async function render() {
       return;
     }
     preview.replaceChildren(...stage.childNodes);
+    // Facing pages: the two-page view pairs them as in the bound document, first page on the right.
+    preview.toggleAttribute('data-facing', state.mirrorMargins);
     preview.classList.remove('is-stale');
     disposePreviewer(activePreviewer);
     activePreviewer = previewer;
-    status.textContent = `${flow.total} page${flow.total > 1 ? 's' : ''}`;
+    status.textContent = flow.total > 1 ? t('{count} pages', { count: flow.total }) : t('1 page');
     applyView();
     enhanceResizables(preview, () => state.markdown, applyMarkdown);
     setMissingImages([...preview.querySelectorAll('.image-missing')].map(element => element.dataset.image));
@@ -81,7 +84,7 @@ export async function render() {
     disposePreviewer(previewer);
     if (token !== renderToken) return;
     console.error(error);
-    status.textContent = 'Render error';
+    status.textContent = t('Render error');
     disposePreviewer(activePreviewer);
     activePreviewer = null;
     preview.replaceChildren(renderErrorElement(error));

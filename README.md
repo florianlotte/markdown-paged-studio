@@ -28,13 +28,16 @@
 
 - **Live paged preview** powered by [Paged.js](https://pagedjs.org): what you see is what prints.
 - **Bundled font**: Inter ships with the studio and is embedded in every export, so the preview, the print and the PDF look the same on any machine.
-- **Cover page** with title, subtitle, author, date and an optional logo.
-- **Running header** (left and right), **footer**, and an automatic `Page X / Y` counter.
-- **A4, Letter or A5** with configurable margins.
+- **Cover page** with title, subtitle, author, date and an optional logo, in four templates with an accent colour.
+- **Table of contents** with page numbers from `[[toc]]`, and **page breaks** from `\newpage`.
+- **Running header** (left and right, or the current chapter), **footer**, and an automatic `Page X / Y` counter.
+- **A4, Letter or A5** with configurable margins, mirrored on facing pages if you print double-sided.
+- **Syntax highlighting** of code blocks, light or dark, and **captions** under images and diagrams.
 - **Mermaid diagrams** from ` ```mermaid ` code fences, rendered to SVG and embedded in exports, resizable by dragging in the preview.
 - **Document language** (BCP 47 tag) driving hyphenation and typographic quotes (« » in French, „ “ in German…).
 - **Images** uploaded, dropped or pasted, matched to the Markdown by file name, resizable like the diagrams.
 - **Custom CSS** editor with import, applied to the document only.
+- **Interface in English or French**, following the browser or your choice.
 - **Preview controls**: one page or two pages side by side, zoom, fit to width, Ctrl + wheel, and a collapsible sidebar.
 - **Autosave** in the browser, plus export and import of the whole configuration as JSON.
 - **Personal defaults** (your name, company logo, stylesheet, template) from a gitignored `local/` folder.
@@ -97,6 +100,17 @@ Every diagram type supported by [Mermaid](https://mermaid.js.org) works. Diagram
 
 ![A Mermaid flowchart rendered inside a page](docs/screenshots/diagram.png)
 
+### Structure: table of contents, page breaks, code
+
+| Write                      | To get                                                                                         |
+| -------------------------- | ---------------------------------------------------------------------------------------------- |
+| `[[toc]]` alone on a line  | The table of contents of the headings that follow it (levels 1 to 3), with their page numbers  |
+| `[[toc depth=2]]`          | The same, down to the given level (1 to 6)                                                     |
+| `\newpage` alone on a line | A page break                                                                                   |
+| ` ```js ` … ` ``` `        | A code block highlighted for its language (about 35 common languages); unknown ones stay plain |
+
+The **Page break** and **Table of contents** buttons under the editor write the markers at the cursor. Every heading gets an anchor named after its text, the way GitHub does: `[see the details](#details)` links to the heading "Details", in the preview and in the exports. The theme of the code blocks (light, dark or none) is chosen in the **Design** tab.
+
 ### Images
 
 Add the images of your document with **Add images** in the Content tab, by dropping files on the editor, or by pasting from the clipboard. They are matched to the Markdown **by file name only**, whatever the path and the letter case:
@@ -124,7 +138,7 @@ Size and align an image with attributes in braces right after it, or with the sa
 
 An image is inside text as soon as its paragraph holds something else: a sentence, a caption on the next line, another image. Headings, tables, code blocks and diagrams always start below a floating image. Without `width` an image keeps its natural size, never wider than the text column nor taller than the text area of a page.
 
-Every image has the preview tools, wherever it is: in a paragraph, a list, a quote, a table cell or a link.
+A caption goes in the title of the image, `![Plan](plan.png "Figure 1: the plan")`, and for a diagram in a `caption` attribute on its opening line: ` ```mermaid caption="Figure 2: the flow" `. Every image has the preview tools, wherever it is: in a paragraph, a list, a quote, a table cell or a link.
 
 ![An image sized from the preview, the Images section and a missing image](docs/screenshots/images.png)
 
@@ -137,12 +151,12 @@ Good to know:
 
 ### Cover page, header and footer
 
-- **Content** tab: title, subtitle, author, date, the cover page toggle, and the logo (any image; wider than 1200 px it is scaled down).
-- **Design** tab: header title (top left), header name (top right) and footer text (bottom left). The page counter always sits at the bottom right.
+- **Content** tab: title, subtitle, author, date, the cover page toggle, the logo (any image; wider than 1200 px it is scaled down), and the cover template (classic, centered, colour band, minimal) with its accent colour.
+- **Design** tab: header title (top left), header name (top right) and footer text (bottom left). The page counter always sits at the bottom right. With **Use the current chapter as header title**, the header shows the first-level heading the page belongs to.
 
 ### Page setup
 
-The **Page** tab selects the paper size, the four margins in millimetres, and the document language as a BCP 47 tag (`en`, `fr`, `pt-BR`…). The language sets `lang` on the rendered document and on the exported file, which drives hyphenation (`hyphens: auto` in the sample CSS) and the typographic quotes produced by the Markdown parser (« » in French, „ “ in German…). The cover page ignores margins and headers.
+The **Page** tab selects the paper size, the four margins in millimetres, and the document language as a BCP 47 tag (`en`, `fr`, `pt-BR`…). The language sets `lang` on the rendered document and on the exported file, which drives hyphenation (`hyphens: auto` in the sample CSS) and the typographic quotes produced by the Markdown parser (« » in French, „ “ in German…). The cover page ignores margins and headers. **Facing pages** mirrors the left and right margins on left-hand pages, for double-sided printing: the left margin is then the inner one, the page number stays on the outer edge, and the two-page view of the preview pairs the pages as in the bound document.
 
 ### Custom CSS
 
@@ -161,7 +175,7 @@ The **Design** tab has a CSS editor. Its content is appended after the built-in 
 <article class="document-content">…your Markdown as HTML…</article>
 ```
 
-Diagrams live in `.mermaid-diagram` (with `.is-sized` and the `--diagram-width` custom property when a width is set, and `data-align` for the alignment); a failed diagram is a `<pre class="mermaid-error">`. Images are wrapped in `<span class="document-image">` (`.is-block` when alone in a paragraph, `.is-sized` with `--image-width` when a width is set, `data-align` for the placement); an image that is not uploaded is a `.image-missing` box. Use print units (`mm`, `pt`) and paged-media properties such as `break-before: page` or `break-inside: avoid`. A minimal example:
+Diagrams live in `.mermaid-diagram` (with `.is-sized` and the `--diagram-width` custom property when a width is set, and `data-align` for the alignment); a failed diagram is a `<pre class="mermaid-error">`. Images are wrapped in `<span class="document-image">` (`.is-block` when alone in a paragraph, `.is-sized` with `--image-width` when a width is set, `data-align` for the placement); an image that is not uploaded is a `.image-missing` box. Captions are `.image-caption` and `.diagram-caption`. The table of contents is a `<nav class="toc">` holding `.toc-item` entries with a level class (`.toc-level-1`…), each a link with `.toc-text`, `.toc-dots` and the page number as its `::after`; a page break is `.page-break`; highlighted code is `pre.code-block` with `.code-light` or `.code-dark` and highlight.js `.hljs-*` spans. Use print units (`mm`, `pt`) and paged-media properties such as `break-before: page` or `break-inside: avoid`. A minimal example:
 
 ```css
 .document-content {
@@ -307,6 +321,7 @@ src/main.js         wires the modules: restore, UI, view, first render
 src/config.js       defaults (built-in and local/), state, validation, autosave
 src/markdown.js     markdown-it and Mermaid diagrams, fence attributes
 src/images.js       image library: matching by file name, storage, upload; logo storage
+src/i18n.js         interface language: French translations, applied to the markup
 src/fonts.js        bundled document font: loaded for the preview, inlined in exports
 src/font-faces.js   which font subsets a text needs (pure helpers)
 src/resize-controls.js resize controls on the diagrams and images of the preview
@@ -333,10 +348,8 @@ Recent Chromium-based browsers (Chrome, Edge, Brave, Arc) are the reference for 
 
 ## Roadmap
 
-- Table of contents with page numbers (`target-counter`)
-- Running headers taken from headings (`string-set`) and left/right page styles
-- Cover page templates
-- Syntax highlighting in code blocks
+- Automatic numbering of figures and headings
+- More interface languages
 - Code signing of the desktop binaries (Windows and macOS)
 
 ## Contributing
@@ -355,4 +368,4 @@ If the studio saves you time, you can support its development through [GitHub Sp
 
 [MIT](LICENSE) © 2026 Florian Lotte
 
-The bundled font, [Inter](https://rsms.me/inter/), is licensed under the [SIL Open Font License 1.1](https://openfontlicense.org).
+Code highlighting uses [highlight.js](https://highlightjs.org) (BSD 3-Clause). The bundled font, [Inter](https://rsms.me/inter/), is licensed under the [SIL Open Font License 1.1](https://openfontlicense.org).

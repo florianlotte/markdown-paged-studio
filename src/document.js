@@ -3,7 +3,7 @@
 import { LANGUAGE_TAG, PAGE_HEIGHT_MM, state } from './config.js';
 import { escCssString, escapeHtml } from './escape.js';
 import { inlineFontCss } from './fonts.js';
-import { md, renderDiagrams } from './markdown.js';
+import { highlightCode, md, renderDiagrams } from './markdown.js';
 
 // Typographic quotes used by markdown-it's typographer, per primary language.
 const QUOTES_BY_LANGUAGE = {
@@ -23,6 +23,76 @@ export function documentLanguage() {
   return LANGUAGE_TAG.test(value) ? value : 'en';
 }
 
+// Colours of the highlighted code, per theme: [text, background, comment, keyword, string, number, title,
+// attribute, built-in, deletion, addition].
+const CODE_COLORS = {
+  light: ['#24292f', '#f5f6f8', '#6e7781', '#cf222e', '#0a3069', '#0550ae', '#8250df', '#116329', '#953800'],
+  dark: ['#e6edf3', '#161b22', '#8b949e', '#ff7b72', '#a5d6ff', '#79c0ff', '#d2a8ff', '#7ee787', '#ffa657'],
+};
+
+function codeCss() {
+  const colors = CODE_COLORS[state.codeTheme];
+  if (!colors) return '';
+  const [text, background, comment, keyword, string, number, title, attribute, builtin] = colors;
+  const block = `.document-content pre.code-${state.codeTheme}`;
+  return `
+${block} { background: ${background}; color: ${text}; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+${block} .hljs-comment, ${block} .hljs-quote, ${block} .hljs-meta { color: ${comment}; }
+${block} .hljs-keyword, ${block} .hljs-selector-tag, ${block} .hljs-doctag, ${block} .hljs-template-tag, ${block} .hljs-deletion { color: ${keyword}; }
+${block} .hljs-string, ${block} .hljs-regexp, ${block} .hljs-link { color: ${string}; }
+${block} .hljs-number, ${block} .hljs-literal, ${block} .hljs-variable, ${block} .hljs-template-variable, ${block} .hljs-symbol, ${block} .hljs-bullet { color: ${number}; }
+${block} .hljs-title, ${block} .hljs-section, ${block} .hljs-selector-id, ${block} .hljs-selector-class { color: ${title}; }
+${block} .hljs-attr, ${block} .hljs-attribute, ${block} .hljs-name, ${block} .hljs-tag, ${block} .hljs-addition { color: ${attribute}; }
+${block} .hljs-built_in, ${block} .hljs-type, ${block} .hljs-params { color: ${builtin}; }
+${block} .hljs-strong { font-weight: 700; }`;
+}
+
+// Margin boxes of a page. With mirrored margins the left-hand pages swap sides, so the page number stays
+// on the outer edge and the inner margin on the binding.
+function marginBoxes({ mirrored = false } = {}) {
+  // The running header is the text of the current first-level heading.
+  const title = state.runningHeader ? 'string(chapter)' : `"${escCssString(state.headerTitle)}"`;
+  const name = `"${escCssString(state.headerName)}"`;
+  const footer = `"${escCssString(state.footerText)}"`;
+  const counter = '"Page " counter(page) " / " counter(pages)';
+  const [left, right] = mirrored ? ['right', 'left'] : ['left', 'right'];
+  return `
+  @top-${left} { content: ${title}; font-size: 8.5pt; color: #5f6368; }
+  @top-${right} { content: ${name}; font-size: 8.5pt; color: #5f6368; }
+  @bottom-${left} { content: ${footer}; font-size: 8pt; color: #6f7378; }
+  @bottom-${right} { content: ${counter}; font-size: 8pt; color: #6f7378; }`;
+}
+
+const NO_MARGIN_BOXES = `
+  @top-left { content: none; }
+  @top-right { content: none; }
+  @bottom-left { content: none; }
+  @bottom-right { content: none; }`;
+
+// Layout of the cover page per template. The markup is the same for all of them.
+function coverCss() {
+  const accent = state.accentColor;
+  switch (state.coverTemplate) {
+    case 'centered':
+      return `
+.cover-page { align-items: center; text-align: center; }
+.cover-logo { margin-left: auto; margin-right: auto; }
+.cover-title::after { content: ""; display: block; width: 30mm; height: 1.2mm; margin: 9mm auto 0; background: ${accent}; }`;
+    case 'band':
+      return `
+.cover-page { padding-left: 46mm; print-color-adjust: exact; -webkit-print-color-adjust: exact; background: linear-gradient(to right, ${accent} 0, ${accent} 22mm, transparent 22mm); }`;
+    case 'minimal':
+      return `
+.cover-page { justify-content: flex-end; padding-bottom: 40mm; }
+.cover-logo { margin-bottom: auto; max-width: 40mm; max-height: 20mm; }
+.cover-title { font-size: 24pt; padding-top: 6mm; border-top: .6mm solid ${accent}; }
+.cover-subtitle { margin-top: 4mm; font-size: 12pt; }
+.cover-meta { margin-top: 10mm; font-size: 9.5pt; }`;
+    default:
+      return '';
+  }
+}
+
 export function documentCss() {
   const coverHeight = PAGE_HEIGHT_MM[state.pageSize] ?? PAGE_HEIGHT_MM.A4;
   // A diagram never grows taller than the text area of a page (it cannot be split across pages).
@@ -31,20 +101,26 @@ export function documentCss() {
 @page {
   size: ${state.pageSize};
   margin: ${state.marginTop}mm ${state.marginRight}mm ${state.marginBottom}mm ${state.marginLeft}mm;
-  font-family: Inter, Arial, sans-serif;
-  @top-left { content: "${escCssString(state.headerTitle)}"; font-size: 8.5pt; color: #5f6368; }
-  @top-right { content: "${escCssString(state.headerName)}"; font-size: 8.5pt; color: #5f6368; }
-  @bottom-left { content: "${escCssString(state.footerText)}"; font-size: 8pt; color: #6f7378; }
-  @bottom-right { content: "Page " counter(page) " / " counter(pages); font-size: 8pt; color: #6f7378; }
-}
+  font-family: Inter, Arial, sans-serif;${marginBoxes()}
+}${
+    state.mirrorMargins
+      ? `
+@page :left {
+  margin: ${state.marginTop}mm ${state.marginLeft}mm ${state.marginBottom}mm ${state.marginRight}mm;${marginBoxes({ mirrored: true })}
+}`
+      : ''
+  }
 @page cover {
   size: ${state.pageSize};
-  margin: 0;
-  @top-left { content: none; }
-  @top-right { content: none; }
-  @bottom-left { content: none; }
-  @bottom-right { content: none; }
-}
+  margin: 0;${NO_MARGIN_BOXES}
+}${
+    state.mirrorMargins
+      ? `
+@page cover:left {
+  margin: 0;${NO_MARGIN_BOXES}
+}`
+      : ''
+  }${state.runningHeader ? '\n.document-content h1 { string-set: chapter content(text); }' : ''}
 .cover-page {
   page: cover;
   break-after: page;
@@ -59,7 +135,20 @@ export function documentCss() {
 .cover-logo { max-width: 55mm; max-height: 28mm; object-fit: contain; margin-bottom: 20mm; }
 .cover-title { margin: 0; font-size: 32pt; line-height: 1.1; color: #17191c; }
 .cover-subtitle { margin-top: 7mm; font-size: 15pt; color: #5f6368; }
-.cover-meta { margin-top: 18mm; color: #6d7278; font-size: 10.5pt; line-height: 1.6; }
+.cover-meta { margin-top: 18mm; color: #6d7278; font-size: 10.5pt; line-height: 1.6; }${coverCss()}
+.page-break { break-after: page; height: 0; margin: 0; }
+.toc { margin: 4mm 0 8mm; }
+.toc-list { list-style: none; margin: 0; padding: 0; }
+.toc-item { margin: 1.4mm 0; break-inside: avoid; }
+.toc-item a { display: flex; align-items: baseline; gap: 2mm; color: inherit; text-decoration: none; }
+.toc-item a::after { content: target-counter(attr(href), page); font-variant-numeric: tabular-nums; }
+.toc-dots { flex: 1; min-width: 8mm; border-bottom: .25mm dotted #9aa0a6; }
+.toc-level-1 { font-weight: 600; margin-top: 3mm; }
+.toc-level-2 { padding-left: 5mm; }
+.toc-level-3 { padding-left: 10mm; font-size: .95em; }
+.toc-level-4, .toc-level-5, .toc-level-6 { padding-left: 15mm; font-size: .9em; }
+.image-caption, .diagram-caption { display: block; margin-top: 2mm; font-size: 9pt; line-height: 1.35; color: #5f6368; text-align: center; }
+.document-image.has-caption > .image-caption { box-sizing: border-box; width: 0; min-width: 100%; }
 .document-content h1, .document-content h2, .document-content h3 { break-after: avoid; }
 .document-content img, .document-content table, .document-content pre, .document-content blockquote, .mermaid-diagram { break-inside: avoid; max-width: 100%; }
 .mermaid-diagram { margin: 5mm auto; text-align: center; }
@@ -84,6 +173,7 @@ export function documentCss() {
 .document-content .image-missing { display: inline-block; font-size: 8.5pt; color: #8a1f1f; background: #fff3f3; border: .3mm dashed #d7a8a8; padding: 2mm 3mm; border-radius: 1.5mm; }
 .document-content .mermaid-error { text-align: left; white-space: pre-wrap; font-size: 8.5pt; color: #8a1f1f; background: #fff3f3; border: .3mm solid #d7a8a8; padding: 3mm; border-radius: 1.5mm; }
 ${state.customCss}
+${codeCss()}
 `;
 }
 
@@ -102,7 +192,7 @@ export async function documentHtml() {
       </div>
     </section>`
     : '';
-  const body = await renderDiagrams(md.render(state.markdown));
+  const body = await highlightCode(await renderDiagrams(md.render(state.markdown)), state.codeTheme);
   return `${cover}<article class="document-content" lang="${lang}">${body}</article>`;
 }
 

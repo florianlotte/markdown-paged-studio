@@ -8,6 +8,9 @@ export const PAGE_SIZES = ['A4', 'Letter', 'A5'];
 // Page heights in mm, used to size the cover page to the selected paper.
 export const PAGE_HEIGHT_MM = { A4: 297, A5: 210, Letter: 279.4 };
 export const MARGIN_MAX_MM = 80;
+export const CODE_THEMES = ['light', 'dark', 'none'];
+export const COVER_TEMPLATES = ['classic', 'centered', 'band', 'minimal'];
+const COLOR = /^#[0-9a-f]{6}$/i;
 // BCP 47 language tag such as "en", "fr", "pt-BR" or "zh-Hant".
 export const LANGUAGE_TAG = /^[a-z]{2,3}(?:-[a-z0-9]{2,8})*$/i;
 
@@ -49,6 +52,11 @@ const DEFAULT_STATE = {
   markdown: DEFAULT_MARKDOWN,
   customCss: DEFAULT_CSS,
   logoDataUrl: '',
+  codeTheme: 'light',
+  runningHeader: false,
+  mirrorMargins: false,
+  coverTemplate: 'classic',
+  accentColor: '#1d4ed8',
 };
 
 // Value kind per config key. Anything not listed here is dropped on import.
@@ -70,6 +78,11 @@ export const CONFIG_SCHEMA = {
   markdown: 'string',
   customCss: 'string',
   logoDataUrl: 'imageDataUrl',
+  codeTheme: 'codeTheme',
+  runningHeader: 'boolean',
+  mirrorMargins: 'boolean',
+  coverTemplate: 'coverTemplate',
+  accentColor: 'color',
 };
 
 // Returns only the keys of `input` that are known and well-typed, coerced into safe values.
@@ -94,6 +107,15 @@ export function sanitizeConfig(input) {
         if (Number.isFinite(n)) out[key] = Math.min(MARGIN_MAX_MM, Math.max(0, n));
         break;
       }
+      case 'codeTheme':
+        if (CODE_THEMES.includes(value)) out[key] = value;
+        break;
+      case 'coverTemplate':
+        if (COVER_TEMPLATES.includes(value)) out[key] = value;
+        break;
+      case 'color':
+        if (typeof value === 'string' && COLOR.test(value.trim())) out[key] = value.trim().toLowerCase();
+        break;
       case 'language':
         if (typeof value === 'string' && LANGUAGE_TAG.test(value.trim())) out[key] = value.trim();
         break;

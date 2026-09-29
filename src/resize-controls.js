@@ -1,6 +1,7 @@
 // Studio-only controls to resize Mermaid diagrams and images directly in the preview. They are added
 // after pagination, so they never reach the exported document. The size is not kept here: every change
 // rewrites the attributes in the Markdown source (```mermaid width=60% or ![Alt](photo.png){width=60%}).
+import { t } from './i18n.js';
 import { DIAGRAM_WIDTH_MAX, DIAGRAM_WIDTH_MIN, updateFenceAttributes, updateImageAttributes } from './markdown.js';
 
 const BLOCK_ALIGNMENTS = { options: ['left', 'center', 'right'], fallback: 'center' };
@@ -138,16 +139,16 @@ function enhance(diagram, target, commit, onSelect) {
   const tools = document.createElement('span');
   tools.className = 'diagram-tools';
   tools.setAttribute('role', 'toolbar');
-  tools.setAttribute('aria-label', `${target.label} size and alignment`);
+  tools.setAttribute('aria-label', t(`${target.label} size and alignment`));
   const percent = currentPercent(diagram, drawing);
   for (const preset of PRESETS) {
     tools.append(
-      button(`${preset}%`, `Width ${preset} %`, () => commit({ width: `${preset}%` }), {
+      button(`${preset}%`, t('Width {percent} %', { percent: preset }), () => commit({ width: `${preset}%` }), {
         pressed: sized && percent === preset,
       }),
     );
   }
-  tools.append(button('Auto', 'Natural size', () => commit({ width: null }), { pressed: !sized }));
+  tools.append(button(t('Auto'), t('Natural size'), () => commit({ width: null }), { pressed: !sized }));
   const separator = document.createElement('span');
   separator.className = 'diagram-tools-separator';
   tools.append(separator);
@@ -155,7 +156,7 @@ function enhance(diagram, target, commit, onSelect) {
     const [title, path] = ALIGNMENT_BUTTONS[value];
     // The default position is the absence of attribute.
     tools.append(
-      button(icon(path), title, () => commit({ align: value === fallback ? null : value }), {
+      button(icon(path), t(title), () => commit({ align: value === fallback ? null : value }), {
         pressed: align === value,
       }),
     );
@@ -165,12 +166,12 @@ function enhance(diagram, target, commit, onSelect) {
   handle.className = 'diagram-handle';
   handle.tabIndex = 0;
   handle.setAttribute('role', 'slider');
-  handle.setAttribute('aria-label', `${target.label} width`);
+  handle.setAttribute('aria-label', t(`${target.label} width`));
   handle.setAttribute('aria-valuemin', String(DIAGRAM_WIDTH_MIN));
   handle.setAttribute('aria-valuemax', String(DIAGRAM_WIDTH_MAX));
   handle.setAttribute('aria-valuenow', String(percent));
   handle.setAttribute('aria-valuetext', `${percent} %`);
-  handle.title = 'Drag to resize (arrow keys: 5 % steps)';
+  handle.title = t('Drag to resize (arrow keys: 5 % steps)');
 
   // The drawing can be narrower than its container (natural size): place the tools on its edges.
   // Shares of the container width are zoom-independent.
@@ -180,6 +181,8 @@ function enhance(diagram, target, commit, onSelect) {
     const left = ((inner.left - box.left) / box.width) * 100;
     const right = ((inner.right - box.left) / box.width) * 100;
     handle.style.left = `${align === 'right' ? left : right}%`;
+    // Halfway up the drawing, not the container: a caption makes the container taller.
+    handle.style.top = `${((inner.top - box.top + inner.height / 2) / box.height) * 100}%`;
     // The toolbar starts at the left edge of the drawing, unless it would then stick out of the page:
     // in that case it ends at the right edge of the drawing instead.
     tools.style.right = 'auto';

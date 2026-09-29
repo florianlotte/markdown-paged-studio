@@ -104,23 +104,34 @@ function sendCommand(command) {
   win?.webContents.send('command', command);
 }
 
+// Labels of the application menu, in French when the system is: the page follows the same default.
+const MENU_FR = {
+  File: 'Fichier',
+  'Export PDF…': 'Exporter en PDF…',
+  'Print…': 'Imprimer…',
+  View: 'Affichage',
+  'Toggle Sidebar': 'Afficher ou masquer la barre latérale',
+};
+
 function buildMenu() {
+  const french = app.getLocale().toLowerCase().startsWith('fr');
+  const label = text => (french ? (MENU_FR[text] ?? text) : text);
   const template = [
     ...(isMac ? [{ role: 'appMenu' }] : []),
     {
-      label: 'File',
+      label: label('File'),
       submenu: [
-        { label: 'Export PDF…', accelerator: 'CmdOrCtrl+Shift+E', click: () => sendCommand('export-pdf') },
-        { label: 'Print…', accelerator: 'CmdOrCtrl+P', click: () => sendCommand('print') },
+        { label: label('Export PDF…'), accelerator: 'CmdOrCtrl+Shift+E', click: () => sendCommand('export-pdf') },
+        { label: label('Print…'), accelerator: 'CmdOrCtrl+P', click: () => sendCommand('print') },
         { type: 'separator' },
         { role: isMac ? 'close' : 'quit' },
       ],
     },
     { role: 'editMenu' },
     {
-      label: 'View',
+      label: label('View'),
       submenu: [
-        { label: 'Toggle Sidebar', accelerator: 'CmdOrCtrl+B', click: () => sendCommand('toggle-sidebar') },
+        { label: label('Toggle Sidebar'), accelerator: 'CmdOrCtrl+B', click: () => sendCommand('toggle-sidebar') },
         { type: 'separator' },
         { role: 'reload' },
         { role: 'toggleDevTools' },
