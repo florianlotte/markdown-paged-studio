@@ -56,8 +56,9 @@ in the app.
 
 Also in `markdown`: a line holding only `\newpage` starts a new page, a line holding only `[[toc]]` (or
 `[[toc depth=2]]`) becomes the table of contents of the headings that follow it, a caption is the title
-of an image (`![Alt](photo.png "Caption")`) or `caption="..."` on a mermaid fence line, and code fences
-with a language are syntax-highlighted.
+of an image (`![Alt](photo.png "Caption")`) or `caption="..."` on a mermaid fence line, code fences
+with a language are syntax-highlighted, footnotes are written `Text[^1]` with `[^1]: the note` (or `^[in
+place]`), and task lists `- [ ] to do`.
 
 In `markdown`, a diagram is sized on its opening line: ` ```mermaid width=60% align=left ` (`width` from `10%` to `100%` or in `mm`; `align` is `left`, `center` or `right`).
 

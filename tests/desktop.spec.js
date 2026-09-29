@@ -58,8 +58,8 @@ test('the desktop app renders the document and exports a PDF directly', async ()
       shell.openExternal = async url => void globalThis.openedExternally.push(url);
     });
     await page.locator('#markdown').fill('# Links\n\n[External](https://example.com/page)\n');
-    const link = page.locator('#preview .document-content a');
-    await expect(link).toHaveText('External');
+    const link = page.locator('#preview .document-content a', { hasText: 'External' });
+    await expect(link).toHaveCount(1);
     await link.click();
     await expect.poll(() => app.evaluate(() => globalThis.openedExternally)).toEqual(['https://example.com/page']);
     expect(page.url()).toBe('app://studio/');

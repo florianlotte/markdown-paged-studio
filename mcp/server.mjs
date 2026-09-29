@@ -209,7 +209,8 @@ const markdownField = z
       'the image title, ![Alt](photo.png "Caption"), or in caption="..." on a mermaid fence line. A line ' +
       'holding only \\newpage starts a new page; a line holding only [[toc]] (or [[toc depth=2]]) becomes the ' +
       'table of contents of the headings that follow it, with page numbers. Code fences with a language are ' +
-      'syntax-highlighted.',
+      'syntax-highlighted. Footnotes: Text[^1] with "[^1]: the note" on its own line, or ^[a note in place]; ' +
+      'they are printed at the foot of the page. Task lists: "- [ ] to do" and "- [x] done".',
   );
 const imagesField = z
   .array(
@@ -355,6 +356,7 @@ A diagram is sized from its fence line (\`width=60%\`, \`align=left\`), which se
 Images are wrapped in \`<span class="document-image">\` (\`.is-block\` when alone in a paragraph, \`.is-sized\` with \`--image-width\` for \`![Alt](photo.png){width=60% align=center}\`); an image that was not provided is a \`.image-missing\` box. \`data-align\` on a block image moves it left or right of its centered default; on an image inside text it floats it (\`left\`, \`right\`) or gives it its own line (\`center\`).
 A caption is \`.image-caption\` inside the image wrapper (\`.has-caption\`) or \`.diagram-caption\` inside the diagram.
 Headings carry an id (\`sec-\` plus the slug of their text). The table of contents is \`<nav class="toc">\` with an \`<ol class="toc-list">\` of \`<li class="toc-item toc-level-N">\`, each holding a link with \`.toc-text\` and \`.toc-dots\`; the page number is the \`::after\` of the link. A forced page break is \`<div class="page-break">\`.
+A footnote is \`<span class="footnote">\` written where it is called and moved to the foot of the page (style its call with \`.footnote::footnote-call\`, its number with \`.footnote::footnote-marker\`, the area with \`@page { @footnote { … } }\`); a repeated call is \`<sup class="footnote-ref">\`. Task lists are \`.contains-task-list\` holding \`.task-list-item\` with an \`input\`.
 Highlighted code blocks are \`<pre class="code-block code-light">\` (or \`code-dark\`) with highlight.js \`.hljs-*\` spans.
 Header, footer and the page counter are \`@page\` margin boxes driven by the config, not by CSS classes.
 Use print units (\`mm\`, \`pt\`) and paged-media properties such as \`break-before: page\` or \`break-inside: avoid\`.

@@ -29,7 +29,7 @@
 - **Live paged preview** powered by [Paged.js](https://pagedjs.org): what you see is what prints.
 - **Bundled font**: Inter ships with the studio and is embedded in every export, so the preview, the print and the PDF look the same on any machine.
 - **Cover page** with title, subtitle, author, date and an optional logo, in four templates with an accent colour.
-- **Table of contents** with page numbers from `[[toc]]`, and **page breaks** from `\newpage`.
+- **Table of contents** with page numbers from `[[toc]]`, **page breaks** from `\newpage`, and **footnotes** at the foot of the page.
 - **Running header** (left and right, or the current chapter), **footer**, and an automatic `Page X / Y` counter.
 - **A4, Letter or A5** with configurable margins, mirrored on facing pages if you print double-sided.
 - **Syntax highlighting** of code blocks, light or dark, and **captions** under images and diagrams.
@@ -66,7 +66,7 @@ Node.js 20.19 or newer (or 22.12+) is required by Vite 8.
 
 ### Writing
 
-The **Content** tab holds the Markdown editor. Import an existing `.md` file or download the current one. The parser is [markdown-it](https://github.com/markdown-it/markdown-it): all of [CommonMark](https://commonmark.org), plus tables, strikethrough, automatic links and typographic replacements. Raw HTML inside Markdown is intentionally disabled. [Markdown support](docs/markdown-support.md) lists what is understood, the four deliberate differences with the specification, what is not supported (task lists, footnotes…), and the conformance measured on the official examples.
+The **Content** tab holds the Markdown editor. Import an existing `.md` file or download the current one. The parser is [markdown-it](https://github.com/markdown-it/markdown-it): all of [CommonMark](https://commonmark.org) and of GitHub Flavored Markdown (tables, strikethrough, task lists, automatic links), plus footnotes and typographic replacements. Raw HTML inside Markdown is intentionally disabled. [Markdown support](docs/markdown-support.md) lists what is understood, the four deliberate differences with the specification, what is not supported (formulas, definition lists…), and the conformance measured on the official examples.
 
 Whatever the studio writes into the editor for you (the insert buttons, a pasted image, a size set from the preview) is an ordinary edit: Ctrl+Z undoes it like something you typed.
 
@@ -105,14 +105,16 @@ Every diagram type supported by [Mermaid](https://mermaid.js.org) works. Diagram
 
 ![A diagram selected in the preview, with its size and alignment tools and its caption](docs/screenshots/diagram.png)
 
-### Structure: table of contents, page breaks, code
+### Structure: table of contents, page breaks, footnotes, code
 
-| Write                      | To get                                                                                         |
-| -------------------------- | ---------------------------------------------------------------------------------------------- |
-| `[[toc]]` alone on a line  | The table of contents of the headings that follow it (levels 1 to 3), with their page numbers  |
-| `[[toc depth=2]]`          | The same, down to the given level (1 to 6)                                                     |
-| `\newpage` alone on a line | A page break                                                                                   |
-| ` ```js ` … ` ``` `        | A code block highlighted for its language (about 35 common languages); unknown ones stay plain |
+| Write                           | To get                                                                                                 |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `[[toc]]` alone on a line       | The table of contents of the headings that follow it (levels 1 to 3), with their page numbers          |
+| `[[toc depth=2]]`               | The same, down to the given level (1 to 6)                                                             |
+| `\newpage` alone on a line      | A page break                                                                                           |
+| `Text[^1]` and `[^1]: The note` | A footnote, numbered and printed at the foot of the page that calls it; `^[a note]` writes it in place |
+| `- [ ] to do`, `- [x] done`     | A task list with check boxes                                                                           |
+| ` ```js ` … ` ``` `             | A code block highlighted for its language (about 35 common languages); unknown ones stay plain         |
 
 The **Page break** and **Table of contents** buttons under the editor write the markers at the cursor. The table lists what comes after it: a heading placed above it, such as "Contents", is not part of it. Clicking an entry in the preview scrolls to its page.
 
@@ -197,15 +199,17 @@ The **Design** tab has a CSS editor. Its content is appended after the built-in 
 
 Inside the content, these class names are stable and meant to be styled:
 
-| Element           | Selector                                                                                                                                               |
-| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Diagram           | `.mermaid-diagram`, its drawing `.mermaid-diagram > svg`; `.is-sized` with `--diagram-width`, `data-align`; a failed one is `.mermaid-error`           |
-| Image             | `.document-image` around the `img`; `.is-block` alone in a paragraph, `.is-sized` with `--image-width`, `data-align`; `.image-missing` if not uploaded |
-| Caption           | `.image-caption`, `.diagram-caption`                                                                                                                   |
-| Table of contents | `nav.toc`, `.toc-item` with `.toc-level-1`…, holding a link with `.toc-text` and `.toc-dots`; the page number is the `::after` of the link             |
-| Page break        | `.page-break`                                                                                                                                          |
-| Highlighted code  | `pre.code-block` with `.code-light` or `.code-dark`, and highlight.js `.hljs-*` spans                                                                  |
-| Heading           | an `id` made of `sec-` and the anchor name: `#sec-details`                                                                                             |
+| Element           | Selector                                                                                                                                                                                                              |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Diagram           | `.mermaid-diagram`, its drawing `.mermaid-diagram > svg`; `.is-sized` with `--diagram-width`, `data-align`; a failed one is `.mermaid-error`                                                                          |
+| Image             | `.document-image` around the `img`; `.is-block` alone in a paragraph, `.is-sized` with `--image-width`, `data-align`; `.image-missing` if not uploaded                                                                |
+| Caption           | `.image-caption`, `.diagram-caption`                                                                                                                                                                                  |
+| Table of contents | `nav.toc`, `.toc-item` with `.toc-level-1`…, holding a link with `.toc-text` and `.toc-dots`; the page number is the `::after` of the link                                                                            |
+| Page break        | `.page-break`                                                                                                                                                                                                         |
+| Footnote          | `.footnote` for the note, `.footnote::footnote-call` for its call in the text, `.footnote::footnote-marker` for its number, `.footnote-ref` for a repeated call; the area of the notes is `@page { @footnote { … } }` |
+| Task list         | `.contains-task-list` on the list, `.task-list-item` on the item, holding an `input`                                                                                                                                  |
+| Highlighted code  | `pre.code-block` with `.code-light` or `.code-dark`, and highlight.js `.hljs-*` spans                                                                                                                                 |
+| Heading           | an `id` made of `sec-` and the anchor name: `#sec-details`                                                                                                                                                            |
 
 Use print units (`mm`, `pt`) and paged-media properties such as `break-before: page` or `break-inside: avoid`. A minimal example:
 
@@ -405,7 +409,6 @@ Recent Chromium-based browsers (Chrome, Edge, Brave, Arc) are the reference for 
 ## Roadmap
 
 - Automatic numbering of figures and headings
-- Footnotes
 - Dark theme for the studio
 - More interface languages
 - Code signing of the desktop binaries (Windows and macOS)

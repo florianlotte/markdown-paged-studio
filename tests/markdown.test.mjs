@@ -123,3 +123,48 @@ test('captions come from the image title or the caption attribute', () => {
     '```mermaid caption="Flow of data" width=60% align=left',
   );
 });
+
+test('footnotes are written where they are called', () => {
+  const html = md.render(
+    'First[^a], second[^b], first again[^a], inline^[An *inline* note].\n\n' +
+      '[^a]: The **first** note\n    on two lines.\n\n    Its second paragraph.\n[^b]: The second <note>.\n',
+  );
+  assert.equal(
+    html,
+    '<p>First<span class="footnote">The <strong>first</strong> note\non two lines. Its second paragraph.</span>, ' +
+      'second<span class="footnote">The second &lt;note&gt;.</span>, first again<sup class="footnote-ref">1</sup>, ' +
+      'inline<span class="footnote">An <em>inline</em> note</span>.</p>\n',
+  );
+  // A call without its note stays as written, and a note that is never called shows nowhere.
+  assert.equal(md.render('Missing[^9] note.\n'), '<p>Missing[^9] note.</p>\n');
+  assert.equal(md.render('Text.\n\n[^unused]: Never called.\n'), '<p>Text.</p>\n');
+  assert.doesNotMatch(md.render('`code[^a]`\n\n[^a]: Note\n'), /footnote/);
+});
+
+test('task lists become check boxes', () => {
+  const html = md.render('- [ ] to do\n- [x] done *now*\n- plain\n  - [X] nested\n\n1. [ ] numbered\n');
+  assert.match(
+    html,
+    /^<ul class="contains-task-list">\n<li class="task-list-item"><input disabled="" type="checkbox"> to do<\/li>/,
+  );
+  assert.match(
+    html,
+    /<li class="task-list-item"><input checked="" disabled="" type="checkbox"> done <em>now<\/em><\/li>/,
+  );
+  assert.match(html, /<li>plain\n<ul class="contains-task-list">\n<li class="task-list-item"><input checked=""/);
+  assert.match(html, /<ol class="contains-task-list">/);
+  // Not a task: no space after the box, another letter, not at the start, not in a list.
+  const plain = md.render('- [ ]no space\n- [y] other\n- then [ ] later\n\n[ ] paragraph\n');
+  assert.doesNotMatch(plain, /checkbox|task-list/);
+});
+
+test('addresses starting with www. become links, other bare names do not', () => {
+  const html = md.render(
+    'Visit www.example.com/a_(b)?x=1. Or (www.example.org), "www.quoted.fr"; not awww.example.com nor readme.md.\n',
+  );
+  assert.match(html, /<a href="http:\/\/www\.example\.com\/a_\(b\)\?x=1">www\.example\.com\/a_\(b\)\?x=1<\/a>\. Or/);
+  assert.match(html, /\(<a href="http:\/\/www\.example\.org">www\.example\.org<\/a>\)/);
+  assert.match(html, /“<a href="http:\/\/www\.quoted\.fr">www\.quoted\.fr<\/a>”;/);
+  assert.equal([...html.matchAll(/<a /g)].length, 3);
+  assert.doesNotMatch(md.render('`www.example.com` and [text](www.example.com)\n'), /http:\/\/www/);
+});

@@ -205,3 +205,70 @@ test('cover templates rearrange the same cover with the accent colour', async ({
   await expect(page.locator('#coverTemplate')).toHaveValue('minimal');
   await expect(page.locator('#accentColor')).toHaveValue('#aa3366');
 });
+
+test('footnotes go to the foot of the page that calls them, task lists show check boxes', async ({ page, context }) => {
+  const filler = Array.from({ length: 30 }, () => 'Filler text to reach the next page. '.repeat(5)).join('\n\n');
+  const markdown = [
+    '# Notes',
+    'A first claim[^a] and a second[^b], the first again[^a], and an inline one^[Written **in place**.].',
+    '- [ ] to do\n- [x] done\n- plain',
+    filler,
+    'A claim further down[^c], see www.example.com.',
+    '[^a]: The first note.\n[^b]: The second note.\n[^c]: A note on a later page.',
+  ].join('\n\n');
+  await openDocument(page, markdown, 'Notes');
+  await page.locator('#cover').uncheck();
+  await expect(status(page)).toHaveText('3 pages');
+
+  // Where the calls and the notes are, page by page, with the numbers Paged.js gives them.
+  const layout = target =>
+    target.locator('.pagedjs_page').evaluateAll(sheets =>
+      sheets.map(sheet => ({
+        calls: sheet.querySelectorAll('.pagedjs_page_content [data-footnote-call]').length,
+        notes: [...sheet.querySelectorAll('.pagedjs_footnote_area [data-footnote-marker]')].map(note =>
+          note.textContent.trim(),
+        ),
+        again: [...sheet.querySelectorAll('.footnote-ref')].map(ref => ref.textContent),
+      })),
+    );
+  const expected = [
+    { calls: 3, notes: ['The first note.', 'The second note.', 'Written in place.'], again: ['1'] },
+    { calls: 0, notes: [], again: [] },
+    { calls: 1, notes: ['A note on a later page.'], again: [] },
+  ];
+  expect(await layout(page.locator('#preview'))).toEqual(expected);
+
+  // The notes sit inside the sheet, under the text and above the footer of the page.
+  const first = pages(page).first();
+  const boxes = await first.evaluate(sheet => {
+    const box = selector => sheet.querySelector(selector).getBoundingClientRect();
+    const notes = [...sheet.querySelectorAll('.pagedjs_footnote_area [data-footnote-marker]')];
+    return {
+      textBottom: [...sheet.querySelectorAll('.document-content > *')].at(-1).getBoundingClientRect().bottom,
+      notesTop: notes[0].getBoundingClientRect().top,
+      notesBottom: notes.at(-1).getBoundingClientRect().bottom,
+      areaBottom: box('.pagedjs_area').bottom,
+    };
+  });
+  expect(boxes.notesTop).toBeGreaterThan(boxes.textBottom);
+  expect(boxes.notesBottom).toBeLessThanOrEqual(boxes.areaBottom + 1);
+
+  // Check boxes of the document are those of the browser, not the form fields of the studio.
+  const boxesOfList = page.locator('#preview .task-list-item input');
+  await expect(boxesOfList).toHaveCount(2);
+  await expect(boxesOfList.nth(1)).toBeChecked();
+  await expect(boxesOfList.nth(0)).toBeDisabled();
+  expect((await boxesOfList.nth(0).boundingBox()).width).toBeLessThan(30);
+  await expect(page.locator('#preview .task-list-item').first()).toHaveCSS('list-style-type', 'none');
+  await expect(page.locator('#preview a', { hasText: 'www.example.com' })).toHaveAttribute(
+    'href',
+    'http://www.example.com',
+  );
+
+  // The exported document lays the notes out the same way.
+  const [download] = await Promise.all([page.waitForEvent('download'), page.locator('#exportHtml').click()]);
+  const exported = await context.newPage();
+  await exported.setContent(readFileSync(await download.path(), 'utf8'));
+  await expect(exported.locator('.pagedjs_page')).toHaveCount(3);
+  expect(await layout(exported.locator('body'))).toEqual(expected);
+});

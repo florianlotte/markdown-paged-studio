@@ -2,10 +2,98 @@
 // because Paged.js needs their final size to lay out pages; images are resolved by file name from the
 // image library and inlined as data URLs.
 import MarkdownIt from 'markdown-it';
+import footnotes from 'markdown-it-footnote';
 import { escapeHtml } from './escape.js';
 import { findImage, imageName, isExternalSource } from './images.js';
 
 export const md = new MarkdownIt({ html: false, linkify: true, typographer: true });
+
+// ---- Links: an address starting with "www." is a link, as on GitHub. Other bare names (readme.md) are not:
+// too many file names look like a domain.
+
+const WWW_ADDRESS = /^[a-z0-9-]+(?:\.[a-z0-9-]+)+(?::\d+)?(?:[/?#][^\s<]*)?/i;
+
+md.linkify.add('www.', {
+  validate(text, position) {
+    // "www." must start a word.
+    const before = text[position - 'www.'.length - 1];
+    if (before !== undefined && !/[\s([{"'«“‘*_~]/.test(before)) return 0;
+    const match = WWW_ADDRESS.exec(text.slice(position));
+    if (!match) return 0;
+    let address = match[0];
+    // The punctuation of the sentence is not part of the address, nor a bracket that closes the sentence.
+    for (let previous = ''; previous !== address;) {
+      previous = address;
+      address = address.replace(/[.,;:!?'"*_~]+$/, '');
+      if (address.endsWith(')') && address.split(')').length > address.split('(').length)
+        address = address.slice(0, -1);
+    }
+    return address.length;
+  },
+  normalize(match) {
+    match.url = `http://${match.url}`;
+  },
+});
+
+// ---- Footnotes: Text[^1] with "[^1]: The note" anywhere in the document, or an inline note^[like this].
+// The text of a note is written where it is called: Paged.js moves it to the foot of the page holding the
+// call and numbers both. A note called again shows the number of its first call.
+
+md.use(footnotes);
+
+md.core.ruler.after('footnote_tail', 'footnote_notes', state => {
+  const notes = new Map();
+  const kept = [];
+  let inside = false;
+  let current = null;
+  for (const token of state.tokens) {
+    if (token.type === 'footnote_block_open') inside = true;
+    else if (token.type === 'footnote_block_close') inside = false;
+    else if (!inside) kept.push(token);
+    else if (token.type === 'footnote_open') notes.set(token.meta.id, (current = []));
+    else if (token.type === 'inline')
+      // One entry per paragraph of the note, without the back-links of the plugin.
+      current?.push((token.children ?? []).filter(child => child.type !== 'footnote_anchor'));
+  }
+  state.tokens.splice(0, state.tokens.length, ...kept);
+  state.env.footnoteNotes = notes;
+});
+
+md.renderer.rules.footnote_ref = (tokens, idx, options, env, self) => {
+  const { id, subId } = tokens[idx].meta;
+  const paragraphs = env.footnoteNotes?.get(id);
+  if (subId > 0 || !paragraphs) return `<sup class="footnote-ref">${id + 1}</sup>`;
+  const text = paragraphs.map(children => self.renderInline(children, options, env)).join(' ');
+  return `<span class="footnote">${text}</span>`;
+};
+
+// ---- Task lists: "- [ ] to do" and "- [x] done" become check boxes, as on GitHub.
+
+md.core.ruler.after('inline', 'task_lists', state => {
+  const { tokens } = state;
+  for (let index = 2; index < tokens.length; index++) {
+    const token = tokens[index];
+    if (token.type !== 'inline' || tokens[index - 1].type !== 'paragraph_open') continue;
+    const item = tokens[index - 2];
+    const first = token.children?.[0];
+    const box = first?.type === 'text' ? /^\[([ xX])\] (?=\S)/.exec(first.content) : null;
+    if (item.type !== 'list_item_open' || !box) continue;
+    first.content = first.content.slice(box[0].length);
+    token.content = token.content.slice(box[0].length);
+    const input = new state.Token('html_inline', '', 0);
+    input.content = `<input${box[1] === ' ' ? '' : ' checked=""'} disabled="" type="checkbox"> `;
+    token.children.unshift(input);
+    item.attrJoin('class', 'task-list-item');
+    for (let back = index - 3; back >= 0; back--) {
+      if (tokens[back].level === item.level - 1 && /^(bullet|ordered)_list_open$/.test(tokens[back].type)) {
+        if (!/\bcontains-task-list\b/.test(tokens[back].attrGet('class') ?? '')) {
+          tokens[back].attrJoin('class', 'contains-task-list');
+        }
+        break;
+      }
+    }
+  }
+});
 
 const WIDTH_PERCENT = /^(\d{1,3}(?:\.\d+)?)%$/;
 const WIDTH_MM = /^(\d{1,3}(?:\.\d+)?)mm$/;

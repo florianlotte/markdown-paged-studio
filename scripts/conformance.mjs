@@ -93,7 +93,7 @@ function tally(examples, render) {
 // the parser understands them.
 const PROBES = [
   ['Task lists', '- [ ] todo\n- [x] done\n', /type="checkbox"/],
-  ['Footnotes', 'Text[^1]\n\n[^1]: Note\n', /footnote/],
+  ['Footnotes', 'Text[^1]\n\n[^1]: Note\n', /<span class="footnote">Note<\/span>/],
   ['Definition lists', 'Term\n: Definition\n', /<dl>/],
   ['Subscript and superscript', 'H~2~O and x^2^\n', /<sub>|<sup>/],
   ['Math formulas', '$a^2 + b^2$\n', /katex|<math/],

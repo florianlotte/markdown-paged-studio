@@ -60,7 +60,8 @@ function marginBoxes({ mirrored = false } = {}) {
   @top-${left} { content: ${title}; font-size: 8.5pt; color: #5f6368; }
   @top-${right} { content: ${name}; font-size: 8.5pt; color: #5f6368; }
   @bottom-${left} { content: ${footer}; font-size: 8pt; color: #6f7378; }
-  @bottom-${right} { content: ${counter}; font-size: 8pt; color: #6f7378; }`;
+  @bottom-${right} { content: ${counter}; font-size: 8pt; color: #6f7378; }
+  @footnote { margin-top: 4mm; padding-top: 2mm; border-top: .2mm solid #9aa0a6; }`;
 }
 
 const NO_MARGIN_BOXES = `
@@ -147,6 +148,13 @@ export function documentCss() {
 .toc-level-2 { padding-left: 5mm; }
 .toc-level-3 { padding-left: 10mm; font-size: .95em; }
 .toc-level-4, .toc-level-5, .toc-level-6 { padding-left: 15mm; font-size: .9em; }
+.footnote { float: footnote; font-size: 8.5pt; font-weight: 400; font-style: normal; line-height: 1.4; color: #3c4043; text-align: left; hyphens: auto; }
+.footnote::footnote-call { font-size: 65%; line-height: 0; vertical-align: super; font-variant-position: normal; }
+.footnote::footnote-marker { font-weight: 600; }
+.footnote-ref { font-size: 65%; line-height: 0; vertical-align: super; }
+.contains-task-list { padding-left: 6mm; }
+.task-list-item { list-style: none; }
+.task-list-item input { margin: 0 1.5mm 0 -5.5mm; vertical-align: middle; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
 .image-caption, .diagram-caption { display: block; margin-top: 2mm; font-size: 9pt; line-height: 1.35; color: #5f6368; text-align: center; }
 .document-image.has-caption > .image-caption { box-sizing: border-box; width: 0; min-width: 100%; }
 .document-content h1, .document-content h2, .document-content h3 { break-after: avoid; }

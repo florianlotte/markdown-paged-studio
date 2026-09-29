@@ -36,7 +36,7 @@ test('edits re-render the document without leaking styles or render stages', asy
     await page.waitForTimeout(60);
   }
   await appendMarkdown(page, '\n\n## Extra section\n\n' + 'More text. '.repeat(400));
-  await expect(status(page)).toHaveText('4 pages');
+  await expect(status(page)).toHaveText('5 pages');
   await expect(page.locator('head style')).toHaveCount(stylesBefore);
   await expect(page.locator('.render-stage')).toHaveCount(0);
   await expect(page.locator('#preview .pagedjs_pages')).toHaveCount(1);

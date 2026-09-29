@@ -322,6 +322,10 @@ button:hover {
   width: max-content;
   margin: 0 auto;
 }
+/* The form styles of the studio stop at the document: its check boxes are those of the browser. */
+.preview input {
+  all: revert;
+}
 .preview[data-layout='spread'] .pagedjs_pages {
   grid-template-columns: repeat(2, max-content);
 }

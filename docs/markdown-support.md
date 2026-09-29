@@ -6,9 +6,9 @@ What the studio understands, how it differs from the specifications on purpose, 
 
 - **CommonMark**, the reference specification of Markdown, is fully supported: headings, paragraphs, emphasis,
   lists, quotes, code, links, images, line breaks.
-- From **GitHub Flavored Markdown** (GFM): tables, strikethrough, and automatic links for addresses written
-  with their scheme (`https://…`) and for e-mail addresses. Addresses starting with `www.` are not linked, and
-  task lists are not supported.
+- **GitHub Flavored Markdown** (GFM) is supported too: tables, strikethrough, task lists, and automatic links
+  for addresses written with their scheme (`https://…`), addresses starting with `www.` and e-mail addresses.
+- **Footnotes**, which belong to neither specification, are placed at the foot of the page that calls them.
 - The studio adds its own syntax for paged documents: size, alignment and caption of images and diagrams,
   `[[toc]]`, `\newpage`, Mermaid diagrams. See the [README](../README.md#usage).
 - Four behaviours differ from CommonMark on purpose. They are listed below; nothing else differs.
@@ -53,9 +53,9 @@ GitHub Flavored Markdown extensions:
 | Extension           | Supported | Same HTML as the specification |
 | ------------------- | --------- | ------------------------------ |
 | Tables              | yes       | 6 / 8                          |
-| Task list items     | no        | 0 / 2                          |
+| Task list items     | yes       | 0 / 2                          |
 | Strikethrough       | yes       | 1 / 2                          |
-| Autolinks           | partly    | 3 / 11                         |
+| Autolinks           | yes       | 9 / 11                         |
 | Disallowed Raw HTML | yes       | 0 / 1                          |
 
 <!-- conformance:end -->
@@ -74,22 +74,32 @@ How to read them:
 
 ## Not supported
 
-| Syntax                    | Example                 | What you see today                                   |
-| ------------------------- | ----------------------- | ---------------------------------------------------- |
-| Task lists (GFM)          | `- [ ] todo`            | A list item with `[ ]`                               |
-| Links from `www.` (GFM)   | `www.example.com`       | The text as written; write `https://www.example.com` |
-| Footnotes                 | `Text[^1]`              | The text as written                                  |
-| Definition lists          | `Term` / `: Definition` | A paragraph                                          |
-| Subscript and superscript | `H~2~O`, `x^2^`         | The text as written                                  |
-| Math formulas             | `$a^2 + b^2$`           | The text as written                                  |
-| Highlighted text          | `==marked==`            | The text as written                                  |
-| Alerts                    | `> [!NOTE]`             | A quote starting with `[!NOTE]`                      |
-| Heading identifiers       | `# Title {#custom}`     | The braces in the title                              |
-| Abbreviations             | `*[HTML]: Hyper Text`   | The text as written                                  |
-| Emoji shortcodes          | `:smile:`               | The text as written; type the emoji itself           |
+| Syntax                    | Example                 | What you see today                         |
+| ------------------------- | ----------------------- | ------------------------------------------ |
+| Definition lists          | `Term` / `: Definition` | A paragraph                                |
+| Subscript and superscript | `H~2~O`, `x^2^`         | The text as written                        |
+| Math formulas             | `$a^2 + b^2$`           | The text as written                        |
+| Highlighted text          | `==marked==`            | The text as written                        |
+| Alerts                    | `> [!NOTE]`             | A quote starting with `[!NOTE]`            |
+| Heading identifiers       | `# Title {#custom}`     | The braces in the title                    |
+| Abbreviations             | `*[HTML]: Hyper Text`   | The text as written                        |
+| Emoji shortcodes          | `:smile:`               | The text as written; type the emoji itself |
 
-A footnote written as `Text[^1]` followed by `[^1]: Note` is read as a link reference by CommonMark itself, so
-it shows as a link to "Note". Until footnotes are supported, write notes another way.
+## Footnotes and task lists
+
+```markdown
+A claim[^source] and another one^[A note written in place.].
+
+[^source]: The text of the note, anywhere in the document.
+
+- [x] done
+- [ ] to do
+```
+
+- A note is numbered in the order of the calls and printed at the foot of the page holding its call. A note
+  called a second time shows the number of its first call. A call without a note stays as written.
+- The text of a note is a single paragraph: the paragraphs of a longer note are joined.
+- Check boxes are shown as they are written; they cannot be ticked in the preview.
 
 ## Running the measure
 

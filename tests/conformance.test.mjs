@@ -34,15 +34,15 @@ test('the GFM extensions and the other syntaxes are in the documented state', ()
   const support = Object.fromEntries([...result.extensions].map(([name, entry]) => [name, entry.supported]));
   assert.deepEqual(support, {
     Tables: 'yes',
-    'Task list items': 'no',
+    'Task list items': 'yes',
     Strikethrough: 'yes',
-    Autolinks: 'partly',
+    Autolinks: 'yes',
     'Disallowed Raw HTML': 'yes',
   });
   // Supporting one of these is good news: update docs/markdown-support.md with it.
   assert.deepEqual(
     result.probes.filter(probe => probe.supported).map(probe => probe.name),
-    [],
+    ['Task lists', 'Footnotes'],
   );
 });
 

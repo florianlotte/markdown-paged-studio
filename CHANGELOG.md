@@ -7,6 +7,24 @@ All notable changes to Markdown Paged Studio are listed here, newest first. The 
 
 ## [Unreleased]
 
+## [1.15.0] - 2026-09-29
+
+### Added
+
+- Footnotes: `Text[^1]` with `[^1]: The note`, or `^[a note in place]`, numbered and printed at the foot of the
+  page that calls them.
+- Task lists: `- [ ] to do` and `- [x] done` show check boxes.
+- Addresses starting with `www.` become links.
+
+### Changed
+
+- The sample document shows the table of contents, a page break, a caption, a footnote and a task list.
+- All the GitHub Flavored Markdown extensions are now supported.
+
+### Fixed
+
+- `Text[^1]` followed by `[^1]: Note` no longer shows as a broken link.
+
 ## [1.14.0] - 2026-09-29
 
 ### Added
@@ -223,7 +241,8 @@ All notable changes to Markdown Paged Studio are listed here, newest first. The 
 - Portable desktop app for Windows, Linux and macOS with direct PDF export.
 - Docker image, Playwright integration tests and CI.
 
-[Unreleased]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.14.0...HEAD
+[Unreleased]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.15.0...HEAD
+[1.15.0]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.14.0...v1.15.0
 [1.14.0]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.13.2...v1.14.0
 [1.13.2]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.13.1...v1.13.2
 [1.13.1]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.13.0...v1.13.1

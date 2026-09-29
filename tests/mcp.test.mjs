@@ -257,7 +257,8 @@ test('render_html supports the table of contents, page breaks, captions, highlig
     arguments: {
       markdown:
         '# Report\n\n[[toc]]\n\n\\newpage\n\n# Chapter\n\n```js\nconst a = 1;\n```\n\n' +
-        '```mermaid caption="The flow"\nflowchart LR\n  A --> B\n```\n',
+        '```mermaid caption="The flow"\nflowchart LR\n  A --> B\n```\n\n' +
+        'A claim[^1], see www.example.com.\n\n- [x] done\n\n[^1]: The note.\n',
       config: {
         coverTemplate: 'band',
         accentColor: '#AA3366',
@@ -273,6 +274,10 @@ test('render_html supports the table of contents, page breaks, captions, highlig
   assert.match(html, /<div class="page-break"><\/div>/);
   assert.match(html, /<pre class="code-block code-dark">/);
   assert.match(html, /<div class="diagram-caption">The flow<\/div>/);
+  assert.match(html, /A claim<span class="footnote">The note\.<\/span>/);
+  assert.match(html, /<a href="http:\/\/www\.example\.com">/);
+  assert.match(html, /<li class="task-list-item"><input checked="" disabled="" type="checkbox"> done<\/li>/);
+  assert.match(html, /float: footnote/);
   assert.match(html, /#aa3366 22mm/);
   assert.match(html, /@page :left/);
   assert.match(html, /string-set: chapter/);

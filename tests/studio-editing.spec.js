@@ -163,7 +163,8 @@ test('what the insert buttons and pasted images write can be undone in the edito
   await expect(editor).toHaveValue(/Typed\.\n\n\\newpage\n$/);
   await page.keyboard.press('Control+z');
   await expect(editor).toHaveValue(/Typed\.$/);
-  await expect(page.locator('#preview .page-break')).toHaveCount(0);
+  // Only the page break of the sample document is left.
+  await expect(page.locator('#preview .page-break')).toHaveCount(1);
   await page.keyboard.press('Control+Shift+z');
   await expect(editor).toHaveValue(/Typed\.\n\n\\newpage\n$/);
 
@@ -172,5 +173,5 @@ test('what the insert buttons and pasted images write can be undone in the edito
   await editor.evaluate(el => el.setSelectionRange(el.value.length, el.value.length));
   await page.evaluate(() => document.getElementById('insertToc').click());
   await expect(editor).toHaveValue(/\\newpage\n\n\[\[toc\]\]\n$/);
-  await expect(page.locator('#preview .toc')).toHaveCount(1);
+  await expect(page.locator('#preview .toc')).toHaveCount(2);
 });

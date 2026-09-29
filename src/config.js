@@ -14,7 +14,64 @@ const COLOR = /^#[0-9a-f]{6}$/i;
 // BCP 47 language tag such as "en", "fr", "pt-BR" or "zh-Hant".
 export const LANGUAGE_TAG = /^[a-z]{2,3}(?:-[a-z0-9]{2,8})*$/i;
 
-const DEFAULT_MARKDOWN = `# Introduction\n\nWelcome to **Markdown Paged Studio**.\n\nThis app turns your Markdown into a paginated document that is ready to print.\n\n## Features\n\n- configurable cover page;\n- logo;\n- header and footer;\n- Page X / Y counter;\n- custom CSS;\n- live paged preview;\n- Mermaid diagrams;\n- standalone HTML export;\n- print / PDF through the browser.\n\n## Table example\n\n| Item | Value |\n|---|---|\n| Source | Markdown |\n| Rendering | HTML |\n| Pagination | Paged.js |\n\n## Diagram\n\n\`\`\`mermaid\nflowchart LR\n  A[Markdown] --> B[HTML]\n  B --> C[Pages]\n\`\`\`\n\n## Second part\n\nAdd content here to get more pages.\n\n> Custom CSS only applies to the rendered document.\n\n### Code\n\n\`\`\`js\nconsole.log('Markdown → HTML → pages');\n\`\`\`\n`;
+const DEFAULT_MARKDOWN = `# Introduction
+
+Welcome to **Markdown Paged Studio**.
+
+This app turns your Markdown into a paginated document that is ready to print[^export].
+
+[[toc]]
+
+## Features
+
+- configurable cover page and logo;
+- table of contents with page numbers;
+- header, footer and Page X / Y counter;
+- images and Mermaid diagrams, with captions;
+- footnotes and task lists;
+- highlighted code;
+- custom CSS;
+- standalone HTML and PDF export.
+
+## Table example
+
+| Item | Value |
+|---|---|
+| Source | Markdown |
+| Rendering | HTML |
+| Pagination | Paged.js |
+
+\\newpage
+
+## Diagram
+
+This part starts on a new page: the line above its title holds only \`\\newpage\`.
+
+\`\`\`mermaid caption="Figure 1: from Markdown to pages"
+flowchart LR
+  A[Markdown] --> B[HTML]
+  B --> C[Pages]
+\`\`\`
+
+## Second part
+
+Add content here to get more pages.
+
+> Custom CSS only applies to the rendered document.
+
+### Tasks
+
+- [x] Write the Markdown
+- [ ] Export the PDF
+
+### Code
+
+\`\`\`js
+console.log('Markdown → HTML → pages');
+\`\`\`
+
+[^export]: With **Export PDF**, or with the print dialog of the browser.
+`;
 
 const DEFAULT_CSS = `
 .document-content {
