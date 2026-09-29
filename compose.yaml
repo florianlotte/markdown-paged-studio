@@ -1,6 +1,10 @@
 services:
   studio:
-    build: .
+    build:
+      context: .
+      args:
+        # Shown in the sidebar footer; set it with: APP_COMMIT=$(git rev-parse --short=7 HEAD) docker compose up --build
+        APP_COMMIT: ${APP_COMMIT:-}
     image: markdown-paged-studio
     ports:
       - '8080:80'

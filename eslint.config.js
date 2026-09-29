@@ -10,11 +10,13 @@ export default [
     languageOptions: {
       ecmaVersion: 'latest',
       sourceType: 'module',
-      globals: { ...globals.browser },
+      // __APP_VERSION__ and __APP_COMMIT__ are replaced at build time (vite.config.js).
+      globals: { ...globals.browser, __APP_VERSION__: 'readonly', __APP_COMMIT__: 'readonly' },
     },
   },
   {
     files: [
+      'vite.config.js',
       'playwright.config.js',
       'playwright.desktop.config.js',
       'tests/**/*.{js,mjs}',

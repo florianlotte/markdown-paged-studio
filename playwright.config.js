@@ -1,6 +1,7 @@
 import { defineConfig } from '@playwright/test';
 
-const PORT = 5173;
+// PORT lets the suite run next to a dev server already using the default port.
+const PORT = Number(process.env.PORT) || 5173;
 
 export default defineConfig({
   testDir: 'tests',

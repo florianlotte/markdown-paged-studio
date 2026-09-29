@@ -1,6 +1,7 @@
 // Smoke test of the Electron desktop build: the app starts from dist/, renders the sample document,
 // and the desktop-only "Export PDF" button writes a real PDF through Chromium's print-to-PDF.
 import { test, expect, _electron as electron } from '@playwright/test';
+import { execSync } from 'node:child_process';
 import { existsSync, mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -17,6 +18,13 @@ test('the desktop app renders the document and exports a PDF directly', async ()
     await expect(page.locator('#preview .pagedjs_page')).toHaveCount(3);
     expect(await page.title()).toBe('Markdown Paged Studio');
     await expect(page.locator('#exportPdf')).toBeVisible();
+
+    // The footer shows what was built: the package version and, outside the dev server, the commit.
+    const { version } = JSON.parse(readFileSync('package.json', 'utf8'));
+    await expect(page.locator('#appVersion')).toHaveText(`v${version}`);
+    const built = (process.env.GITHUB_SHA || execSync('git rev-parse --short=7 HEAD').toString()).trim().slice(0, 7);
+    await expect(page.locator('#appCommit')).toHaveText(built);
+    await expect(page.locator('#appCommit')).toHaveAttribute('href', new RegExp(`/commit/${built}$`));
 
     // Short-circuit the native save dialog so the export lands in the temp folder.
     const target = path.join(dir, 'document.pdf');

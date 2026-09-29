@@ -566,3 +566,28 @@ test('a clicked diagram keeps its tools until another click or Escape', async ({
   await page.mouse.move(away.x, away.y, { steps: 5 });
   await expect(tools).toBeHidden();
 });
+
+test('the sidebar footer shows the running version and stays at the bottom', async ({ page }) => {
+  const { version } = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
+  await page.setViewportSize({ width: 1200, height: 520 });
+  await openFreshStudio(page);
+  const footer = page.locator('.sidebar-footer');
+  await expect(footer).toBeVisible();
+  await expect(page.locator('#appVersion')).toHaveText(`v${version}`);
+  await expect(page.locator('#appVersion')).toHaveAttribute(
+    'href',
+    `https://github.com/florianlotte/markdown-paged-studio/releases/tag/v${version}`,
+  );
+  // The dev server does not claim a commit: the working tree may differ from HEAD.
+  await expect(page.locator('#appCommit')).toHaveText('dev');
+  await expect(page.locator('#appCommit')).not.toHaveAttribute('href', /.*/);
+
+  // Pinned under the scrolling settings, flush with the bottom of the window.
+  const before = await footer.boundingBox();
+  expect(Math.round(before.y + before.height)).toBe(520);
+  await page.locator('.sidebar-body').evaluate(el => {
+    el.scrollTop = 300;
+  });
+  expect(await footer.boundingBox()).toEqual(before);
+  await expect(footer).toBeInViewport();
+});

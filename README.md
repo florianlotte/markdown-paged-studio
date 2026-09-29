@@ -152,6 +152,8 @@ Diagrams live in `.mermaid-diagram` (with `.is-sized` and the `--diagram-width` 
 
 Layout, zoom and the sidebar state are remembered in the browser, separately from the document.
 
+The footer of the sidebar shows which build is running, for example `v1.6.0 · 31ee325`: the version links to its release notes and the commit to the exact source. It tells apart two deployments of the online demo made between two releases.
+
 ### Personal defaults
 
 To start every session with your own name, company logo, stylesheet or document template, put them in the gitignored `local/` folder: `local/config.json` for the text fields and page setup, `local/logo.png` (or `.svg`, `.jpg`, `.webp`, `.gif`) for the cover logo, `local/custom.css` and `local/template.md` for the defaults of the two editors. They apply on first launch and on **Reset**, and a document saved in the browser always takes precedence. See [local/README.md](local/README.md) for details.
@@ -227,9 +229,11 @@ docker compose up --build -d   # then open http://localhost:8080
 Or without Compose:
 
 ```bash
-docker build -t markdown-paged-studio .
+docker build --build-arg APP_COMMIT=$(git rev-parse --short=7 HEAD) -t markdown-paged-studio .
 docker run --rm -p 8080:80 markdown-paged-studio
 ```
+
+`APP_COMMIT` is optional: the image has no git history, so without it the sidebar footer shows the version only.
 
 The build context includes the gitignored `local/` folder, so an image built on your machine carries your personal defaults. Keep such images private, or build from a clean checkout for a public image.
 
@@ -257,6 +261,7 @@ Project layout:
 
 ```
 index.html          entry point and the studio markup
+vite.config.js      build-time constants: version and commit shown in the sidebar footer
 src/main.js         wires the modules: restore, UI, view, first render
 src/config.js       defaults (built-in and local/), state, validation, autosave
 src/markdown.js     markdown-it and Mermaid diagrams, fence attributes
@@ -266,6 +271,7 @@ src/render.js       Paged.js preview lifecycle
 src/view.js         layout and zoom of the preview
 src/ui.js           form, tabs, files, export and print
 src/automation.js   headless API used by the MCP server
+src/version.js      version and commit of the running build
 src/ui.css          studio chrome (sidebar, toolbar, preview frame)
 src/assets/logo.svg logo and favicon
 electron/           Electron main process, sandboxed preload and app icon

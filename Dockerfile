@@ -12,6 +12,10 @@ RUN npm ci --no-audit --no-fund
 
 # Everything else, including the optional gitignored local/ folder (personal defaults are baked in).
 COPY . .
+# The build context has no .git: pass the commit to show it in the sidebar footer, e.g.
+#   docker build --build-arg APP_COMMIT=$(git rev-parse --short=7 HEAD) .
+ARG APP_COMMIT=
+ENV APP_COMMIT=$APP_COMMIT
 RUN npm run build
 
 # ---- Runtime stage: serve dist/ with nginx -------------------------------------------------------

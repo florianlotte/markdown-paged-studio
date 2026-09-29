@@ -3,6 +3,7 @@
 import { clearStoredConfig, DEFAULTS, sanitizeConfig, state } from './config.js';
 import { standaloneHtml } from './document.js';
 import { scheduleRender } from './render.js';
+import { APP_COMMIT, APP_VERSION, COMMIT_URL, RELEASE_URL } from './version.js';
 import { toggleSidebar } from './view.js';
 
 // Every state key has a form control with the same id, except the logo (a file input).
@@ -217,7 +218,21 @@ function bindPdf() {
   }
 }
 
+// Sidebar footer: the version links to its release, the commit (when known) to the commit itself.
+function showVersion() {
+  const version = document.getElementById('appVersion');
+  version.textContent = `v${APP_VERSION}`;
+  version.href = RELEASE_URL;
+  if (!APP_COMMIT) return;
+  const commit = document.getElementById('appCommit');
+  commit.textContent = APP_COMMIT;
+  if (COMMIT_URL) commit.href = COMMIT_URL;
+  commit.hidden = false;
+  document.getElementById('appCommitSeparator').hidden = false;
+}
+
 export function initUi() {
+  showVersion();
   syncInputs();
   bindInputs();
   bindTabs();
