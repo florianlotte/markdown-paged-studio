@@ -32,6 +32,7 @@
 - **A4, Letter or A5** with configurable margins.
 - **Mermaid diagrams** from ` ```mermaid ` code fences, rendered to SVG and embedded in exports, resizable by dragging in the preview.
 - **Document language** (BCP 47 tag) driving hyphenation and typographic quotes (« » in French, „ “ in German…).
+- **Images** uploaded, dropped or pasted, matched to the Markdown by file name, resizable like the diagrams.
 - **Custom CSS** editor with import, applied to the document only.
 - **Preview controls**: one page or two pages side by side, zoom, fit to width, Ctrl + wheel, and a collapsible sidebar.
 - **Autosave** in the browser, plus export and import of the whole configuration as JSON.
@@ -95,6 +96,35 @@ Every diagram type supported by [Mermaid](https://mermaid.js.org) works. Diagram
 
 ![A Mermaid flowchart rendered inside a page](docs/screenshots/diagram.png)
 
+### Images
+
+Add the images of your document with **Add images** in the Content tab, by dropping files on the editor, or by pasting from the clipboard. They are matched to the Markdown **by file name only**, whatever the path and the letter case:
+
+```markdown
+![Plan](./docs/img/plan.png)
+![Plan](C:\work\report\Plan.PNG)
+![Plan](plan.png)
+```
+
+All three show the uploaded `plan.png`. An existing Markdown file therefore works as it is: import it, then upload its images. Images that the document uses but that are not uploaded yet are listed in the Images section and shown as a "Missing image" box in the page. Uploading a file with the same name replaces the image.
+
+Size and align an image with attributes in braces right after it, or with the same preview tools as the diagrams (hover or click the image):
+
+```markdown
+![Requests per month](requests.png){width=70% align=center}
+```
+
+`width` is a share of the text column (`10%` to `100%`) or a size in `mm`; `align` is `left`, `center` or `right` and applies to an image alone in its paragraph. Without attributes an image keeps its natural size, never wider than the text column nor taller than the text area of a page.
+
+![An image sized from the preview, the Images section and a missing image](docs/screenshots/images.png)
+
+Good to know:
+
+- Images are stored in the browser (IndexedDB) and travel in the configuration file of **Save config**, which is then a complete document. **Reset** removes them.
+- A raster image wider than 2400 px is scaled down to that width on upload (300 dpi across an A4 text column); SVG and GIF files are never modified.
+- Remote images (`https://…`) are left to the browser: they need the network, also in an exported file.
+- Two images with the same file name in different folders cannot be told apart: rename one of them.
+
 ### Cover page, header and footer
 
 - **Content** tab: title, subtitle, author, date, the cover page toggle, and the logo (any image, kept as a data URL).
@@ -121,7 +151,7 @@ The **Design** tab has a CSS editor. Its content is appended after the built-in 
 <article class="document-content">…your Markdown as HTML…</article>
 ```
 
-Diagrams live in `.mermaid-diagram` (with `.is-sized` and the `--diagram-width` custom property when a width is set, and `data-align` for the alignment); a failed diagram is a `<pre class="mermaid-error">`. Use print units (`mm`, `pt`) and paged-media properties such as `break-before: page` or `break-inside: avoid`. A minimal example:
+Diagrams live in `.mermaid-diagram` (with `.is-sized` and the `--diagram-width` custom property when a width is set, and `data-align` for the alignment); a failed diagram is a `<pre class="mermaid-error">`. Images are wrapped in `<span class="document-image">` (`.is-block` when alone in a paragraph, `.is-sized` with `--image-width` when a width is set, `data-align`); an image that is not uploaded is a `.image-missing` box. Use print units (`mm`, `pt`) and paged-media properties such as `break-before: page` or `break-inside: avoid`. A minimal example:
 
 ```css
 .document-content {
@@ -255,7 +285,7 @@ GitHub Actions workflows in `.github/workflows/`: `ci.yml` runs on every push an
 | `npm run test:desktop`  | Playwright smoke test of the desktop app (after `npm run build`)                        |
 | `npm run mcp`           | Start the MCP server on stdio (after `npm run build`)                                   |
 | `npm run test:mcp`      | End-to-end test of the MCP server with a real MCP client (after `npm run build`)        |
-| `npm run test:unit`     | Unit tests of the Markdown helpers (Node test runner)                                   |
+| `npm run test:unit`     | Unit tests of the Markdown and image helpers (Node test runner)                         |
 
 Project layout:
 
@@ -265,7 +295,8 @@ vite.config.js      build-time constants: version and commit shown in the sideba
 src/main.js         wires the modules: restore, UI, view, first render
 src/config.js       defaults (built-in and local/), state, validation, autosave
 src/markdown.js     markdown-it and Mermaid diagrams, fence attributes
-src/diagram-resize.js resize controls on the diagrams of the preview
+src/images.js       image library: matching by file name, storage, upload
+src/resize-controls.js resize controls on the diagrams and images of the preview
 src/document.js     document CSS and HTML, standalone export
 src/render.js       Paged.js preview lifecycle
 src/view.js         layout and zoom of the preview

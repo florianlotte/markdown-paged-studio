@@ -4,7 +4,8 @@
 // element. Each Previewer injects a <style> into <head>; disposePreviewer() removes it.
 import { Previewer } from 'pagedjs';
 import { schedulePersist, state } from './config.js';
-import { enhanceDiagrams } from './diagram-resize.js';
+import { setMissingImages } from './images.js';
+import { enhanceResizables } from './resize-controls.js';
 import { documentCss, documentHtml } from './document.js';
 import { applyView } from './view.js';
 
@@ -70,7 +71,8 @@ export async function render() {
     activePreviewer = previewer;
     status.textContent = `${flow.total} page${flow.total > 1 ? 's' : ''}`;
     applyView();
-    enhanceDiagrams(preview, () => state.markdown, applyMarkdown);
+    enhanceResizables(preview, () => state.markdown, applyMarkdown);
+    setMissingImages([...preview.querySelectorAll('.image-missing')].map(element => element.dataset.image));
   } catch (error) {
     disposePreviewer(previewer);
     if (token !== renderToken) return;

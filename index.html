@@ -97,6 +97,20 @@
                 <input id="markdownFile" type="file" accept=".md,.markdown,text/markdown,text/plain" hidden />
                 <button id="downloadMarkdown" class="secondary">Download .md</button>
               </div>
+
+              <section class="images" aria-labelledby="imagesTitle">
+                <div class="images-header">
+                  <strong id="imagesTitle">Images</strong>
+                  <button id="addImages" class="secondary" type="button">Add images</button>
+                  <input id="imageFiles" type="file" accept="image/*" multiple hidden />
+                </div>
+                <p class="images-hint">
+                  Matched by file name, whatever the path: <code>![Alt](any/folder/photo.png)</code> shows the uploaded
+                  <code>photo.png</code>. You can also drop or paste images into the editor.
+                </p>
+                <p id="imagesStatus" class="images-status" role="status" hidden></p>
+                <ul id="imageList" class="image-list"></ul>
+              </section>
             </div>
 
             <div class="panel" role="tabpanel" id="panel-design" aria-labelledby="tab-design" data-panel="design">

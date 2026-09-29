@@ -3,10 +3,11 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import assert from 'node:assert/strict';
-import { mkdtempSync, readFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { after, before, test } from 'node:test';
+import { png } from './helpers/png.mjs';
 
 const dir = mkdtempSync(path.join(tmpdir(), 'mps-mcp-'));
 const client = new Client({ name: 'mcp-test', version: '0.0.0' });
@@ -85,6 +86,88 @@ test('diagrams honour the size and alignment of their fence line', async () => {
     /class="mermaid-diagram is-sized"[^>]*style="--diagram-width: 40%"[^>]*data-align="left"[^>]*><svg/,
   );
   assert.doesNotMatch(html, /diagram-tools/);
+});
+
+test('images are read from disk and matched to the Markdown by file name', async () => {
+  const chart = path.join(dir, 'Chart Q3.png');
+  writeFileSync(chart, png(200, 100));
+  const markdown = '# Images\n\n![Chart](reports/2026/chart%20q3.png){width=50% align=center}\n\n![Logo](logo.png)\n';
+  const result = await client.callTool({
+    name: 'render_html',
+    arguments: { markdown, images: [{ path: chart }], output_path: path.join(dir, 'images.html') },
+  });
+  assert.equal(result.isError, undefined, JSON.stringify(result.content));
+  assert.deepEqual(JSON.parse(result.content[0].text).missing_images, ['logo.png']);
+  const html = readFileSync(path.join(dir, 'images.html'), 'utf8');
+  assert.match(
+    html,
+    /<span class="document-image is-sized is-block"[^>]*style="--image-width: 50%" data-align="center"><img src="data:image\/png;base64,[^"]+" alt="Chart"><\/span>/,
+  );
+  assert.match(html, /Missing image: logo.png/);
+
+  // The same file under the name the document expects.
+  const renamed = await client.callTool({
+    name: 'render_pdf',
+    arguments: {
+      markdown,
+      images: [{ path: chart }, { path: chart, name: 'logo.png' }],
+      output_path: path.join(dir, 'images.pdf'),
+    },
+  });
+  assert.equal(renamed.isError, undefined, JSON.stringify(renamed.content));
+  assert.deepEqual(JSON.parse(renamed.content[0].text).missing_images, []);
+  assert.equal(readFileSync(path.join(dir, 'images.pdf')).subarray(0, 5).toString(), '%PDF-');
+});
+
+test('only image files can be read, inside MPS_INPUT_DIR when it is set', async () => {
+  const secret = path.join(dir, 'notes.txt');
+  writeFileSync(secret, 'not an image');
+  const refused = await client.callTool({
+    name: 'render_html',
+    arguments: { markdown: '# T', images: [{ path: secret, name: 'notes.png' }] },
+  });
+  assert.equal(refused.isError, true);
+  assert.match(refused.content[0].text, /not a supported type/);
+  const absent = await client.callTool({
+    name: 'render_html',
+    arguments: { markdown: '# T', images: [{ path: path.join(dir, 'absent.png') }] },
+  });
+  assert.equal(absent.isError, true);
+  assert.match(absent.content[0].text, /cannot be read/);
+
+  const allowed = path.join(dir, 'allowed');
+  mkdirSync(allowed);
+  writeFileSync(path.join(allowed, 'in.png'), png(20, 20));
+  writeFileSync(path.join(dir, 'out.png'), png(20, 20));
+  const confined = new Client({ name: 'mcp-test-confined', version: '0.0.0' });
+  await confined.connect(
+    new StdioClientTransport({
+      command: process.execPath,
+      args: ['mcp/server.mjs'],
+      env: { ...process.env, MPS_INPUT_DIR: allowed },
+    }),
+  );
+  try {
+    const inside = await confined.callTool({
+      name: 'render_html',
+      arguments: { markdown: '![In](in.png)', images: [{ path: 'in.png' }] },
+    });
+    assert.equal(inside.isError, undefined, JSON.stringify(inside.content));
+    assert.match(inside.content[0].text, /<img src="data:image\/png;base64,/);
+    const outside = await confined.callTool({
+      name: 'render_html',
+      arguments: { markdown: '![Out](out.png)', images: [{ path: path.join(dir, 'out.png') }] },
+    });
+    assert.equal(outside.isError, true);
+    assert.match(outside.content[0].text, /MPS_INPUT_DIR/);
+    const escaping = await confined.callTool({
+      name: 'render_html',
+      arguments: { markdown: '![Out](out.png)', images: [{ path: '../out.png' }] },
+    });
+    assert.equal(escaping.isError, true);
+  } finally {
+    await confined.close();
+  }
 });
 
 test('refuses to overwrite an existing file unless asked', async () => {

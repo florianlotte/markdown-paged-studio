@@ -41,11 +41,11 @@ current `dist/`.
 
 ## Tools
 
-| Tool              | Input                                                 | Result                                                                                    |
-| ----------------- | ----------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| `render_pdf`      | `markdown`, optional `config`, `output_path`          | Writes the PDF; returns `{ path, pages, bytes }`                                          |
-| `render_html`     | `markdown`, optional `config`, optional `output_path` | Standalone HTML, written to disk or returned inline                                       |
-| `describe_config` | none                                                  | Current defaults (including `local/`) and the accepted keys, page sizes and margin limits |
+| Tool              | Input                                                                           | Result                                                                                    |
+| ----------------- | ------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `render_pdf`      | `markdown`, optional `config`, `output_path`, optional `overwrite` and `images` | Writes the PDF; returns `{ path, pages, bytes, missing_images }`                          |
+| `render_html`     | `markdown`, optional `config`, optional `output_path`, `overwrite` and `images` | Standalone HTML, written to disk or returned inline                                       |
+| `describe_config` | none                                                                            | Current defaults (including `local/`) and the accepted keys, page sizes and margin limits |
 
 `config` accepts the same keys as `local/config.json`: `title`, `subtitle`, `author`, `date`,
 `headerTitle`, `headerName`, `footerText`, `language`, `pageSize` (`A4`, `Letter`, `A5`), `marginTop`,
@@ -53,6 +53,8 @@ current `dist/`.
 are ignored, like a JSON import in the app.
 
 In `markdown`, a diagram is sized on its opening line: ` ```mermaid width=60% align=left ` (`width` from `10%` to `100%` or in `mm`; `align` is `left`, `center` or `right`).
+
+`images` lists the local image files of the document: `[{ "path": "/data/charts/q3.png" }]`, with an optional `name` when the Markdown uses another file name. The document matches them **by file name only**, so `![Chart](charts/q3.png)` and `![Chart](q3.png)` both use that file; size them with `![Chart](q3.png){width=60% align=center}`. Supported types: png, jpg, webp, gif, svg, up to 20 MB each. `missing_images` in the result names the images the Markdown references but that were not provided.
 
 The resource `studio://css-contract` documents the HTML structure and class names a `customCss`
 stylesheet can target.
@@ -68,6 +70,7 @@ diagram if useful), then calls `render_pdf` with `{ title, author, date, languag
 ## Safety
 
 - An existing file is never replaced unless the call passes `overwrite: true`.
+- Set `MPS_INPUT_DIR=/some/folder` to confine the image files the tools may read to that folder; only image files are ever read.
 - Set `MPS_OUTPUT_DIR=/some/folder` in the server's environment to confine every write to that folder; relative `output_path` values are then resolved inside it. Without it, any path the server process can write to is accepted.
 
 ## Notes

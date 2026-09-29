@@ -1,12 +1,13 @@
 // Document settings: defaults (built-in, then personal ones from local/), the mutable `state`, validation of
 // anything that enters it, and the autosave in localStorage.
 
+import { IMAGE_DATA_URL } from './images.js';
+
 export const STORAGE_KEY = 'markdown-paged-studio:document';
 export const PAGE_SIZES = ['A4', 'Letter', 'A5'];
 // Page heights in mm, used to size the cover page to the selected paper.
 export const PAGE_HEIGHT_MM = { A4: 297, A5: 210, Letter: 279.4 };
 export const MARGIN_MAX_MM = 80;
-const IMAGE_DATA_URL = /^data:image\/[a-z0-9.+-]+(?:;[a-z0-9=-]+)*,[^\s"<>]*$/i;
 // BCP 47 language tag such as "en", "fr", "pt-BR" or "zh-Hant".
 export const LANGUAGE_TAG = /^[a-z]{2,3}(?:-[a-z0-9]{2,8})*$/i;
 
@@ -116,6 +117,13 @@ const localText = import.meta.glob(['../local/custom.css', '../local/template.md
 const localLogo = Object.values(
   import.meta.glob('../local/logo.{svg,png,jpg,jpeg,webp,gif}', { eager: true, query: '?inline', import: 'default' }),
 )[0];
+
+// Images bundled from local/images/: available to every document of this build, matched by file name.
+export const LOCAL_IMAGES = import.meta.glob('../local/images/*.{png,jpg,jpeg,webp,gif,svg}', {
+  eager: true,
+  query: '?inline',
+  import: 'default',
+});
 
 export const DEFAULTS = {
   ...DEFAULT_STATE,

@@ -2,6 +2,18 @@
 // The markup itself lives in index.html.
 import { clearStoredConfig, DEFAULTS, sanitizeConfig, state } from './config.js';
 import { standaloneHtml } from './document.js';
+import {
+  addImageFiles,
+  clearImages,
+  exportImages,
+  findImage,
+  listImages,
+  missingImages,
+  onImagesChange,
+  removeImage,
+  replaceImages,
+  sanitizeImages,
+} from './images.js';
 import { scheduleRender } from './render.js';
 import { APP_COMMIT, APP_VERSION, COMMIT_URL, RELEASE_URL } from './version.js';
 import { toggleSidebar } from './view.js';
@@ -133,7 +145,9 @@ function bindFiles() {
     .addEventListener('click', () => download('document.md', state.markdown, 'text/markdown;charset=utf-8'));
 
   document.getElementById('saveConfig').addEventListener('click', () => {
-    download('markdown-paged-config.json', JSON.stringify(state, null, 2), 'application/json');
+    // The images travel with the configuration, so the file is a complete, portable document.
+    const config = { ...state, images: exportImages() };
+    download('markdown-paged-config.json', JSON.stringify(config, null, 2), 'application/json');
   });
 
   document.getElementById('loadConfig').addEventListener('click', () => document.getElementById('configFile').click());
@@ -146,13 +160,16 @@ function bindFiles() {
         alert('Invalid JSON file.');
         return;
       }
+      // A configuration saved before images existed has no `images` key: keep the current ones.
+      if (loaded && typeof loaded === 'object' && 'images' in loaded) replaceImages(sanitizeImages(loaded.images));
       applyConfig(loaded);
     }),
   );
 
   document.getElementById('resetDocument').addEventListener('click', () => {
-    if (!confirm('Discard the current document and restore the sample?')) return;
+    if (!confirm('Discard the current document and its images, and restore the sample?')) return;
     clearStoredConfig();
+    clearImages();
     document.getElementById('logo').value = '';
     applyConfig(DEFAULTS);
   });
@@ -231,6 +248,149 @@ function showVersion() {
   document.getElementById('appCommitSeparator').hidden = false;
 }
 
+// ---- Images: uploaded files are matched to the Markdown by file name (see images.js).
+
+function formatBytes(bytes) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} kB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+// Markdown for an image: the name only, with the characters a link destination cannot hold escaped.
+function imageReference(name) {
+  const alt = name.replace(/\.[^.]+$/, '');
+  const destination = encodeURI(name).replace(/\(/g, '%28').replace(/\)/g, '%29');
+  return `![${alt}](${destination})`;
+}
+
+function insertIntoEditor(text) {
+  const editor = document.getElementById('markdown');
+  const before = editor.value.slice(0, editor.selectionStart);
+  const lead = before && !before.endsWith('\n\n') ? (before.endsWith('\n') ? '\n' : '\n\n') : '';
+  editor.setRangeText(`${lead}${text}\n`, editor.selectionStart, editor.selectionEnd, 'end');
+  editor.dispatchEvent(new Event('input'));
+}
+
+function reportImages(results) {
+  const status = document.getElementById('imagesStatus');
+  status.textContent = results
+    .map(result => {
+      if (result.error) return `${result.name}: ${result.error}.`;
+      return result.resized ? `${result.name} added, scaled down to ${result.width} px wide.` : `${result.name} added.`;
+    })
+    .join(' ');
+  status.hidden = results.length === 0;
+  status.classList.toggle(
+    'is-error',
+    results.some(result => result.error),
+  );
+}
+
+async function addImages(files, { insert = false, rename } = {}) {
+  const images = [...files].filter(file => file.type.startsWith('image/'));
+  if (!images.length) return;
+  const results = await addImageFiles(images, { rename });
+  reportImages(results);
+  if (insert) {
+    const added = results.filter(result => !result.error).map(result => imageReference(result.name));
+    if (added.length) insertIntoEditor(added.join('\n\n'));
+  }
+}
+
+function imageListItem(image) {
+  const item = document.createElement('li');
+  const thumb = document.createElement('img');
+  thumb.className = 'image-thumb';
+  thumb.src = image.dataUrl;
+  thumb.alt = '';
+  const text = document.createElement('div');
+  text.className = 'image-text';
+  const name = document.createElement('span');
+  name.className = 'image-name';
+  name.textContent = image.name;
+  name.title = image.name;
+  const details = document.createElement('span');
+  details.className = 'image-details';
+  const size = image.width && image.height ? `${image.width} × ${image.height} · ` : '';
+  details.textContent = `${size}${formatBytes(image.bytes)}${image.builtin ? ' · built in' : ''}`;
+  text.append(name, details);
+  const insert = document.createElement('button');
+  insert.type = 'button';
+  insert.className = 'secondary';
+  insert.textContent = 'Insert';
+  insert.title = `Insert ${image.name} at the cursor`;
+  insert.addEventListener('click', () => insertIntoEditor(imageReference(image.name)));
+  item.append(thumb, text, insert);
+  if (!image.builtin) {
+    const remove = document.createElement('button');
+    remove.type = 'button';
+    remove.className = 'secondary';
+    remove.textContent = 'Remove';
+    remove.title = `Remove ${image.name}`;
+    remove.addEventListener('click', () => removeImage(image.key));
+    item.append(remove);
+  }
+  return item;
+}
+
+function missingListItem(name) {
+  const item = document.createElement('li');
+  item.className = 'is-missing';
+  const text = document.createElement('div');
+  text.className = 'image-text';
+  const label = document.createElement('span');
+  label.className = 'image-name';
+  label.textContent = name;
+  const details = document.createElement('span');
+  details.className = 'image-details';
+  details.textContent = 'Used in the document, not uploaded yet';
+  text.append(label, details);
+  item.append(text);
+  return item;
+}
+
+function renderImageList() {
+  const list = document.getElementById('imageList');
+  // The missing names come from the last render: drop those uploaded since.
+  const missing = missingImages().filter(name => !findImage(name));
+  list.replaceChildren(...missing.map(missingListItem), ...listImages().map(imageListItem));
+}
+
+function bindImages() {
+  const input = document.getElementById('imageFiles');
+  document.getElementById('addImages').addEventListener('click', () => input.click());
+  input.addEventListener('change', async () => {
+    await addImages(input.files);
+    input.value = '';
+  });
+
+  // Dropping or pasting image files into the editor adds them and writes their reference at the cursor.
+  const editor = document.getElementById('markdown');
+  editor.addEventListener('dragover', event => {
+    if (event.dataTransfer?.types.includes('Files')) event.preventDefault();
+  });
+  editor.addEventListener('drop', event => {
+    const files = [...(event.dataTransfer?.files ?? [])].filter(file => file.type.startsWith('image/'));
+    if (!files.length) return;
+    event.preventDefault();
+    addImages(files, { insert: true });
+  });
+  editor.addEventListener('paste', event => {
+    const files = [...(event.clipboardData?.files ?? [])].filter(file => file.type.startsWith('image/'));
+    if (!files.length) return;
+    event.preventDefault();
+    // Clipboard images are all called "image.png": give each paste its own name.
+    const stamp = new Date().toISOString().slice(0, 19).replace(/[-:T]/g, '');
+    addImages(files, {
+      insert: true,
+      rename: file => `pasted-${stamp}.${file.type.split('/')[1]?.replace('jpeg', 'jpg') || 'png'}`,
+    });
+  });
+
+  onImagesChange(renderImageList);
+  renderImageList();
+}
+
 export function initUi() {
   showVersion();
   syncInputs();
@@ -238,4 +398,5 @@ export function initUi() {
   bindTabs();
   bindFiles();
   bindPdf();
+  bindImages();
 }

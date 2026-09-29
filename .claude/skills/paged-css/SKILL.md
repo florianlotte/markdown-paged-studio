@@ -35,7 +35,7 @@ description: Reference for the rendered-document CSS contract and the Paged.js p
 
 ## Public class names (do not rename)
 
-`.document-content`, `.cover-page`, `.cover-logo`, `.cover-title`, `.cover-subtitle`, `.cover-meta`. Also `.mermaid-diagram` (wrapper of a rendered diagram SVG; `.is-sized` with `--diagram-width` when the fence line sets `width`, `data-align` for `align`) and `.mermaid-error` (a `<pre>` shown when a diagram fails to parse). Select the drawing with `.mermaid-diagram > svg`: in the preview the wrapper also holds the studio's resize controls. Users paste stylesheets that target these; README documents them.
+`.document-content`, `.cover-page`, `.cover-logo`, `.cover-title`, `.cover-subtitle`, `.cover-meta`. Also `.mermaid-diagram` (wrapper of a rendered diagram SVG; `.is-sized` with `--diagram-width` when the fence line sets `width`, `data-align` for `align`) and `.mermaid-error` (a `<pre>` shown when a diagram fails to parse). Select the drawing with `.mermaid-diagram > svg`: in the preview the wrapper also holds the studio's resize controls. Images are `<span class="document-image"><img></span>` (`.is-block` alone in a paragraph, `.is-sized` with `--image-width`, `data-align`), resolved by file name from the image library (`src/images.js`); an image that is not uploaded renders as `.image-missing`. Users paste stylesheets that target these; README documents them.
 
 ## Known quirks
 

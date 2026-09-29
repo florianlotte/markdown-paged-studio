@@ -3,6 +3,7 @@
 // for the rendering pipeline.
 import { test, expect } from '@playwright/test';
 import { readFileSync } from 'node:fs';
+import { png } from './helpers/png.mjs';
 
 const STATUS_DONE = /^\d+ pages?$/;
 const status = page => page.locator('#status');
@@ -342,6 +343,8 @@ test('the sidebar can be hidden and the choice is remembered', async ({ page }) 
   const previewWidth = () => page.locator('.preview-shell').evaluate(el => el.clientWidth);
   const widthBefore = await previewWidth();
   await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+  // The drawer close button belongs to the phone layout only.
+  await expect(page.locator('#closeSidebar')).toBeHidden();
 
   await toggle.click();
   await expect(sidebar).toBeHidden();
@@ -590,4 +593,218 @@ test('the sidebar footer shows the running version and stays at the bottom', asy
   });
   expect(await footer.boundingBox()).toEqual(before);
   await expect(footer).toBeInViewport();
+});
+
+// ---- Images
+
+const upload = (page, files) => page.locator('#imageFiles').setInputFiles(files);
+const pngFile = (name, width = 300, height = 200) => ({ name, mimeType: 'image/png', buffer: png(width, height) });
+const imageItems = page => page.locator('#imageList li');
+
+// Opens the studio on a document and waits for its pages; images uploaded by earlier tests are gone
+// because every test runs in a fresh browser context.
+async function openDocument(page, markdown, title) {
+  await openFreshStudio(page);
+  await setMarkdown(page, markdown);
+  await expect(page.locator('#preview .document-content h1')).toHaveText(title);
+  await expect(page.locator('#preview')).not.toHaveClass(/is-stale/);
+}
+
+test('images are matched by file name whatever the path, and kept across reloads', async ({ page }) => {
+  await openDocument(
+    page,
+    '# Names\n\n![Plan](./docs/img/Plan.PNG)\n\nInline ![Again](C:\\\\work\\\\plan.png) and ![Other](other.png).\n',
+    'Names',
+  );
+  await expect(page.locator('#preview .image-missing')).toHaveCount(3);
+  await expect(page.locator('#preview .image-missing').first()).toHaveText('Missing image: Plan.PNG');
+  await expect(imageItems(page)).toHaveCount(3);
+  await expect(page.locator('#imageList li.is-missing')).toHaveCount(3);
+
+  await upload(page, pngFile('plan.png'));
+  await expect(page.locator('#imagesStatus')).toHaveText('plan.png added.');
+  const images = page.locator('#preview .document-image > img');
+  await expect(images).toHaveCount(2);
+  await expect(images.first()).toHaveAttribute('src', /^data:image\/png;base64,/);
+  await expect(images.first()).toHaveAttribute('alt', 'Plan');
+  expect(await images.first().evaluate(el => el.complete && el.naturalWidth)).toBe(300);
+  await expect(page.locator('#preview .image-missing')).toHaveText('Missing image: other.png');
+  await expect(page.locator('#imageList li.is-missing .image-name')).toHaveText('other.png');
+  await expect(page.locator('#imageList li:not(.is-missing) .image-name')).toHaveText('plan.png');
+  await expect(page.locator('#imageList li:not(.is-missing) .image-details')).toHaveText(/^300 × 200 · \d+ (B|kB)$/);
+
+  // IndexedDB keeps the library.
+  await page.reload();
+  await expect(status(page)).toHaveText(STATUS_DONE);
+  await expect(page.locator('#preview .document-image > img')).toHaveCount(2);
+  await expect(page.locator('#imageList li:not(.is-missing) .image-name')).toHaveText('plan.png');
+
+  // A file of the same name replaces the image; removing it brings the placeholders back.
+  await upload(page, pngFile('PLAN.png', 120, 60));
+  await expect(page.locator('#imageList li:not(.is-missing)')).toHaveCount(1);
+  await expect(page.locator('#imageList li:not(.is-missing) .image-details')).toHaveText(/^120 × 60/);
+  await page.locator('#imageList').getByRole('button', { name: 'Remove' }).click();
+  await expect(page.locator('#preview .image-missing')).toHaveCount(3);
+});
+
+test('large raster images are scaled down on upload, vector images are left alone', async ({ page }) => {
+  await openDocument(page, '# Sizes\n\n![Wide](wide.png)\n\n![Icon](icon.svg)\n', 'Sizes');
+  const svg =
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 4000 100" width="4000" height="100"><rect width="4000" height="100" fill="#1d4ed8"/></svg>';
+  await upload(page, [
+    pngFile('wide.png', 3000, 150),
+    { name: 'icon.svg', mimeType: 'image/svg+xml', buffer: Buffer.from(svg) },
+  ]);
+  await expect(page.locator('#imagesStatus')).toHaveText(
+    'wide.png added, scaled down to 2400 px wide. icon.svg added.',
+  );
+  await expect(
+    page.locator('#imageList li:not(.is-missing)', { hasText: 'wide.png' }).locator('.image-details'),
+  ).toHaveText(/^2400 × 120/);
+  const wide = page.locator('#preview .document-image > img[alt="Wide"]');
+  await expect(wide).toBeVisible();
+  expect(await wide.evaluate(el => el.naturalWidth)).toBe(2400);
+  await expect(page.locator('#preview .document-image > img[alt="Icon"]')).toHaveAttribute(
+    'src',
+    /^data:image\/svg\+xml;base64,/,
+  );
+  // Whatever its pixel size, an image never exceeds the text column.
+  const geometry = await wide.evaluate(el => {
+    const column = el.closest('p').getBoundingClientRect();
+    return el.getBoundingClientRect().width <= column.width + 0.5;
+  });
+  expect(geometry).toBe(true);
+});
+
+test('the configuration file carries the images, Reset removes them', async ({ page }) => {
+  await openDocument(page, '# Config\n\n![Plan](plan.png)\n', 'Config');
+  await upload(page, pngFile('plan.png'));
+  await expect(page.locator('#preview .document-image > img')).toHaveCount(1);
+
+  const [download] = await Promise.all([page.waitForEvent('download'), page.locator('#saveConfig').click()]);
+  const saved = JSON.parse(readFileSync(await download.path(), 'utf8'));
+  expect(Object.keys(saved.images)).toEqual(['plan.png']);
+  expect(saved.images['plan.png']).toMatch(/^data:image\/png;base64,/);
+
+  page.on('dialog', dialog => dialog.accept());
+  await page.locator('#resetDocument').click();
+  await expect(imageItems(page)).toHaveCount(0);
+  await expect(page.locator('#title')).toHaveValue('Architecture Report');
+
+  const hostile = {
+    ...saved,
+    images: { ...saved.images, 'bad.png': 'javascript:alert(1)', 'page.html': 'data:text/html,x' },
+  };
+  await page.locator('#configFile').setInputFiles({
+    name: 'config.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from(JSON.stringify(hostile)),
+  });
+  await expect(page.locator('#preview .document-content h1')).toHaveText('Config');
+  await expect(page.locator('#preview .document-image > img')).toHaveCount(1);
+  await expect(imageItems(page)).toHaveCount(1);
+  await expect(page.locator('#imageList .image-name')).toHaveText('plan.png');
+});
+
+test('images are inserted from the list, by pasting, and exported inline', async ({ page }) => {
+  await openDocument(page, '# Insert\n\nFirst paragraph.\n', 'Insert');
+  const editor = page.locator('#markdown');
+  await upload(page, pngFile('My photo (1).png'));
+  await editor.evaluate(el => el.setSelectionRange(el.value.length, el.value.length));
+  await page.locator('#imageList').getByRole('button', { name: 'Insert' }).click();
+  await expect(editor).toHaveValue(/!\[My photo \(1\)\]\(My%20photo%20%281%29\.png\)\n$/);
+  await expect(page.locator('#preview .document-image > img')).toHaveCount(1);
+
+  // Pasting an image from the clipboard adds it under its own name and references it.
+  const bytes = [...png(40, 40)];
+  await editor.evaluate((el, data) => {
+    const transfer = new DataTransfer();
+    transfer.items.add(new File([new Uint8Array(data)], 'image.png', { type: 'image/png' }));
+    el.dispatchEvent(new ClipboardEvent('paste', { clipboardData: transfer, bubbles: true, cancelable: true }));
+  }, bytes);
+  await expect(editor).toHaveValue(/!\[pasted-\d{14}\]\(pasted-\d{14}\.png\)\n$/);
+  await expect(page.locator('#preview .document-image > img')).toHaveCount(2);
+  await expect(imageItems(page)).toHaveCount(2);
+
+  const [download] = await Promise.all([page.waitForEvent('download'), page.locator('#exportHtml').click()]);
+  const html = readFileSync(await download.path(), 'utf8');
+  expect(html.match(/<span class="document-image is-block"[^>]*><img src="data:image\/png;base64,/g)).toHaveLength(2);
+  expect(html).not.toContain('diagram-tools');
+  expect(html).not.toContain('resizable');
+});
+
+// Width of an image as a share of its paragraph, and where it sits in it.
+function imageGeometry(page, selector = '#preview .document-image') {
+  return page.evaluate(target => {
+    const wrapper = document.querySelector(target);
+    const image = wrapper?.querySelector(':scope > img');
+    if (!image) return null;
+    const column = wrapper.parentElement.getBoundingClientRect();
+    const box = image.getBoundingClientRect();
+    return {
+      percent: Math.round((box.width / column.width) * 100),
+      left: Math.round(((box.left - column.left) / column.width) * 100),
+      right: Math.round(((column.right - box.right) / column.width) * 100),
+    };
+  }, selector);
+}
+
+test('images are resized and aligned from the preview like diagrams', async ({ page }) => {
+  await openDocument(
+    page,
+    '# Resize image\n\n![Plan](img/plan.png)\n\nInline ![Small](plan.png) image.\n',
+    'Resize image',
+  );
+  await upload(page, pngFile('plan.png', 300, 200));
+  const editor = page.locator('#markdown');
+  const block = page.locator('#preview .document-image.is-block');
+  const inline = page.locator('#preview .document-image:not(.is-block)');
+  await expect(block.locator('> img')).toBeVisible();
+  await expect(page.locator('#preview')).not.toHaveClass(/is-stale/);
+  await block.scrollIntoViewIfNeeded();
+
+  // Click to select, then a preset: the braces are written after the image.
+  const middle = centre(await block.locator('> img').boundingBox());
+  await page.mouse.click(middle.x, middle.y);
+  await expect(block).toHaveClass(/is-selected/);
+  await block.getByRole('button', { name: 'Width 50 %' }).click();
+  await expect(editor).toHaveValue(/!\[Plan\]\(img\/plan\.png\)\{width=50%\}\n/);
+  await expect.poll(async () => (await imageGeometry(page, '#preview .document-image.is-block'))?.percent).toBe(50);
+
+  // Alignment: left by default, so "Center" is written and "Align left" removes it.
+  await expect(page.locator('#preview')).not.toHaveClass(/is-stale/);
+  await block.getByRole('button', { name: 'Center' }).click();
+  await expect(editor).toHaveValue(/\{width=50% align=center\}/);
+  await expect
+    .poll(() => imageGeometry(page, '#preview .document-image.is-block'))
+    .toEqual({ percent: 50, left: 25, right: 25 });
+  await expect(page.locator('#preview')).not.toHaveClass(/is-stale/);
+  await block.getByRole('button', { name: 'Align right' }).click();
+  await expect(editor).toHaveValue(/\{width=50% align=right\}/);
+  await expect.poll(async () => (await imageGeometry(page, '#preview .document-image.is-block'))?.right).toBe(0);
+
+  // Drag the handle (on the left edge of a right-aligned image) to make it wider.
+  await expect(page.locator('#preview')).not.toHaveClass(/is-stale/);
+  const handle = centre(await block.locator('.diagram-handle').boundingBox());
+  await page.mouse.move(handle.x, handle.y, { steps: 5 });
+  await page.mouse.down();
+  await page.mouse.move(handle.x - 140, handle.y, { steps: 8 });
+  await page.mouse.up();
+  await expect(editor).not.toHaveValue(/width=50%/);
+  const dragged = Number(/\{width=(\d+)% align=right\}/.exec(await editor.inputValue())?.[1]);
+  expect(dragged).toBeGreaterThan(50);
+  await expect
+    .poll(async () => (await imageGeometry(page, '#preview .document-image.is-block'))?.percent)
+    .toBe(dragged);
+
+  // An image inside a sentence can be sized but not moved sideways.
+  await expect(page.locator('#preview')).not.toHaveClass(/is-stale/);
+  const small = centre(await inline.locator('> img').boundingBox());
+  await page.mouse.click(small.x, small.y);
+  await expect(inline).toHaveClass(/is-selected/);
+  await expect(block).not.toHaveClass(/is-selected/);
+  await expect(inline.getByRole('button', { name: 'Center' })).toHaveCount(0);
+  await inline.getByRole('button', { name: 'Width 25 %' }).click();
+  await expect(editor).toHaveValue(/Inline !\[Small\]\(plan\.png\)\{width=25%\} image\./);
+  await expect(editor).toHaveValue(new RegExp(`\\{width=${dragged}% align=right\\}`));
 });

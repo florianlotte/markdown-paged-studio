@@ -1,7 +1,34 @@
-// Studio-only controls to resize Mermaid diagrams directly in the preview. They are added after
-// pagination, so they never reach the exported document. The size is not kept here: every change rewrites
-// the attributes of the diagram's fence line in the Markdown source (```mermaid width=60% align=left).
-import { DIAGRAM_WIDTH_MAX, DIAGRAM_WIDTH_MIN, updateFenceAttributes } from './markdown.js';
+// Studio-only controls to resize Mermaid diagrams and images directly in the preview. They are added
+// after pagination, so they never reach the exported document. The size is not kept here: every change
+// rewrites the attributes in the Markdown source (```mermaid width=60% or ![Alt](photo.png){width=60%}).
+import { DIAGRAM_WIDTH_MAX, DIAGRAM_WIDTH_MIN, updateFenceAttributes, updateImageAttributes } from './markdown.js';
+
+// What can be resized: where it is, what is drawn, which CSS property previews the width, how it is
+// identified across renders, and how a change is written back to the source.
+const TARGETS = [
+  {
+    label: 'Diagram',
+    selector: '.mermaid-diagram[data-line]',
+    drawing: ':scope > svg',
+    widthProperty: '--diagram-width',
+    defaultAlign: 'center',
+    canAlign: () => true,
+    key: element => `diagram:${element.dataset.line}`,
+    rewrite: (markdown, data, changes) => updateFenceAttributes(markdown, Number(data.line), changes),
+  },
+  {
+    label: 'Image',
+    selector: '.document-image[data-line]',
+    drawing: ':scope > img',
+    widthProperty: '--image-width',
+    defaultAlign: 'left',
+    // Only an image alone in its paragraph is a block that can be moved sideways.
+    canAlign: element => element.classList.contains('is-block'),
+    key: element => `image:${element.dataset.line}:${element.dataset.index}`,
+    rewrite: (markdown, data, changes) =>
+      updateImageAttributes(markdown, Number(data.line), Number(data.lineEnd), Number(data.index), changes),
+  },
+];
 
 const PRESETS = [25, 50, 75, 100];
 const KEYBOARD_STEP = 5;
@@ -11,19 +38,19 @@ const ALIGNMENTS = [
   ['right', 'Align right', 'M3 4h14M9 8h8M3 12h14M9 16h8'],
 ];
 
-// Source line of the diagram whose tools stay open without hovering (clicked, or just edited). It is
-// kept across renders: attribute changes never move a fence to another line.
-let selectedLine = null;
+// Key of the element whose tools stay open without hovering (clicked, or just edited). It is kept across
+// renders: attribute changes never move a diagram or an image to another line.
+let selectedKey = null;
 let listening = false;
 
 function applySelection(preview) {
-  for (const diagram of preview.querySelectorAll('.mermaid-diagram[data-line]')) {
-    diagram.classList.toggle('is-selected', Number(diagram.dataset.line) === selectedLine);
+  for (const element of preview.querySelectorAll('.resizable')) {
+    element.classList.toggle('is-selected', element.dataset.resizeKey === selectedKey);
   }
 }
 
-function select(preview, line) {
-  selectedLine = line;
+function select(preview, key) {
+  selectedKey = key;
   applySelection(preview);
 }
 
@@ -33,10 +60,10 @@ function listenForDeselection(preview) {
   listening = true;
   const clear = () => select(preview, null);
   (preview.closest('.preview-shell') ?? preview).addEventListener('pointerdown', event => {
-    if (!event.target.closest('.mermaid-diagram')) clear();
+    if (!event.target.closest('.resizable')) clear();
   });
   document.addEventListener('keydown', event => {
-    if (event.key === 'Escape' && selectedLine !== null) clear();
+    if (event.key === 'Escape' && selectedKey !== null) clear();
   });
 }
 
@@ -75,16 +102,16 @@ function currentPercent(diagram, drawing) {
   return clamp((drawing.getBoundingClientRect().width / diagram.parentElement.getBoundingClientRect().width) * 100);
 }
 
-function enhance(diagram, commit, onSelect) {
-  const drawing = diagram.querySelector(':scope > svg');
+function enhance(diagram, target, commit, onSelect) {
+  const drawing = diagram.querySelector(target.drawing);
   if (!drawing || diagram.querySelector(':scope > .diagram-tools')) return;
-  const align = diagram.dataset.align ?? 'center';
+  const align = diagram.dataset.align ?? target.defaultAlign;
   const sized = diagram.classList.contains('is-sized');
 
-  const tools = document.createElement('div');
+  const tools = document.createElement('span');
   tools.className = 'diagram-tools';
   tools.setAttribute('role', 'toolbar');
-  tools.setAttribute('aria-label', 'Diagram size and alignment');
+  tools.setAttribute('aria-label', `${target.label} size and alignment`);
   const percent = currentPercent(diagram, drawing);
   for (const preset of PRESETS) {
     tools.append(
@@ -94,22 +121,24 @@ function enhance(diagram, commit, onSelect) {
     );
   }
   tools.append(button('Auto', 'Natural size', () => commit({ width: null }), { pressed: !sized }));
-  const separator = document.createElement('span');
-  separator.className = 'diagram-tools-separator';
-  tools.append(separator);
-  for (const [value, title, path] of ALIGNMENTS) {
-    tools.append(
-      button(icon(path), title, () => commit({ align: value === 'center' ? null : value }), {
-        pressed: align === value,
-      }),
-    );
+  if (target.canAlign(diagram)) {
+    const separator = document.createElement('span');
+    separator.className = 'diagram-tools-separator';
+    tools.append(separator);
+    for (const [value, title, path] of ALIGNMENTS) {
+      tools.append(
+        button(icon(path), title, () => commit({ align: value === target.defaultAlign ? null : value }), {
+          pressed: align === value,
+        }),
+      );
+    }
   }
 
   const handle = document.createElement('span');
   handle.className = 'diagram-handle';
   handle.tabIndex = 0;
   handle.setAttribute('role', 'slider');
-  handle.setAttribute('aria-label', 'Diagram width');
+  handle.setAttribute('aria-label', `${target.label} width`);
   handle.setAttribute('aria-valuemin', String(DIAGRAM_WIDTH_MIN));
   handle.setAttribute('aria-valuemax', String(DIAGRAM_WIDTH_MAX));
   handle.setAttribute('aria-valuenow', String(percent));
@@ -130,7 +159,7 @@ function enhance(diagram, commit, onSelect) {
 
   const preview = percentValue => {
     diagram.classList.add('is-sized', 'is-resizing');
-    diagram.style.setProperty('--diagram-width', `${percentValue}%`);
+    diagram.style.setProperty(target.widthProperty, `${percentValue}%`);
     handle.dataset.value = `${percentValue} %`;
     handle.setAttribute('aria-valuenow', String(percentValue));
     handle.setAttribute('aria-valuetext', `${percentValue} %`);
@@ -170,24 +199,30 @@ function enhance(diagram, commit, onSelect) {
   });
 
   diagram.addEventListener('pointerdown', onSelect);
+  diagram.classList.add('resizable');
   diagram.append(tools, handle);
 }
 
-// Adds the controls to every rendered diagram of the preview. `getMarkdown` returns the current source and
-// `applyMarkdown` stores the rewritten one (and triggers a render).
-export function enhanceDiagrams(preview, getMarkdown, applyMarkdown) {
-  for (const diagram of preview.querySelectorAll('.mermaid-diagram[data-line]')) {
-    const line = Number(diagram.dataset.line);
-    if (!Number.isInteger(line)) continue;
-    enhance(
-      diagram,
-      changes => {
-        // Keep the tools open on this diagram after the render triggered by the change.
-        select(preview, line);
-        applyMarkdown(updateFenceAttributes(getMarkdown(), line, changes));
-      },
-      () => select(preview, line),
-    );
+// Adds the controls to every rendered diagram and image of the preview. `getMarkdown` returns the current
+// source and `applyMarkdown` stores the rewritten one (and triggers a render).
+export function enhanceResizables(preview, getMarkdown, applyMarkdown) {
+  for (const target of TARGETS) {
+    for (const element of preview.querySelectorAll(target.selector)) {
+      if (!Number.isInteger(Number(element.dataset.line))) continue;
+      const key = target.key(element);
+      const data = { ...element.dataset };
+      element.dataset.resizeKey = key;
+      enhance(
+        element,
+        target,
+        changes => {
+          // Keep the tools open on this element after the render triggered by the change.
+          select(preview, key);
+          applyMarkdown(target.rewrite(getMarkdown(), data, changes));
+        },
+        () => select(preview, key),
+      );
+    }
   }
   applySelection(preview);
   listenForDeselection(preview);

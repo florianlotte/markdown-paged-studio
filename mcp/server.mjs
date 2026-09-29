@@ -9,7 +9,7 @@
 // Never write to stdout here: it carries the MCP protocol. Use console.error for diagnostics.
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { access, mkdir, readFile, writeFile } from 'node:fs/promises';
+import { access, mkdir, readFile, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
@@ -81,14 +81,19 @@ async function withStudio(fn) {
   }
 }
 
-// Standalone HTML for a document; the page validates the config exactly like a JSON import.
-function renderHtml(page, config, mode) {
-  return page.evaluate(([cfg, m]) => window.studio.render(cfg, m), [config, mode]);
+// Standalone HTML for a document; the page validates the config and the images like a JSON import.
+function renderHtml(page, config, mode, images) {
+  return page.evaluate(([cfg, m, files]) => window.studio.render(cfg, m, { images: files }), [config, mode, images]);
 }
 
-async function renderPdf(config) {
+// Names of the images the document references but that were not provided.
+function missingImages(html) {
+  return [...new Set([...html.matchAll(/class="image-missing" data-image="([^"]*)"/g)].map(match => match[1]))];
+}
+
+async function renderPdf(config, images) {
   return withStudio(async (page, context) => {
-    const html = await renderHtml(page, config, 'pdf');
+    const html = await renderHtml(page, config, 'pdf', images);
     const printPage = await context.newPage();
     printPage.setDefaultTimeout(RENDER_TIMEOUT_MS);
     await printPage.setContent(html, { waitUntil: 'load' });
@@ -99,8 +104,40 @@ async function renderPdf(config) {
       printBackground: true,
       margin: { top: 0, right: 0, bottom: 0, left: 0 },
     });
-    return { pdf, pages };
+    return { pdf, pages, missing: missingImages(html) };
   });
+}
+
+// Image files the tools may read. Only image types, of a bounded size; MPS_INPUT_DIR confines the reads to
+// one folder, as MPS_OUTPUT_DIR does for the writes.
+const INPUT_DIR = process.env.MPS_INPUT_DIR ? path.resolve(process.env.MPS_INPUT_DIR) : null;
+const MAX_IMAGE_BYTES = 20 * 1024 * 1024;
+const IMAGE_TYPES = {
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.webp': 'image/webp',
+  '.gif': 'image/gif',
+  '.svg': 'image/svg+xml',
+};
+
+// [{ path, name? }] -> { fileName: dataUrl }. The document matches images by file name only.
+async function readImages(images = []) {
+  const files = {};
+  for (const { path: file, name } of images) {
+    const source = path.resolve(INPUT_DIR ?? process.cwd(), file);
+    if (INPUT_DIR && !source.startsWith(INPUT_DIR + path.sep)) {
+      throw new Error(`Image ${file} must stay inside ${INPUT_DIR} (MPS_INPUT_DIR)`);
+    }
+    const type = IMAGE_TYPES[path.extname(source).toLowerCase()];
+    if (!type) throw new Error(`Image ${file} is not a supported type (${Object.keys(IMAGE_TYPES).join(', ')})`);
+    const { size } = await stat(source).catch(() => {
+      throw new Error(`Image ${file} cannot be read`);
+    });
+    if (size > MAX_IMAGE_BYTES) throw new Error(`Image ${file} is larger than ${MAX_IMAGE_BYTES / 1024 / 1024} MB`);
+    files[name || path.basename(source)] = `data:${type};base64,${(await readFile(source)).toString('base64')}`;
+  }
+  return files;
 }
 
 // Where the tools may write. MPS_OUTPUT_DIR confines every output to one folder; without it, any path the
@@ -154,8 +191,22 @@ const markdownField = z
   .min(1)
   .describe(
     'The report body in Markdown (CommonMark + tables). ```mermaid fences become diagrams; size one with ' +
-      'attributes on its opening line, e.g. ```mermaid width=60% align=left (width: 10-100% or mm).',
+      'attributes on its opening line, e.g. ```mermaid width=60% align=left (width: 10-100% or mm). Local ' +
+      'images are passed through `images` and sized the same way: ![Alt](photo.png){width=60% align=center}.',
   );
+const imagesField = z
+  .array(
+    z.object({
+      path: z.string().min(1).describe('Image file to read (absolute, or relative to MPS_INPUT_DIR or the server cwd)'),
+      name: z.string().min(1).optional().describe('File name the Markdown uses, when it differs from the file on disk'),
+    }),
+  )
+  .optional()
+  .describe(
+    'Local images of the document (png, jpg, webp, gif, svg). The Markdown refers to them by file name, any ' +
+      'path is ignored: ![Chart](charts/q3.png) uses the image named q3.png.',
+  );
+
 const configField = z
   .object(configShape)
   .optional()
@@ -185,13 +236,14 @@ server.registerTool(
         .min(1)
         .describe('Where to write the PDF (absolute, or relative to MPS_OUTPUT_DIR or the server cwd)'),
       overwrite: z.boolean().optional().describe('Replace the file if it already exists (default: refuse)'),
+      images: imagesField,
     },
   },
-  async ({ markdown, config, output_path, overwrite }) => {
+  async ({ markdown, config, output_path, overwrite, images }) => {
     try {
-      const { pdf, pages } = await renderPdf({ ...config, markdown });
+      const { pdf, pages, missing } = await renderPdf({ ...config, markdown }, await readImages(images));
       const target = await writeOutput(output_path, pdf, { overwrite });
-      const result = { path: target, pages, bytes: pdf.length };
+      const result = { path: target, pages, bytes: pdf.length, missing_images: missing };
       return { content: [{ type: 'text', text: JSON.stringify(result) }], structuredContent: result };
     } catch (error) {
       return toolError(error);
@@ -212,14 +264,16 @@ server.registerTool(
       config: configField,
       output_path: z.string().min(1).optional().describe('Where to write the HTML file'),
       overwrite: z.boolean().optional().describe('Replace the file if it already exists (default: refuse)'),
+      images: imagesField,
     },
   },
-  async ({ markdown, config, output_path, overwrite }) => {
+  async ({ markdown, config, output_path, overwrite, images }) => {
     try {
-      const html = await withStudio(page => renderHtml(page, { ...config, markdown }, 'export'));
+      const files = await readImages(images);
+      const html = await withStudio(page => renderHtml(page, { ...config, markdown }, 'export', files));
       if (output_path) {
         const target = await writeOutput(output_path, html, { overwrite });
-        const result = { path: target, bytes: Buffer.byteLength(html) };
+        const result = { path: target, bytes: Buffer.byteLength(html), missing_images: missingImages(html) };
         return { content: [{ type: 'text', text: JSON.stringify(result) }], structuredContent: result };
       }
       return { content: [{ type: 'text', text: html }] };
@@ -281,6 +335,7 @@ The rendered document has this structure (the cover section only when \`cover\` 
 
 Mermaid diagrams live in \`.mermaid-diagram\` (inline SVG, select it with \`.mermaid-diagram > svg\`); a failed diagram is a \`<pre class="mermaid-error">\`.
 A diagram is sized from its fence line (\`width=60%\`, \`align=left\`), which sets \`.is-sized\`, \`--diagram-width\` and \`data-align\`.
+Images are wrapped in \`<span class="document-image">\` (\`.is-block\` when alone in a paragraph, \`.is-sized\` with \`--image-width\` for \`![Alt](photo.png){width=60% align=center}\`); an image that was not provided is a \`.image-missing\` box.
 Header, footer and the page counter are \`@page\` margin boxes driven by the config, not by CSS classes.
 Use print units (\`mm\`, \`pt\`) and paged-media properties such as \`break-before: page\` or \`break-inside: avoid\`.
 \`customCss\` replaces the default stylesheet entirely; start from \`describe_config().defaults.customCss\`.
