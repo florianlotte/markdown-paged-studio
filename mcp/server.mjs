@@ -152,7 +152,10 @@ const configShape = {
 const markdownField = z
   .string()
   .min(1)
-  .describe('The report body in Markdown (CommonMark + tables). ```mermaid fences become diagrams.');
+  .describe(
+    'The report body in Markdown (CommonMark + tables). ```mermaid fences become diagrams; size one with ' +
+      'attributes on its opening line, e.g. ```mermaid width=60% align=left (width: 10-100% or mm).',
+  );
 const configField = z
   .object(configShape)
   .optional()
@@ -276,7 +279,8 @@ The rendered document has this structure (the cover section only when \`cover\` 
 <article class="document-content">…Markdown as HTML…</article>
 \`\`\`
 
-Mermaid diagrams live in \`.mermaid-diagram\` (inline SVG); a failed diagram is a \`<pre class="mermaid-error">\`.
+Mermaid diagrams live in \`.mermaid-diagram\` (inline SVG, select it with \`.mermaid-diagram > svg\`); a failed diagram is a \`<pre class="mermaid-error">\`.
+A diagram is sized from its fence line (\`width=60%\`, \`align=left\`), which sets \`.is-sized\`, \`--diagram-width\` and \`data-align\`.
 Header, footer and the page counter are \`@page\` margin boxes driven by the config, not by CSS classes.
 Use print units (\`mm\`, \`pt\`) and paged-media properties such as \`break-before: page\` or \`break-inside: avoid\`.
 \`customCss\` replaces the default stylesheet entirely; start from \`describe_config().defaults.customCss\`.

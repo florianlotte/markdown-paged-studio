@@ -66,11 +66,25 @@ test('render_html returns a standalone document with the diagram and French quot
   assert.equal(result.isError, undefined);
   const html = result.content[0].text;
   assert.match(html, /<html lang="fr">/);
-  assert.match(html, /class="mermaid-diagram"><svg/);
+  assert.match(html, /class="mermaid-diagram"[^>]*><svg/);
   // innerHTML serialisation turns the no-break spaces of French quotes into &nbsp; entities.
   assert.match(html, /«(?:\u00a0|&nbsp;)world(?:\u00a0|&nbsp;)»/);
   assert.doesNotMatch(html, /<section class="cover-page"/);
   assert.doesNotMatch(html, /unpkg\.com/);
+});
+
+test('diagrams honour the size and alignment of their fence line', async () => {
+  const result = await client.callTool({
+    name: 'render_html',
+    arguments: { markdown: '# Sized\n\n```mermaid width=40% align=left\nflowchart LR\n  A --> B\n```\n' },
+  });
+  assert.equal(result.isError, undefined);
+  const html = result.content[0].text;
+  assert.match(
+    html,
+    /class="mermaid-diagram is-sized"[^>]*style="--diagram-width: 40%"[^>]*data-align="left"[^>]*><svg/,
+  );
+  assert.doesNotMatch(html, /diagram-tools/);
 });
 
 test('refuses to overwrite an existing file unless asked', async () => {

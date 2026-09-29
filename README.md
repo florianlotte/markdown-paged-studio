@@ -30,7 +30,7 @@
 - **Cover page** with title, subtitle, author, date and an optional logo.
 - **Running header** (left and right), **footer**, and an automatic `Page X / Y` counter.
 - **A4, Letter or A5** with configurable margins.
-- **Mermaid diagrams** from ` ```mermaid ` code fences, rendered to SVG and embedded in exports.
+- **Mermaid diagrams** from ` ```mermaid ` code fences, rendered to SVG and embedded in exports, resizable by dragging in the preview.
 - **Document language** (BCP 47 tag) driving hyphenation and typographic quotes (« » in French, „ “ in German…).
 - **Custom CSS** editor with import, applied to the document only.
 - **Preview controls**: one page or two pages side by side, zoom, fit to width, Ctrl + wheel, and a collapsible sidebar.
@@ -75,6 +75,22 @@ flowchart LR
 ```
 ````
 
+To size a diagram, add attributes after the language on the opening line:
+
+````markdown
+```mermaid width=60% align=left
+flowchart LR
+  A[Markdown] --> B[HTML]
+```
+````
+
+| Attribute | Values                             | Effect                                                               |
+| --------- | ---------------------------------- | -------------------------------------------------------------------- |
+| `width`   | `10%` to `100%`, or a size in `mm` | Width as a share of the text column, or absolute; the height follows |
+| `align`   | `left`, `center`, `right`          | Horizontal position, centered by default                             |
+
+You rarely need to type them: hover or click a diagram in the preview to get size presets (25, 50, 75, 100 %, natural size), alignment buttons and a handle to drag, which also answers to the arrow keys in 5 % steps. A clicked diagram keeps its tools open, also on touch screens, until you click elsewhere or press Escape, so several adjustments can follow one another. Every change is written back to that opening line, so the size travels with the Markdown into exports, the desktop app and the MCP server. Without attributes a diagram keeps its natural size, and it is never taller than the text area of a page.
+
 Every diagram type supported by [Mermaid](https://mermaid.js.org) works. Diagrams are rendered before pagination, so Paged.js knows their exact size, and the resulting SVG is part of the exported file. A diagram with a syntax error shows its error message and source in place, without breaking the rest of the document. Mermaid is loaded on demand the first time a document contains a diagram.
 
 ![A Mermaid flowchart rendered inside a page](docs/screenshots/diagram.png)
@@ -105,7 +121,7 @@ The **Design** tab has a CSS editor. Its content is appended after the built-in 
 <article class="document-content">…your Markdown as HTML…</article>
 ```
 
-Diagrams live in `.mermaid-diagram`; a failed diagram is a `<pre class="mermaid-error">`. Use print units (`mm`, `pt`) and paged-media properties such as `break-before: page` or `break-inside: avoid`. A minimal example:
+Diagrams live in `.mermaid-diagram` (with `.is-sized` and the `--diagram-width` custom property when a width is set, and `data-align` for the alignment); a failed diagram is a `<pre class="mermaid-error">`. Use print units (`mm`, `pt`) and paged-media properties such as `break-before: page` or `break-inside: avoid`. A minimal example:
 
 ```css
 .document-content {
@@ -235,6 +251,7 @@ GitHub Actions workflows in `.github/workflows/`: `ci.yml` runs on every push an
 | `npm run test:desktop`  | Playwright smoke test of the desktop app (after `npm run build`)                        |
 | `npm run mcp`           | Start the MCP server on stdio (after `npm run build`)                                   |
 | `npm run test:mcp`      | End-to-end test of the MCP server with a real MCP client (after `npm run build`)        |
+| `npm run test:unit`     | Unit tests of the Markdown helpers (Node test runner)                                   |
 
 Project layout:
 
@@ -242,7 +259,8 @@ Project layout:
 index.html          entry point and the studio markup
 src/main.js         wires the modules: restore, UI, view, first render
 src/config.js       defaults (built-in and local/), state, validation, autosave
-src/markdown.js     markdown-it and Mermaid diagrams
+src/markdown.js     markdown-it and Mermaid diagrams, fence attributes
+src/diagram-resize.js resize controls on the diagrams of the preview
 src/document.js     document CSS and HTML, standalone export
 src/render.js       Paged.js preview lifecycle
 src/view.js         layout and zoom of the preview

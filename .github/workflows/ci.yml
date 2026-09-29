@@ -32,6 +32,8 @@ jobs:
 
       - run: npm run format:check
 
+      - run: npm run test:unit
+
       - name: Install Playwright Chromium
         run: npx playwright install --with-deps --only-shell chromium
 

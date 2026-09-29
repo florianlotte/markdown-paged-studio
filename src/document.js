@@ -24,6 +24,8 @@ export function documentLanguage() {
 
 export function documentCss() {
   const coverHeight = PAGE_HEIGHT_MM[state.pageSize] ?? PAGE_HEIGHT_MM.A4;
+  // A diagram never grows taller than the text area of a page (it cannot be split across pages).
+  const diagramMaxHeight = Math.max(40, coverHeight - state.marginTop - state.marginBottom - 12);
   return `
 @page {
   size: ${state.pageSize};
@@ -59,8 +61,12 @@ export function documentCss() {
 .cover-meta { margin-top: 18mm; color: #6d7278; font-size: 10.5pt; line-height: 1.6; }
 .document-content h1, .document-content h2, .document-content h3 { break-after: avoid; }
 .document-content img, .document-content table, .document-content pre, .document-content blockquote, .mermaid-diagram { break-inside: avoid; max-width: 100%; }
-.mermaid-diagram { margin: 5mm 0; text-align: center; }
-.mermaid-diagram svg { max-width: 100%; height: auto; }
+.mermaid-diagram { margin: 5mm auto; text-align: center; }
+.mermaid-diagram > svg { max-width: 100%; height: auto; max-height: ${diagramMaxHeight}mm; }
+.mermaid-diagram.is-sized { width: var(--diagram-width); max-width: 100%; }
+.mermaid-diagram.is-sized > svg { width: 100%; max-width: 100% !important; }
+.mermaid-diagram[data-align="left"] { margin-left: 0; text-align: left; }
+.mermaid-diagram[data-align="right"] { margin-right: 0; text-align: right; }
 .document-content .mermaid-error { text-align: left; white-space: pre-wrap; font-size: 8.5pt; color: #8a1f1f; background: #fff3f3; border: .3mm solid #d7a8a8; padding: 3mm; border-radius: 1.5mm; }
 ${state.customCss}
 `;

@@ -3,7 +3,8 @@
 // visible meanwhile, so typing never flashes an empty preview, and two renders never write into the same
 // element. Each Previewer injects a <style> into <head>; disposePreviewer() removes it.
 import { Previewer } from 'pagedjs';
-import { schedulePersist } from './config.js';
+import { schedulePersist, state } from './config.js';
+import { enhanceDiagrams } from './diagram-resize.js';
 import { documentCss, documentHtml } from './document.js';
 import { applyView } from './view.js';
 
@@ -64,10 +65,12 @@ export async function render() {
       return;
     }
     preview.replaceChildren(...stage.childNodes);
+    preview.classList.remove('is-stale');
     disposePreviewer(activePreviewer);
     activePreviewer = previewer;
     status.textContent = `${flow.total} page${flow.total > 1 ? 's' : ''}`;
     applyView();
+    enhanceDiagrams(preview, () => state.markdown, applyMarkdown);
   } catch (error) {
     disposePreviewer(previewer);
     if (token !== renderToken) return;
@@ -84,9 +87,20 @@ export async function render() {
   }
 }
 
+// Replaces the Markdown source (used when the preview edits it), keeps the editor in sync and re-renders.
+function applyMarkdown(markdown) {
+  if (markdown === state.markdown) return;
+  state.markdown = markdown;
+  const editor = document.getElementById('markdown');
+  if (editor) editor.value = markdown;
+  scheduleRender();
+}
+
 // Debounced re-render after a state change; also schedules the autosave.
 export function scheduleRender() {
   clearTimeout(renderTimer);
   renderTimer = setTimeout(render, 220);
+  // The displayed pages no longer match the source: their diagram tools point at outdated lines.
+  document.getElementById('preview').classList.add('is-stale');
   schedulePersist();
 }

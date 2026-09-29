@@ -76,6 +76,7 @@ export function applyView() {
   preview.dataset.layout = view.layout;
   if (view.fit) view.zoom = fitZoom();
   preview.style.zoom = String(view.zoom);
+  preview.style.setProperty('--view-zoom', String(view.zoom));
   document.getElementById('zoomValue').textContent = `${Math.round(view.zoom * 100)} %`;
   const single = view.layout === 'single';
   document.getElementById('layoutSingle').classList.toggle('active', single);

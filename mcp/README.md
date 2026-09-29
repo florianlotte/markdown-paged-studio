@@ -52,6 +52,8 @@ current `dist/`.
 `marginRight`, `marginBottom`, `marginLeft` (mm), `cover`, `customCss`, `logoDataUrl`. Invalid values
 are ignored, like a JSON import in the app.
 
+In `markdown`, a diagram is sized on its opening line: ` ```mermaid width=60% align=left ` (`width` from `10%` to `100%` or in `mm`; `align` is `left`, `center` or `right`).
+
 The resource `studio://css-contract` documents the HTML structure and class names a `customCss`
 stylesheet can target.
 

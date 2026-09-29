@@ -1,6 +1,6 @@
 {
   "name": "markdown-paged-studio",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -16,7 +16,8 @@
     "desktop:dir": "vite build && electron-builder --dir --publish never",
     "test:desktop": "playwright test --config playwright.desktop.config.js",
     "mcp": "node mcp/server.mjs",
-    "test:mcp": "node --test tests/mcp.test.mjs"
+    "test:mcp": "node --test tests/mcp.test.mjs",
+    "test:unit": "node --test tests/markdown.test.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.30.1",
