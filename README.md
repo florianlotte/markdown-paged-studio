@@ -5,7 +5,7 @@
 <h1 align="center">Markdown Paged Studio</h1>
 
 <p align="center">
-  Write Markdown, add your own CSS, and get a paginated, print-ready document with a cover page, headers, footers, page numbers and Mermaid diagrams.<br />
+  Write Markdown, add your own CSS, and get a paginated, print-ready document with a cover page, a table of contents, headers, footers, page numbers and Mermaid diagrams.<br />
   Everything runs in the browser. No backend, no account, no tracking.
 </p>
 
@@ -68,6 +68,8 @@ Node.js 20.19 or newer (or 22.12+) is required by Vite 8.
 
 The **Content** tab holds the Markdown editor. Import an existing `.md` file or download the current one. The parser is [markdown-it](https://github.com/markdown-it/markdown-it) with CommonMark, tables, automatic links and typographic replacements. Raw HTML inside Markdown is intentionally disabled.
 
+Whatever the studio writes into the editor for you (the insert buttons, a pasted image, a size set from the preview) is an ordinary edit: Ctrl+Z undoes it like something you typed.
+
 ### Diagrams
 
 Any fenced code block tagged `mermaid` becomes an inline SVG:
@@ -93,12 +95,15 @@ flowchart LR
 | --------- | ---------------------------------- | -------------------------------------------------------------------- |
 | `width`   | `10%` to `100%`, or a size in `mm` | Width as a share of the text column, or absolute; the height follows |
 | `align`   | `left`, `center`, `right`          | Horizontal position, centered by default                             |
+| `caption` | text, in double quotes             | Caption shown under the diagram: `caption="Figure 2: the flow"`      |
 
-You rarely need to type them: hover or click a diagram in the preview to get size presets (25, 50, 75, 100 %, natural size), alignment buttons and a handle to drag, which also answers to the arrow keys in 5 % steps. A clicked diagram keeps its tools open, also on touch screens, until you click elsewhere or press Escape, so several adjustments can follow one another. Every change is written back to that opening line as an ordinary edit of the editor, like what the insert buttons write: Ctrl+Z undoes it, in the editor or, with the pointer in the preview, straight from there (also when the sidebar is hidden), so the size travels with the Markdown into exports, the desktop app and the MCP server. Without attributes a diagram keeps its natural size, and it is never taller than the text area of a page.
+You rarely need to type the size and the alignment: hover or click a diagram in the preview to get size presets (25, 50, 75, 100 %, natural size), alignment buttons and a handle to drag, which also answers to the arrow keys in 5 % steps. A clicked diagram keeps its tools open, also on touch screens, until you click elsewhere or press Escape, so several adjustments can follow one another.
+
+Every change is written back to that opening line, so the size travels with the Markdown into exports, the desktop app and the MCP server. Ctrl+Z undoes it, in the editor or straight from the preview (also when the sidebar is hidden). Without attributes a diagram keeps its natural size, and it is never taller than the text area of a page.
 
 Every diagram type supported by [Mermaid](https://mermaid.js.org) works. Diagrams are rendered before pagination, so Paged.js knows their exact size, and the resulting SVG is part of the exported file. A diagram with a syntax error shows its error message and source in place, without breaking the rest of the document. Mermaid is loaded on demand the first time a document contains a diagram.
 
-![A Mermaid flowchart rendered inside a page](docs/screenshots/diagram.png)
+![A diagram selected in the preview, with its size and alignment tools and its caption](docs/screenshots/diagram.png)
 
 ### Structure: table of contents, page breaks, code
 
@@ -109,7 +114,11 @@ Every diagram type supported by [Mermaid](https://mermaid.js.org) works. Diagram
 | `\newpage` alone on a line | A page break                                                                                   |
 | ` ```js ` … ` ``` `        | A code block highlighted for its language (about 35 common languages); unknown ones stay plain |
 
-The **Page break** and **Table of contents** buttons under the editor write the markers at the cursor. Every heading gets an anchor named after its text, the way GitHub does: `[see the details](#details)` links to the heading "Details", in the preview and in the exports. The theme of the code blocks (light, dark or none) is chosen in the **Design** tab.
+The **Page break** and **Table of contents** buttons under the editor write the markers at the cursor. The table lists what comes after it: a heading placed above it, such as "Contents", is not part of it. Clicking an entry in the preview scrolls to its page.
+
+Every heading gets an anchor named after its text, the way GitHub does: `[see the details](#details)` links to the heading "Details", in the preview and in the exports. Two headings with the same text are told apart with a number (`#details-2`).
+
+The theme of the code blocks (light, dark or none) is chosen in the **Design** tab. The highlighter is loaded on demand, the first time a document contains a code block with a language.
 
 ### Images
 
@@ -136,9 +145,16 @@ Size and align an image with attributes in braces right after it, or with the sa
 | Alone on its line | centered        | on the left                           | centered                       | on the right                           |
 | Inside text       | in the sentence | floats left, the text wraps around it | on a line of its own, centered | floats right, the text wraps around it |
 
-An image is inside text as soon as its paragraph holds something else: a sentence, a caption on the next line, another image. Headings, tables, code blocks and diagrams always start below a floating image. Without `width` an image keeps its natural size, never wider than the text column nor taller than the text area of a page.
+An image is inside text as soon as its paragraph holds something else: a sentence, a line of text right below it, another image. Headings, tables, code blocks and diagrams always start below a floating image. Without `width` an image keeps its natural size, never wider than the text column nor taller than the text area of a page.
 
-A caption goes in the title of the image, `![Plan](plan.png "Figure 1: the plan")`, and for a diagram in a `caption` attribute on its opening line: ` ```mermaid caption="Figure 2: the flow" `. Every image has the preview tools, wherever it is: in a paragraph, a list, a quote, a table cell or a link.
+A caption goes in the title of the image, or in a `caption` attribute like the one of the diagrams:
+
+```markdown
+![Plan](plan.png 'Figure 1: the ground floor')
+![Plan](plan.png){width=60% caption="Figure 1: the ground floor"}
+```
+
+Captions are not numbered automatically: write the number yourself. Every image has the preview tools, wherever it is: in a paragraph, a list, a quote, a table cell or a link.
 
 ![An image sized from the preview, the Images section and a missing image](docs/screenshots/images.png)
 
@@ -153,16 +169,18 @@ Good to know:
 
 ![The four cover templates: classic, centered, colour band and minimal](docs/screenshots/covers.png)
 
-- **Content** tab: title, subtitle, author, date, the cover page toggle, the logo (any image; wider than 1200 px it is scaled down), and the cover template (classic, centered, colour band, minimal) with its accent colour.
-- **Design** tab: header title (top left), header name (top right) and footer text (bottom left). The page counter always sits at the bottom right. With **Use the current chapter as header title**, the header shows the first-level heading the page belongs to.
+- **Content** tab: title, subtitle, author, date, the cover page toggle, the logo (any image; wider than 1200 px it is scaled down), and the cover template (classic, centered, colour band, minimal) with its accent colour. The templates arrange the same content, so a stylesheet written for one works with the others.
+- **Design** tab: header title (top left), header name (top right) and footer text (bottom left). The page counter always sits at the bottom right. With **Use the current chapter as header title**, the header shows the first-level heading the page belongs to instead of the header title.
 
 ### Page setup
 
-The **Page** tab selects the paper size, the four margins in millimetres, and the document language as a BCP 47 tag (`en`, `fr`, `pt-BR`…). The language sets `lang` on the rendered document and on the exported file, which drives hyphenation (`hyphens: auto` in the sample CSS) and the typographic quotes produced by the Markdown parser (« » in French, „ “ in German…). The cover page ignores margins and headers. **Facing pages** mirrors the left and right margins on left-hand pages, for double-sided printing: the left margin is then the inner one, the page number stays on the outer edge, and the two-page view of the preview pairs the pages as in the bound document.
+The **Page** tab selects the paper size, the four margins in millimetres, and the document language as a BCP 47 tag (`en`, `fr`, `pt-BR`…). The language sets `lang` on the rendered document and on the exported file, which drives hyphenation (`hyphens: auto` in the sample CSS) and the typographic quotes produced by the Markdown parser (« » in French, „ “ in German…). The cover page ignores margins and headers.
+
+**Facing pages** mirrors the left and right margins on left-hand pages, for double-sided printing: the left margin is then the inner one, the page number stays on the outer edge, and the two-page view of the preview pairs the pages as in the bound document.
 
 ### Custom CSS
 
-The **Design** tab has a CSS editor. Its content is appended after the built-in styles, so your rules win on equal specificity. The rendered document has this structure:
+The **Design** tab has a CSS editor. Its content is appended after the built-in styles, so your rules win on equal specificity. The colours of the code theme are the exception: choose **None** as code highlighting to style the code blocks yourself. The rendered document has this structure:
 
 ```html
 <section class="cover-page">
@@ -177,7 +195,19 @@ The **Design** tab has a CSS editor. Its content is appended after the built-in 
 <article class="document-content">…your Markdown as HTML…</article>
 ```
 
-Diagrams live in `.mermaid-diagram` (with `.is-sized` and the `--diagram-width` custom property when a width is set, and `data-align` for the alignment); a failed diagram is a `<pre class="mermaid-error">`. Images are wrapped in `<span class="document-image">` (`.is-block` when alone in a paragraph, `.is-sized` with `--image-width` when a width is set, `data-align` for the placement); an image that is not uploaded is a `.image-missing` box. Captions are `.image-caption` and `.diagram-caption`. The table of contents is a `<nav class="toc">` holding `.toc-item` entries with a level class (`.toc-level-1`…), each a link with `.toc-text`, `.toc-dots` and the page number as its `::after`; a page break is `.page-break`; highlighted code is `pre.code-block` with `.code-light` or `.code-dark` and highlight.js `.hljs-*` spans. Use print units (`mm`, `pt`) and paged-media properties such as `break-before: page` or `break-inside: avoid`. A minimal example:
+Inside the content, these class names are stable and meant to be styled:
+
+| Element           | Selector                                                                                                                                               |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Diagram           | `.mermaid-diagram`, its drawing `.mermaid-diagram > svg`; `.is-sized` with `--diagram-width`, `data-align`; a failed one is `.mermaid-error`           |
+| Image             | `.document-image` around the `img`; `.is-block` alone in a paragraph, `.is-sized` with `--image-width`, `data-align`; `.image-missing` if not uploaded |
+| Caption           | `.image-caption`, `.diagram-caption`                                                                                                                   |
+| Table of contents | `nav.toc`, `.toc-item` with `.toc-level-1`…, holding a link with `.toc-text` and `.toc-dots`; the page number is the `::after` of the link             |
+| Page break        | `.page-break`                                                                                                                                          |
+| Highlighted code  | `pre.code-block` with `.code-light` or `.code-dark`, and highlight.js `.hljs-*` spans                                                                  |
+| Heading           | an `id` made of `sec-` and the anchor name: `#sec-details`                                                                                             |
+
+Use print units (`mm`, `pt`) and paged-media properties such as `break-before: page` or `break-inside: avoid`. A minimal example:
 
 ```css
 .document-content {
@@ -188,7 +218,7 @@ Diagrams live in `.mermaid-diagram` (with `.is-sized` and the `--diagram-width` 
   break-before: page;
 }
 .cover-title {
-  color: #1d4ed8;
+  color: #2c2f73;
 }
 ```
 
@@ -209,7 +239,7 @@ Diagrams live in `.mermaid-diagram` (with `.is-sized` and the `--diagram-width` 
 
 Layout, zoom and the sidebar state are remembered in the browser, separately from the document.
 
-The footer of the sidebar shows which build is running, for example `v1.6.0 · 31ee325`: the version links to its release notes and the commit to the exact source. It tells apart two deployments of the online demo made between two releases.
+The footer of the sidebar shows which build is running, for example `v1.13.1 · 2205ce9`: the version links to its release notes and the commit to the exact source. It tells apart two deployments of the online demo made between two releases.
 
 ### Interface language
 
@@ -223,11 +253,11 @@ To start every session with your own name, company logo, stylesheet or document 
 
 ### Saving your work
 
-The document autosaves in the browser after every change (the logo and the images in IndexedDB, which has room for them). **Reset** discards it and restores the sample. **Save config** downloads everything (texts, Markdown, CSS, logo, page setup) as one JSON file, and **Load config** restores it. Unknown keys and invalid values in an imported file are ignored.
+The document autosaves in the browser after every change (the logo and the images in IndexedDB, which has room for them). **Reset** discards it and restores the sample. **Save config** downloads everything (texts, Markdown, CSS, logo, images, page setup and options) as one JSON file, and **Load config** restores it. Unknown keys and invalid values in an imported file are ignored.
 
 ### Export and print
 
-- **Export HTML** downloads a single self-contained file: content, styles, diagrams and the Paged.js runtime. It paginates on open, offline, in any modern browser.
+- **Export HTML** downloads a single self-contained file: content, styles, images, diagrams, the font and the Paged.js runtime. It paginates on open, offline, in any modern browser.
 - **Export PDF** is the same button everywhere, with the best implementation available:
   - in the browser it opens the print-ready document in a new tab and triggers the print dialog once pagination is complete; choose _Save as PDF_. Allow pop-ups for the site if nothing opens. Ctrl+P (Cmd+P on macOS) does the same;
   - in the desktop app it writes the PDF directly through the embedded Chromium engine, no dialog other than the file picker.
@@ -240,8 +270,8 @@ Chromium-based browsers give the most faithful print output for paged media.
 ```mermaid
 flowchart LR
   MD[Markdown] -->|markdown-it| HTML[HTML]
-  HTML -->|Mermaid, on demand| SVG["HTML + inline SVG"]
-  CSS["@page rules + custom CSS"] --> P
+  HTML -->|"Mermaid and highlight.js, on demand"| SVG["HTML + inline SVG"]
+  CSS["@page rules + custom CSS + font"] --> P
   SVG --> P["Paged.js Previewer"]
   P -->|hidden stage, then swap| Preview[Preview]
   SVG --> X["Standalone HTML"]
@@ -249,16 +279,26 @@ flowchart LR
   X --> PDF["Export PDF / print"]
 ```
 
-- `documentHtml()` renders the Markdown and replaces every Mermaid placeholder with its SVG.
-- `documentCss()` builds the `@page` rules (size, margins, margin boxes for header, footer and counter), the cover styles, and appends your CSS.
+- `documentHtml()` renders the Markdown (images resolved by file name, heading anchors, table of contents), replaces every Mermaid placeholder with its SVG and highlights the code blocks.
+- `documentCss()` builds the `@page` rules (size, margins, margin boxes for header, footer and counter), the cover template, the built-in styles, and appends your CSS.
+- The subsets of the font that the text needs are loaded before pagination, so the pages are measured with the final font, and inlined in the exports.
+- Page numbers of the table of contents and the running header are resolved by Paged.js while it lays out the pages.
 - Each render paginates into a hidden container and swaps the pages into the preview in one step, so typing never flashes an empty preview and a newer edit cancels the previous pagination.
 - The export inlines the exact Paged.js build used by the preview, so both always match.
 
 ## Desktop app
 
-The same application ships as a portable desktop app built with Electron, with Chromium embedded so the preview and the PDF output are identical on every platform. Binaries are attached to each [GitHub Release](https://github.com/florianlotte/markdown-paged-studio/releases): portable `.exe` files for Windows x64 and ARM64, plus `.zip` archives of the same app folder for company PCs that block downloaded executables (unzip, then run `Markdown Paged Studio.exe` inside) (no installation; the saved document and view settings live in a `markdown-paged-studio-data` folder next to the executable), an `AppImage` for Linux, and a `dmg` / `zip` for macOS (Apple Silicon and Intel). Each release also carries `SHA256SUMS-<os>.txt` files to verify the downloads. The binaries are not code-signed, so Windows SmartScreen and macOS Gatekeeper will ask for confirmation on first launch.
+The same application ships as a portable desktop app built with Electron, with Chromium embedded so the preview and the PDF output are identical on every platform. Binaries are attached to each [GitHub Release](https://github.com/florianlotte/markdown-paged-studio/releases):
 
-In the desktop app, **Export PDF** writes the file directly through the embedded Chromium engine instead of going through a print dialog, and **File → Print…** (Ctrl+P) prints on paper. Everything else works exactly as in the browser, including the personal defaults from `local/` baked in at build time.
+| System  | Files                                     | Notes                                                                                                                               |
+| ------- | ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| Windows | portable `.exe` and `.zip`, x64 and ARM64 | No installation. The `.zip` holds the same app for company PCs that block downloaded executables: unzip, then run the `.exe` inside |
+| Linux   | `AppImage`, x86_64                        | Make it executable, then run it                                                                                                     |
+| macOS   | `dmg` and `zip`, Apple Silicon and Intel  |                                                                                                                                     |
+
+The portable Windows executable keeps the saved document and the view settings in a `markdown-paged-studio-data` folder next to it. Each release also carries `SHA256SUMS-<os>.txt` files to verify the downloads. The binaries are not code-signed, so Windows SmartScreen and macOS Gatekeeper will ask for confirmation on first launch.
+
+In the desktop app, **Export PDF** writes the file directly through the embedded Chromium engine instead of going through a print dialog, and **File → Print…** (Ctrl+P) prints on paper. Links of the document open in the system browser. Everything else works exactly as in the browser, including the personal defaults from `local/` baked in at build time. The application menu is in French on a French system.
 
 From the sources:
 
@@ -268,11 +308,11 @@ npm run desktop:build   # package for the current OS into release/
 npm run test:desktop    # Playwright smoke test of the Electron app (run npm run build first)
 ```
 
-Binaries are built by the `Desktop release` workflow (`.github/workflows/release-desktop.yml`). Run it manually from the **Actions** tab with **Run workflow**: the three binaries are attached to the run as downloadable artifacts, and ticking **publish** also creates the GitHub Release `v<version>` with them. Pushing a tag `v*` publishes the release automatically. Bump `version` in `package.json` first, since it names the artifacts and the release.
+Binaries are built by the `Desktop release` workflow (`.github/workflows/release-desktop.yml`). Run it manually from the **Actions** tab with **Run workflow**: the three binaries are attached to the run as downloadable artifacts, and ticking **publish** also creates the GitHub Release `v<version>` with them. Pushing a tag `v*` publishes the release automatically, with notes taken from `CHANGELOG.md`. Bump `version` in `package.json` and add the section of the version to the changelog first: see [CONTRIBUTING.md](CONTRIBUTING.md#releases).
 
 ## MCP server for AI assistants
 
-`mcp/server.mjs` is a [Model Context Protocol](https://modelcontextprotocol.io) server (stdio) that lets a local AI assistant generate reports with the real rendering pipeline: it exposes `render_pdf`, `render_html` and `describe_config`, plus a resource documenting the CSS contract. Build the app once, then register the server in your client:
+`mcp/server.mjs` is a [Model Context Protocol](https://modelcontextprotocol.io) server (stdio) that lets a local AI assistant generate reports with the real rendering pipeline: it exposes `render_pdf`, `render_html` and `describe_config`, plus a resource documenting the CSS contract. Everything described above works through it: images, table of contents, page breaks, captions, code highlighting, cover templates and page options. Build the app once, then register the server in your client:
 
 ```bash
 npm run build
@@ -313,13 +353,13 @@ GitHub Actions workflows in `.github/workflows/`: `ci.yml` runs on every push an
 | `npm run format`        | Prettier over the whole repository                                                      |
 | `npm run format:check`  | Prettier in check mode                                                                  |
 | `npm test`              | Playwright integration tests of the web app in a headless Chromium (starts Vite itself) |
+| `npm run test:unit`     | Unit tests of the Markdown, image and font helpers, and of the changelog (Node runner)  |
 | `npm run desktop`       | Build and open the Electron desktop app                                                 |
 | `npm run desktop:build` | Package the desktop app for the current OS into `release/`                              |
 | `npm run test:desktop`  | Playwright smoke test of the desktop app (after `npm run build`)                        |
 | `npm run mcp`           | Start the MCP server on stdio (after `npm run build`)                                   |
 | `npm run test:mcp`      | End-to-end test of the MCP server with a real MCP client (after `npm run build`)        |
 | `npm run screenshots`   | Retake the screenshots of this README from the build (after `npm run build`)            |
-| `npm run test:unit`     | Unit tests of the Markdown, image and font helpers, and of the changelog (Node runner)  |
 
 Project layout:
 
@@ -328,19 +368,20 @@ index.html          entry point and the studio markup
 vite.config.js      build-time constants: version and commit shown in the sidebar footer
 src/main.js         wires the modules: restore, UI, view, first render
 src/config.js       defaults (built-in and local/), state, validation, autosave
-src/markdown.js     markdown-it and Mermaid diagrams, fence attributes
+src/markdown.js     markdown-it rules: images, anchors, table of contents, page breaks; Mermaid, highlighting
 src/images.js       image library: matching by file name, storage, upload; logo storage
 src/i18n.js         interface language: French translations, applied to the markup
 src/editor.js       edits of the Markdown editor that keep its undo history
 src/fonts.js        bundled document font: loaded for the preview, inlined in exports
 src/font-faces.js   which font subsets a text needs (pure helpers)
 src/resize-controls.js resize controls on the diagrams and images of the preview
-src/document.js     document CSS and HTML, standalone export
-src/render.js       Paged.js preview lifecycle
+src/document.js     document CSS (page rules, cover templates, code themes) and HTML, standalone export
+src/render.js       Paged.js preview lifecycle, undo history of the preview
 src/view.js         layout and zoom of the preview
-src/ui.js           form, tabs, files, export and print
+src/ui.js           form, tabs, files, images, links of the preview, export and print
 src/automation.js   headless API used by the MCP server
 src/version.js      version and commit of the running build
+src/escape.js       escaping of text placed in HTML and in CSS strings
 src/ui.css          studio chrome (sidebar, toolbar, preview frame)
 src/assets/logo.svg logo and favicon
 electron/           Electron main process, sandboxed preload and app icon
@@ -349,17 +390,21 @@ mcp/                MCP server (stdio) rendering reports headlessly through dist
 Dockerfile          two-stage image: Vite build, then nginx serving dist/
 docs/screenshots/   images used in this README, taken by scripts/screenshots.mjs
 scripts/            release notes from the changelog, README screenshots
+tests/              web (studio-*.spec.js), desktop, MCP and unit tests
+.github/            workflows, Dependabot, issue forms and pull request template
 ```
 
-The rendered document is styled only by the CSS generated in `documentCss()`, never by `src/ui.css`. The integration tests in `tests/studio-*.spec.js` (one file per domain, shared helpers in `tests/helpers/studio.mjs`) drive the real studio in a headless Chromium, since Paged.js needs a browser to lay out pages: rendering, scrolling, re-render hygiene, Mermaid, autosave, config validation, layout and zoom, export, print and the JSON round trip. Run `npx playwright install chromium --only-shell` once before `npm test`.
+The rendered document is styled only by the CSS generated in `documentCss()`, never by `src/ui.css`. The integration tests in `tests/studio-*.spec.js` (one file per domain, shared helpers in `tests/helpers/studio.mjs`) drive the real studio in a headless Chromium, since Paged.js needs a browser to lay out pages: the document and its exports, the layout of the studio, diagrams, images, editing and undo, the document features and the interface language. If port 5173 is busy, `PORT=5183 npm test` uses another one. Run `npx playwright install chromium --only-shell` once before `npm test`.
 
 ## Browser support
 
-Recent Chromium-based browsers (Chrome, Edge, Brave, Arc) are the reference for both the preview and printing. On phones and narrow windows the settings open as a full-screen drawer over the preview, and the toolbar actions scroll horizontally. Firefox 126+ and Safari 17+ run the studio; the preview zoom relies on the standard CSS `zoom` property. Print output from non-Chromium browsers may differ in margin boxes and page breaks.
+Recent Chromium-based browsers (Chrome, Edge, Brave, Arc) are the reference for both the preview and printing. On phones and narrow windows the settings open as a full-screen drawer over the preview, and the toolbar actions scroll horizontally. Firefox 126+ and Safari 17+ have what the studio relies on (the CSS `zoom` property for the preview zoom, among others), but only Chromium is covered by the automated tests. Print output from non-Chromium browsers may differ in margin boxes and page breaks.
 
 ## Roadmap
 
 - Automatic numbering of figures and headings
+- Footnotes
+- Dark theme for the studio
 - More interface languages
 - Code signing of the desktop binaries (Windows and macOS)
 

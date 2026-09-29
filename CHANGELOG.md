@@ -7,6 +7,13 @@ All notable changes to Markdown Paged Studio are listed here, newest first. The 
 
 ## [Unreleased]
 
+## [1.13.2] - 2026-09-29
+
+### Changed
+
+- README revised: undo, captions, table of contents, CSS class names and desktop downloads as tables, what the
+  exports contain, browser support.
+
 ## [1.13.1] - 2026-09-29
 
 ### Changed
@@ -206,7 +213,8 @@ All notable changes to Markdown Paged Studio are listed here, newest first. The 
 - Portable desktop app for Windows, Linux and macOS with direct PDF export.
 - Docker image, Playwright integration tests and CI.
 
-[Unreleased]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.13.1...HEAD
+[Unreleased]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.13.2...HEAD
+[1.13.2]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.13.1...v1.13.2
 [1.13.1]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.13.0...v1.13.1
 [1.13.0]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.12.0...v1.13.0
 [1.12.0]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.11.0...v1.12.0
