@@ -114,7 +114,16 @@ Size and align an image with attributes in braces right after it, or with the sa
 ![Requests per month](requests.png){width=70% align=center}
 ```
 
-`width` is a share of the text column (`10%` to `100%`) or a size in `mm`; `align` is `left`, `center` or `right` and applies to an image alone in its paragraph. Without attributes an image keeps its natural size, never wider than the text column nor taller than the text area of a page.
+`width` is a share of the text column (`10%` to `100%`, the cell in a table) or a size in `mm`. `align` places the image, and what it does depends on where the image is written:
+
+| Image             | No `align`      | `align=left`                          | `align=center`                 | `align=right`                          |
+| ----------------- | --------------- | ------------------------------------- | ------------------------------ | -------------------------------------- |
+| Alone on its line | centered        | on the left                           | centered                       | on the right                           |
+| Inside text       | in the sentence | floats left, the text wraps around it | on a line of its own, centered | floats right, the text wraps around it |
+
+An image is inside text as soon as its paragraph holds something else: a sentence, a caption on the next line, another image. Headings, tables, code blocks and diagrams always start below a floating image. Without `width` an image keeps its natural size, never wider than the text column nor taller than the text area of a page.
+
+Every image has the preview tools, wherever it is: in a paragraph, a list, a quote, a table cell or a link.
 
 ![An image sized from the preview, the Images section and a missing image](docs/screenshots/images.png)
 
@@ -151,7 +160,7 @@ The **Design** tab has a CSS editor. Its content is appended after the built-in 
 <article class="document-content">…your Markdown as HTML…</article>
 ```
 
-Diagrams live in `.mermaid-diagram` (with `.is-sized` and the `--diagram-width` custom property when a width is set, and `data-align` for the alignment); a failed diagram is a `<pre class="mermaid-error">`. Images are wrapped in `<span class="document-image">` (`.is-block` when alone in a paragraph, `.is-sized` with `--image-width` when a width is set, `data-align`); an image that is not uploaded is a `.image-missing` box. Use print units (`mm`, `pt`) and paged-media properties such as `break-before: page` or `break-inside: avoid`. A minimal example:
+Diagrams live in `.mermaid-diagram` (with `.is-sized` and the `--diagram-width` custom property when a width is set, and `data-align` for the alignment); a failed diagram is a `<pre class="mermaid-error">`. Images are wrapped in `<span class="document-image">` (`.is-block` when alone in a paragraph, `.is-sized` with `--image-width` when a width is set, `data-align` for the placement); an image that is not uploaded is a `.image-missing` box. Use print units (`mm`, `pt`) and paged-media properties such as `break-before: page` or `break-inside: avoid`. A minimal example:
 
 ```css
 .document-content {

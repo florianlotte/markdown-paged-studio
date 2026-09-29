@@ -125,3 +125,52 @@ test('updateImageAttributes skips code, escapes and handles nesting and referenc
   );
   assert.equal(updateImageAttributes('![a](a.png)\r\n', 0, 1, 0, { width: '50%' }), '![a](a.png){width=50%}\r\n');
 });
+
+test('images in tables and links are located and recognised', async () => {
+  await replaceImages(sanitizeImages({ 'a.png': PNG }), { persist: false });
+  const table = md.render(
+    'Intro\n\n| Name | Picture |\n|---|---|\n| one | ![A](a.png) |\n| two | ![B](a.png) and ![C](a.png){width=30%} |\n',
+  );
+  const located = [...table.matchAll(/data-line="(\d+)" data-line-end="(\d+)" data-index="(\d+)"/g)].map(match =>
+    match.slice(1).map(Number),
+  );
+  assert.deepEqual(located, [
+    [4, 5, 0],
+    [5, 6, 0],
+    [5, 6, 1],
+  ]);
+  assert.match(table, /class="document-image is-block" data-line="4"/);
+  assert.match(
+    table,
+    /class="document-image is-sized" data-line="5" data-line-end="6" data-index="1" style="--image-width: 30%"/,
+  );
+
+  // An image alone inside a link is still a block; its braces are consumed inside the link label.
+  const linked = md.render('[![A](a.png){width=40%}](https://example.com)');
+  assert.match(
+    linked,
+    /<a href="https:\/\/example.com"><span class="document-image is-sized is-block"[^>]*><img[^>]*><\/span><\/a>/,
+  );
+  // Two images of one paragraph, or an image with a caption line, are in the text.
+  assert.doesNotMatch(md.render('![A](a.png)\n![B](a.png)'), /is-block/);
+  assert.doesNotMatch(md.render('![A](a.png)\nFigure 1: caption'), /is-block/);
+  assert.match(md.render('Text ![A](a.png){align=right} text'), /class="document-image" [^>]*data-align="right"/);
+  await replaceImages([], { persist: false });
+});
+
+test('updateImageAttributes rewrites images in table rows and link labels', () => {
+  const table = '| Name | Picture |\n|---|---|\n| two | ![B](b.png) and ![C](c.png){width=30%} |\n';
+  assert.equal(
+    updateImageAttributes(table, 2, 3, 0, { width: '50%', align: 'right' }),
+    table.replace('![B](b.png)', '![B](b.png){width=50% align=right}'),
+  );
+  assert.equal(updateImageAttributes(table, 2, 3, 1, { width: null }), table.replace('{width=30%}', ''));
+  assert.equal(
+    updateImageAttributes('[![A](a.png)](https://example.com)', 0, 1, 0, { width: '40%' }),
+    '[![A](a.png){width=40%}](https://example.com)',
+  );
+  assert.equal(
+    updateImageAttributes('![A](a.png)\n![B](b.png)', 0, 2, 1, { align: 'right' }),
+    '![A](a.png)\n![B](b.png){align=right}',
+  );
+});

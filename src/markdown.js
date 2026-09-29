@@ -150,21 +150,34 @@ export function updateImageAttributes(markdown, lineStart, lineEnd, index, chang
 
 // Gives every image its position in the source (block lines, rank in the block) and consumes the
 // {attributes} written right after it. Runs before the typographic replacements touch that text.
+// Table cells carry no position: their images are located on the line of their row, and ranked across
+// the whole row, which is what updateImageAttributes() scans.
 md.core.ruler.after('inline', 'image_attributes', state => {
+  let row = null;
+  let rank = 0;
   for (const block of state.tokens) {
+    if (block.type === 'tr_open') {
+      row = block.map;
+      rank = 0;
+    } else if (block.type === 'tr_close') {
+      row = null;
+    }
     if (block.type !== 'inline' || !block.children) continue;
-    let index = 0;
+    const map = block.map ?? row;
+    if (block.map) rank = 0;
     block.children.forEach((child, position) => {
       if (child.type !== 'image') return;
-      child.meta = { line: block.map?.[0] ?? null, lineEnd: block.map?.[1] ?? null, index: index++ };
+      child.meta = { line: map?.[0] ?? null, lineEnd: map?.[1] ?? null, index: rank++ };
       const next = block.children[position + 1];
       const braces = next?.type === 'text' ? /^\{([^{}\n]*)\}/.exec(next.content) : null;
       if (!braces) return;
       Object.assign(child.meta, parseDiagramAttributes(braces[1]));
       next.content = next.content.slice(braces[0].length);
     });
-    // An image alone in its paragraph behaves as a block: it can be aligned.
-    const content = block.children.filter(child => !(child.type === 'text' && !child.content.trim()));
+    // An image alone in its paragraph, possibly inside a link, behaves as a block.
+    const content = block.children.filter(
+      child => !(child.type === 'text' && !child.content.trim()) && !/^link_(open|close)$/.test(child.type),
+    );
     if (content.length === 1 && content[0].type === 'image') content[0].meta.alone = true;
   }
 });

@@ -69,11 +69,17 @@ export function documentCss() {
 .mermaid-diagram[data-align="right"] { margin-right: 0; text-align: right; }
 .document-image { display: inline-block; max-width: 100%; vertical-align: middle; break-inside: avoid; }
 .document-image > img { display: block; max-width: 100%; height: auto; max-height: ${diagramMaxHeight}mm; object-fit: contain; }
-.document-image.is-block { display: block; width: fit-content; margin: 4mm 0; }
-.document-image.is-sized, .document-image.is-block.is-sized { width: var(--image-width); }
 .document-image.is-sized > img { width: 100%; }
-.document-image.is-block[data-align="center"] { margin-left: auto; margin-right: auto; }
-.document-image.is-block[data-align="right"] { margin-left: auto; }
+.document-image.is-sized { width: var(--image-width); }
+.document-image.is-block { display: block; width: fit-content; margin: 4mm auto; }
+.document-image.is-block.is-sized { width: var(--image-width); }
+.document-image.is-block[data-align="left"] { margin-left: 0; }
+.document-image.is-block[data-align="right"] { margin-right: 0; }
+.document-image:not(.is-block)[data-align="left"] { float: left; margin: 1mm 5mm 3mm 0; }
+.document-image:not(.is-block)[data-align="right"] { float: right; margin: 1mm 0 3mm 5mm; }
+.document-image:not(.is-block)[data-align="center"] { display: block; width: fit-content; margin: 4mm auto; }
+.document-image:not(.is-block)[data-align="center"].is-sized { width: var(--image-width); }
+.document-content h1, .document-content h2, .document-content h3, .document-content table, .document-content pre, .mermaid-diagram { clear: both; }
 .document-content .image-missing { display: inline-block; font-size: 8.5pt; color: #8a1f1f; background: #fff3f3; border: .3mm dashed #d7a8a8; padding: 2mm 3mm; border-radius: 1.5mm; }
 .document-content .mermaid-error { text-align: left; white-space: pre-wrap; font-size: 8.5pt; color: #8a1f1f; background: #fff3f3; border: .3mm solid #d7a8a8; padding: 3mm; border-radius: 1.5mm; }
 ${state.customCss}

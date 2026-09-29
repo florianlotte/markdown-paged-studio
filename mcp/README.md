@@ -54,7 +54,7 @@ are ignored, like a JSON import in the app.
 
 In `markdown`, a diagram is sized on its opening line: ` ```mermaid width=60% align=left ` (`width` from `10%` to `100%` or in `mm`; `align` is `left`, `center` or `right`).
 
-`images` lists the local image files of the document: `[{ "path": "/data/charts/q3.png" }]`, with an optional `name` when the Markdown uses another file name. The document matches them **by file name only**, so `![Chart](charts/q3.png)` and `![Chart](q3.png)` both use that file; size them with `![Chart](q3.png){width=60% align=center}`. Supported types: png, jpg, webp, gif, svg, up to 20 MB each. `missing_images` in the result names the images the Markdown references but that were not provided.
+`images` lists the local image files of the document: `[{ "path": "/data/charts/q3.png" }]`, with an optional `name` when the Markdown uses another file name. The document matches them **by file name only**, so `![Chart](charts/q3.png)` and `![Chart](q3.png)` both use that file; size and place them with `![Chart](q3.png){width=60% align=right}`: alone on its line an image is centered unless `align` says `left` or `right`, inside a sentence `left` and `right` float it with the text around and `center` gives it a line of its own. Supported types: png, jpg, webp, gif, svg, up to 20 MB each. `missing_images` in the result names the images the Markdown references but that were not provided.
 
 The resource `studio://css-contract` documents the HTML structure and class names a `customCss`
 stylesheet can target.

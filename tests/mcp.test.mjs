@@ -119,6 +119,51 @@ test('images are read from disk and matched to the Markdown by file name', async
   assert.equal(readFileSync(path.join(dir, 'images.pdf')).subarray(0, 5).toString(), '%PDF-');
 });
 
+test('images inside text float or take their own line, images in tables are sized', async () => {
+  const picture = path.join(dir, 'picture.png');
+  writeFileSync(picture, png(300, 200));
+  const text = 'A sentence that wraps around the image. '.repeat(12);
+  const markdown = [
+    '# Alignment',
+    `![Right](picture.png){width=30% align=right} ${text}`,
+    `![Left](picture.png){width=30% align=left} ${text}`,
+    `Before ![Own line](picture.png){width=40% align=center} after.`,
+    '![Alone](picture.png)',
+    '| Name | Picture |\n|---|---|\n| one | ![Cell](picture.png){width=50%} |',
+  ].join('\n\n');
+  const output = path.join(dir, 'alignment.html');
+  const result = await client.callTool({
+    name: 'render_html',
+    arguments: { markdown, config: { cover: false }, images: [{ path: picture }], output_path: output },
+  });
+  assert.equal(result.isError, undefined, JSON.stringify(result.content));
+  const html = readFileSync(output, 'utf8');
+  assert.match(
+    html,
+    /class="document-image is-sized"[^>]*style="--image-width: 30%" data-align="right"><img[^>]*alt="Right"/,
+  );
+  assert.match(html, /class="document-image is-sized"[^>]*data-align="center"><img[^>]*alt="Own line"/);
+  assert.match(html, /class="document-image is-block"[^>]*><img[^>]*alt="Alone"/);
+  assert.match(
+    html,
+    /<td><span class="document-image is-sized is-block"[^>]*style="--image-width: 50%"><img[^>]*alt="Cell"/,
+  );
+  assert.match(html, /\.document-image:not\(\.is-block\)\[data-align="right"\] \{ float: right;/);
+
+  const pdf = await client.callTool({
+    name: 'render_pdf',
+    arguments: {
+      markdown,
+      config: { cover: false },
+      images: [{ path: picture }],
+      output_path: path.join(dir, 'alignment.pdf'),
+    },
+  });
+  assert.equal(pdf.isError, undefined, JSON.stringify(pdf.content));
+  // Floats must not confuse the pagination: this content fills one page and part of a second.
+  assert.equal(JSON.parse(pdf.content[0].text).pages, 2);
+});
+
 test('only image files can be read, inside MPS_INPUT_DIR when it is set', async () => {
   const secret = path.join(dir, 'notes.txt');
   writeFileSync(secret, 'not an image');

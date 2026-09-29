@@ -192,7 +192,9 @@ const markdownField = z
   .describe(
     'The report body in Markdown (CommonMark + tables). ```mermaid fences become diagrams; size one with ' +
       'attributes on its opening line, e.g. ```mermaid width=60% align=left (width: 10-100% or mm). Local ' +
-      'images are passed through `images` and sized the same way: ![Alt](photo.png){width=60% align=center}.',
+      'images are passed through `images` and sized the same way: ![Alt](photo.png){width=60% align=center}. An ' +
+      'image alone on its line is centered unless align says left or right; inside a sentence, align=left or ' +
+      'align=right floats it with the text around, align=center puts it on its own line.',
   );
 const imagesField = z
   .array(
@@ -335,7 +337,7 @@ The rendered document has this structure (the cover section only when \`cover\` 
 
 Mermaid diagrams live in \`.mermaid-diagram\` (inline SVG, select it with \`.mermaid-diagram > svg\`); a failed diagram is a \`<pre class="mermaid-error">\`.
 A diagram is sized from its fence line (\`width=60%\`, \`align=left\`), which sets \`.is-sized\`, \`--diagram-width\` and \`data-align\`.
-Images are wrapped in \`<span class="document-image">\` (\`.is-block\` when alone in a paragraph, \`.is-sized\` with \`--image-width\` for \`![Alt](photo.png){width=60% align=center}\`); an image that was not provided is a \`.image-missing\` box.
+Images are wrapped in \`<span class="document-image">\` (\`.is-block\` when alone in a paragraph, \`.is-sized\` with \`--image-width\` for \`![Alt](photo.png){width=60% align=center}\`); an image that was not provided is a \`.image-missing\` box. \`data-align\` on a block image moves it left or right of its centered default; on an image inside text it floats it (\`left\`, \`right\`) or gives it its own line (\`center\`).
 Header, footer and the page counter are \`@page\` margin boxes driven by the config, not by CSS classes.
 Use print units (\`mm\`, \`pt\`) and paged-media properties such as \`break-before: page\` or \`break-inside: avoid\`.
 \`customCss\` replaces the default stylesheet entirely; start from \`describe_config().defaults.customCss\`.

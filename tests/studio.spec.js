@@ -733,55 +733,72 @@ test('images are inserted from the list, by pasting, and exported inline', async
   expect(html).not.toContain('resizable');
 });
 
-// Width of an image as a share of its paragraph, and where it sits in it.
+// Width of an image as a share of its text column, and where it sits in it. The column is the content
+// box of the nearest ancestor that is not inline, as in src/resize-controls.js.
 function imageGeometry(page, selector = '#preview .document-image') {
   return page.evaluate(target => {
     const wrapper = document.querySelector(target);
     const image = wrapper?.querySelector(':scope > img');
     if (!image) return null;
-    const column = wrapper.parentElement.getBoundingClientRect();
+    let block = wrapper.parentElement;
+    while (block.parentElement && getComputedStyle(block).display.startsWith('inline')) block = block.parentElement;
+    const zoom = Number(document.getElementById('preview').style.zoom) || 1;
+    const style = getComputedStyle(block);
+    const edge = side => (parseFloat(style[`padding${side}`]) + parseFloat(style[`border${side}Width`])) * zoom;
+    const outer = block.getBoundingClientRect();
+    const column = { left: outer.left + edge('Left'), right: outer.right - edge('Right') };
+    column.width = column.right - column.left;
     const box = image.getBoundingClientRect();
+    // `|| 0` turns the -0 of a tiny negative offset into 0.
+    const share = pixels => Math.round((pixels / column.width) * 100) || 0;
     return {
-      percent: Math.round((box.width / column.width) * 100),
-      left: Math.round(((box.left - column.left) / column.width) * 100),
-      right: Math.round(((column.right - box.right) / column.width) * 100),
+      percent: share(box.width),
+      left: share(box.left - column.left),
+      right: share(column.right - box.right),
+      float: getComputedStyle(wrapper).float,
+      display: getComputedStyle(wrapper).display,
     };
   }, selector);
 }
 
-test('images are resized and aligned from the preview like diagrams', async ({ page }) => {
-  await openDocument(
-    page,
-    '# Resize image\n\n![Plan](img/plan.png)\n\nInline ![Small](plan.png) image.\n',
-    'Resize image',
-  );
+// Selects an image of the preview with a real click, and waits for the tools of fresh pages.
+async function selectImage(page, locator) {
+  await expect(page.locator('#preview')).not.toHaveClass(/is-stale/);
+  await locator.scrollIntoViewIfNeeded();
+  const middle = centre(await locator.locator('> img').boundingBox());
+  await page.mouse.click(middle.x, middle.y);
+  await expect(locator).toHaveClass(/is-selected/);
+}
+
+const position = async (page, selector) => {
+  const { percent, left, right } = await imageGeometry(page, selector);
+  return { percent, left, right };
+};
+
+test('an image alone on its line is centered, resized and moved from the preview', async ({ page }) => {
+  await openDocument(page, '# Block image\n\n![Plan](img/plan.png)\n\nNext paragraph.\n', 'Block image');
   await upload(page, pngFile('plan.png', 300, 200));
   const editor = page.locator('#markdown');
   const block = page.locator('#preview .document-image.is-block');
-  const inline = page.locator('#preview .document-image:not(.is-block)');
+  const selector = '#preview .document-image.is-block';
   await expect(block.locator('> img')).toBeVisible();
-  await expect(page.locator('#preview')).not.toHaveClass(/is-stale/);
-  await block.scrollIntoViewIfNeeded();
 
-  // Click to select, then a preset: the braces are written after the image.
-  const middle = centre(await block.locator('> img').boundingBox());
-  await page.mouse.click(middle.x, middle.y);
-  await expect(block).toHaveClass(/is-selected/);
+  // Centered by default, like a diagram: no attribute is needed.
+  await selectImage(page, block);
+  await expect(block.getByRole('button', { name: 'Center' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(block.getByRole('button', { name: 'In the text' })).toHaveCount(0);
   await block.getByRole('button', { name: 'Width 50 %' }).click();
   await expect(editor).toHaveValue(/!\[Plan\]\(img\/plan\.png\)\{width=50%\}\n/);
-  await expect.poll(async () => (await imageGeometry(page, '#preview .document-image.is-block'))?.percent).toBe(50);
+  await expect.poll(() => position(page, selector)).toEqual({ percent: 50, left: 25, right: 25 });
 
-  // Alignment: left by default, so "Center" is written and "Align left" removes it.
   await expect(page.locator('#preview')).not.toHaveClass(/is-stale/);
-  await block.getByRole('button', { name: 'Center' }).click();
-  await expect(editor).toHaveValue(/\{width=50% align=center\}/);
-  await expect
-    .poll(() => imageGeometry(page, '#preview .document-image.is-block'))
-    .toEqual({ percent: 50, left: 25, right: 25 });
+  await block.getByRole('button', { name: 'Align left' }).click();
+  await expect(editor).toHaveValue(/\{width=50% align=left\}/);
+  await expect.poll(() => position(page, selector)).toEqual({ percent: 50, left: 0, right: 50 });
   await expect(page.locator('#preview')).not.toHaveClass(/is-stale/);
   await block.getByRole('button', { name: 'Align right' }).click();
   await expect(editor).toHaveValue(/\{width=50% align=right\}/);
-  await expect.poll(async () => (await imageGeometry(page, '#preview .document-image.is-block'))?.right).toBe(0);
+  await expect.poll(() => position(page, selector)).toEqual({ percent: 50, left: 50, right: 0 });
 
   // Drag the handle (on the left edge of a right-aligned image) to make it wider.
   await expect(page.locator('#preview')).not.toHaveClass(/is-stale/);
@@ -793,18 +810,112 @@ test('images are resized and aligned from the preview like diagrams', async ({ p
   await expect(editor).not.toHaveValue(/width=50%/);
   const dragged = Number(/\{width=(\d+)% align=right\}/.exec(await editor.inputValue())?.[1]);
   expect(dragged).toBeGreaterThan(50);
-  await expect
-    .poll(async () => (await imageGeometry(page, '#preview .document-image.is-block'))?.percent)
-    .toBe(dragged);
+  await expect.poll(async () => (await position(page, selector)).percent).toBe(dragged);
 
-  // An image inside a sentence can be sized but not moved sideways.
+  // Back to the centre: the attribute goes away.
   await expect(page.locator('#preview')).not.toHaveClass(/is-stale/);
-  const small = centre(await inline.locator('> img').boundingBox());
-  await page.mouse.click(small.x, small.y);
-  await expect(inline).toHaveClass(/is-selected/);
-  await expect(block).not.toHaveClass(/is-selected/);
-  await expect(inline.getByRole('button', { name: 'Center' })).toHaveCount(0);
-  await inline.getByRole('button', { name: 'Width 25 %' }).click();
-  await expect(editor).toHaveValue(/Inline !\[Small\]\(plan\.png\)\{width=25%\} image\./);
-  await expect(editor).toHaveValue(new RegExp(`\\{width=${dragged}% align=right\\}`));
+  await block.getByRole('button', { name: 'Center' }).click();
+  await expect(editor).toHaveValue(new RegExp(`\\{width=${dragged}%\\}\\n`));
+});
+
+test('an image inside text floats with the text around it, or takes a line of its own', async ({ page }) => {
+  const sentence = 'This sentence is long enough to run over several lines next to the image. '.repeat(6);
+  await openDocument(page, `# Wrap\n\n![Small](plan.png) ${sentence}\n\nNext paragraph.\n`, 'Wrap');
+  await upload(page, pngFile('plan.png', 300, 200));
+  const editor = page.locator('#markdown');
+  const image = page.locator('#preview .document-image');
+  await expect(image.locator('> img')).toBeVisible();
+
+  await selectImage(page, image);
+  await expect(image.getByRole('button', { name: 'In the text' })).toHaveAttribute('aria-pressed', 'true');
+  await image.getByRole('button', { name: 'Width 25 %' }).click();
+  await expect(editor).toHaveValue(/!\[Small\]\(plan\.png\)\{width=25%\} This sentence/);
+  await expect.poll(async () => (await imageGeometry(page))?.percent).toBe(25);
+
+  // Right: the image goes to the edge and the text starts beside it, at the same height.
+  await expect(page.locator('#preview')).not.toHaveClass(/is-stale/);
+  await image.getByRole('button', { name: 'Align right' }).click();
+  await expect(editor).toHaveValue(/\{width=25% align=right\} This sentence/);
+  await expect.poll(() => imageGeometry(page)).toMatchObject({ percent: 25, right: 0, float: 'right' });
+  // Against the right edge, the toolbar must stay inside the page with every button reachable.
+  await expect(page.locator('#preview')).not.toHaveClass(/is-stale/);
+  const inside = await image.evaluate(element => {
+    const sheet = element.closest('.pagedjs_page').getBoundingClientRect();
+    const buttons = [...element.querySelectorAll('.diagram-tools button')].map(button =>
+      button.getBoundingClientRect(),
+    );
+    return buttons.length === 9 && buttons.every(box => box.left >= sheet.left && box.right <= sheet.right);
+  });
+  expect(inside).toBe(true);
+  const beside = await page.evaluate(() => {
+    const wrapper = document.querySelector('#preview .document-image');
+    const paragraph = wrapper.closest('p');
+    const range = document.createRange();
+    range.selectNodeContents([...paragraph.childNodes].find(node => node.nodeType === 3 && node.textContent.trim()));
+    const firstLine = range.getClientRects()[0];
+    const box = wrapper.getBoundingClientRect();
+    return firstLine.top < box.bottom && firstLine.bottom > box.top && firstLine.right <= box.left + 1;
+  });
+  expect(beside).toBe(true);
+
+  await expect(page.locator('#preview')).not.toHaveClass(/is-stale/);
+  await image.getByRole('button', { name: 'Align left' }).click();
+  await expect(editor).toHaveValue(/\{width=25% align=left\}/);
+  await expect.poll(() => imageGeometry(page)).toMatchObject({ percent: 25, left: 0, float: 'left' });
+
+  // Centre: a line of its own, no float.
+  await expect(page.locator('#preview')).not.toHaveClass(/is-stale/);
+  await image.getByRole('button', { name: 'Center' }).click();
+  await expect(editor).toHaveValue(/\{width=25% align=center\}/);
+  await expect.poll(() => imageGeometry(page)).toMatchObject({ percent: 25, float: 'none', display: 'block' });
+  const centred = await imageGeometry(page);
+  expect(Math.abs(centred.left - centred.right)).toBeLessThanOrEqual(1);
+
+  // Back in the sentence: the alignment goes away, the width stays.
+  await expect(page.locator('#preview')).not.toHaveClass(/is-stale/);
+  await image.getByRole('button', { name: 'In the text' }).click();
+  await expect(editor).toHaveValue(/!\[Small\]\(plan\.png\)\{width=25%\} This sentence/);
+  await expect.poll(() => imageGeometry(page)).toMatchObject({ percent: 25, float: 'none', display: 'inline-block' });
+});
+
+test('every image can be sized and aligned: same paragraph, table cell, link', async ({ page }) => {
+  const markdown = [
+    '# Everywhere',
+    '![First](plan.png)\n![Second](plan.png)',
+    '| Name | Picture |\n|---|---|\n| one | ![Cell](plan.png) |',
+    '[![Linked](plan.png)](https://example.com)',
+  ].join('\n\n');
+  await openDocument(page, `${markdown}\n`, 'Everywhere');
+  await upload(page, pngFile('plan.png', 300, 200));
+  const editor = page.locator('#markdown');
+  const images = page.locator('#preview .document-image');
+  await expect(images).toHaveCount(4);
+
+  // Two images of one paragraph are handled independently.
+  await selectImage(page, images.nth(1));
+  await images.nth(1).getByRole('button', { name: 'Align right' }).click();
+  await expect(editor).toHaveValue(/!\[First\]\(plan\.png\)\n!\[Second\]\(plan\.png\)\{align=right\}\n/);
+  await selectImage(page, images.nth(0));
+  await images.nth(0).getByRole('button', { name: 'Width 25 %' }).click();
+  await expect(editor).toHaveValue(/!\[First\]\(plan\.png\)\{width=25%\}\n!\[Second\]\(plan\.png\)\{align=right\}\n/);
+
+  // In a table the width is a share of the cell.
+  const cell = page.locator('#preview td .document-image');
+  await selectImage(page, cell);
+  await cell.getByRole('button', { name: 'Width 50 %' }).click();
+  await expect(editor).toHaveValue(/\| one \| !\[Cell\]\(plan\.png\)\{width=50%\} \|/);
+  await expect.poll(async () => (await imageGeometry(page, '#preview td .document-image'))?.percent).toBe(50);
+  await expect(page.locator('#preview')).not.toHaveClass(/is-stale/);
+  await cell.getByRole('button', { name: 'Align left' }).click();
+  await expect(editor).toHaveValue(/!\[Cell\]\(plan\.png\)\{width=50% align=left\} \|/);
+  await expect.poll(async () => (await imageGeometry(page, '#preview td .document-image'))?.left).toBe(0);
+
+  // Inside a link: selecting does not follow the link, and the width is a share of the paragraph.
+  const linked = page.locator('#preview a .document-image');
+  await selectImage(page, linked);
+  expect(page.url()).not.toContain('example.com');
+  await linked.getByRole('button', { name: 'Width 25 %' }).click();
+  await expect(editor).toHaveValue(/\[!\[Linked\]\(plan\.png\)\{width=25%\}\]\(https:\/\/example\.com\)/);
+  await expect.poll(async () => (await imageGeometry(page, '#preview a .document-image'))?.percent).toBe(25);
+  expect(page.url()).not.toContain('example.com');
 });

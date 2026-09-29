@@ -3,6 +3,9 @@
 // rewrites the attributes in the Markdown source (```mermaid width=60% or ![Alt](photo.png){width=60%}).
 import { DIAGRAM_WIDTH_MAX, DIAGRAM_WIDTH_MIN, updateFenceAttributes, updateImageAttributes } from './markdown.js';
 
+const BLOCK_ALIGNMENTS = { options: ['left', 'center', 'right'], fallback: 'center' };
+const INLINE_ALIGNMENTS = { options: ['inline', 'left', 'center', 'right'], fallback: 'inline' };
+
 // What can be resized: where it is, what is drawn, which CSS property previews the width, how it is
 // identified across renders, and how a change is written back to the source.
 const TARGETS = [
@@ -11,8 +14,7 @@ const TARGETS = [
     selector: '.mermaid-diagram[data-line]',
     drawing: ':scope > svg',
     widthProperty: '--diagram-width',
-    defaultAlign: 'center',
-    canAlign: () => true,
+    alignments: () => BLOCK_ALIGNMENTS,
     key: element => `diagram:${element.dataset.line}`,
     rewrite: (markdown, data, changes) => updateFenceAttributes(markdown, Number(data.line), changes),
   },
@@ -21,9 +23,9 @@ const TARGETS = [
     selector: '.document-image[data-line]',
     drawing: ':scope > img',
     widthProperty: '--image-width',
-    defaultAlign: 'left',
-    // Only an image alone in its paragraph is a block that can be moved sideways.
-    canAlign: element => element.classList.contains('is-block'),
+    // Alone on its line an image is a block, centered by default. Inside text it stays in the sentence
+    // unless it is floated left or right (the text wraps around it) or centered on a line of its own.
+    alignments: element => (element.classList.contains('is-block') ? BLOCK_ALIGNMENTS : INLINE_ALIGNMENTS),
     key: element => `image:${element.dataset.line}:${element.dataset.index}`,
     rewrite: (markdown, data, changes) =>
       updateImageAttributes(markdown, Number(data.line), Number(data.lineEnd), Number(data.index), changes),
@@ -32,11 +34,12 @@ const TARGETS = [
 
 const PRESETS = [25, 50, 75, 100];
 const KEYBOARD_STEP = 5;
-const ALIGNMENTS = [
-  ['left', 'Align left', 'M3 4h14M3 8h8M3 12h14M3 16h8'],
-  ['center', 'Center', 'M3 4h14M6 8h8M3 12h14M6 16h8'],
-  ['right', 'Align right', 'M3 4h14M9 8h8M3 12h14M9 16h8'],
-];
+const ALIGNMENT_BUTTONS = {
+  inline: ['In the text', 'M3 4h14M3 16h14M3 10h3M14 10h3M8 8h4v4H8z'],
+  left: ['Align left', 'M3 4h14M3 8h8M3 12h14M3 16h8'],
+  center: ['Center', 'M3 4h14M6 8h8M3 12h14M6 16h8'],
+  right: ['Align right', 'M3 4h14M9 8h8M3 12h14M9 16h8'],
+};
 
 // Key of the element whose tools stay open without hovering (clicked, or just edited). It is kept across
 // renders: attribute changes never move a diagram or an image to another line.
@@ -97,15 +100,31 @@ function icon(path) {
   return svg;
 }
 
+// The text column an element is laid out in: the content box of its nearest ancestor that is not inline
+// (a paragraph, a list item, a table cell...), in screen pixels. Links and emphasis around an image are
+// inline and do not count. Computed paddings are layout pixels: the preview zoom scales them on screen.
+function columnBox(element) {
+  let block = element.parentElement;
+  while (block?.parentElement && getComputedStyle(block).display.startsWith('inline')) block = block.parentElement;
+  const zoom = Number(getComputedStyle(element).getPropertyValue('--view-zoom')) || 1;
+  const style = getComputedStyle(block);
+  const edge = side => (parseFloat(style[`padding${side}`]) + parseFloat(style[`border${side}Width`])) * zoom;
+  const box = block.getBoundingClientRect();
+  const left = box.left + edge('Left');
+  const right = box.right - edge('Right');
+  return { left, right, width: right - left };
+}
+
 // Width of the drawing as a share of the text column, measured on screen (zoom cancels out in the ratio).
 function currentPercent(diagram, drawing) {
-  return clamp((drawing.getBoundingClientRect().width / diagram.parentElement.getBoundingClientRect().width) * 100);
+  return clamp((drawing.getBoundingClientRect().width / columnBox(diagram).width) * 100);
 }
 
 function enhance(diagram, target, commit, onSelect) {
   const drawing = diagram.querySelector(target.drawing);
   if (!drawing || diagram.querySelector(':scope > .diagram-tools')) return;
-  const align = diagram.dataset.align ?? target.defaultAlign;
+  const { options, fallback } = target.alignments(diagram);
+  const align = diagram.dataset.align ?? fallback;
   const sized = diagram.classList.contains('is-sized');
 
   const tools = document.createElement('span');
@@ -121,17 +140,17 @@ function enhance(diagram, target, commit, onSelect) {
     );
   }
   tools.append(button('Auto', 'Natural size', () => commit({ width: null }), { pressed: !sized }));
-  if (target.canAlign(diagram)) {
-    const separator = document.createElement('span');
-    separator.className = 'diagram-tools-separator';
-    tools.append(separator);
-    for (const [value, title, path] of ALIGNMENTS) {
-      tools.append(
-        button(icon(path), title, () => commit({ align: value === target.defaultAlign ? null : value }), {
-          pressed: align === value,
-        }),
-      );
-    }
+  const separator = document.createElement('span');
+  separator.className = 'diagram-tools-separator';
+  tools.append(separator);
+  for (const value of options) {
+    const [title, path] = ALIGNMENT_BUTTONS[value];
+    // The default position is the absence of attribute.
+    tools.append(
+      button(icon(path), title, () => commit({ align: value === fallback ? null : value }), {
+        pressed: align === value,
+      }),
+    );
   }
 
   const handle = document.createElement('span');
@@ -153,7 +172,15 @@ function enhance(diagram, target, commit, onSelect) {
     const left = ((inner.left - box.left) / box.width) * 100;
     const right = ((inner.right - box.left) / box.width) * 100;
     handle.style.left = `${align === 'right' ? left : right}%`;
+    // The toolbar starts at the left edge of the drawing, unless it would then stick out of the page:
+    // in that case it ends at the right edge of the drawing instead.
+    tools.style.right = 'auto';
     tools.style.left = `${left}%`;
+    const sheet = diagram.closest('.pagedjs_page')?.getBoundingClientRect();
+    if (sheet && tools.getBoundingClientRect().right > sheet.right - 4) {
+      tools.style.left = 'auto';
+      tools.style.right = `${100 - right}%`;
+    }
   };
   place();
 
@@ -169,12 +196,15 @@ function enhance(diagram, target, commit, onSelect) {
   handle.addEventListener('pointerdown', event => {
     event.preventDefault();
     handle.setPointerCapture(event.pointerId);
-    const column = diagram.parentElement.getBoundingClientRect();
+    const column = columnBox(diagram);
+    const start = drawing.getBoundingClientRect();
     let value = currentPercent(diagram, drawing);
     const move = moveEvent => {
       let pixels;
       if (align === 'left') pixels = moveEvent.clientX - column.left;
       else if (align === 'right') pixels = column.right - moveEvent.clientX;
+      // In the text the left edge stays where the sentence put it.
+      else if (align === 'inline') pixels = moveEvent.clientX - start.left;
       else pixels = 2 * Math.abs(moveEvent.clientX - (column.left + column.width / 2));
       value = clamp((pixels / column.width) * 100);
       preview(value);
@@ -199,8 +229,12 @@ function enhance(diagram, target, commit, onSelect) {
   });
 
   diagram.addEventListener('pointerdown', onSelect);
+  // Selecting an image that is inside a link must not follow the link.
+  if (diagram.closest('a')) diagram.addEventListener('click', event => event.preventDefault());
   diagram.classList.add('resizable');
   diagram.append(tools, handle);
+  // Now that the toolbar is laid out, its width is known: check that it fits in the page.
+  place();
 }
 
 // Adds the controls to every rendered diagram and image of the preview. `getMarkdown` returns the current
