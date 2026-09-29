@@ -22,6 +22,7 @@ export default [
       'tests/**/*.{js,mjs}',
       'electron/**/*.js',
       'mcp/**/*.mjs',
+      'scripts/**/*.mjs',
     ],
     languageOptions: { globals: { ...globals.node, ...globals.browser } },
   },

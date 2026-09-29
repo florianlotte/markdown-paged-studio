@@ -16,18 +16,70 @@ on:
 
 permissions:
   contents: write
+  actions: read
 
 jobs:
-  # Lint, tests and builds of ci.yml: no binary is built or published from a commit that fails them.
+  # No binary is built or published from a commit that fails the checks of ci.yml. A tag is usually pushed
+  # with its commit, whose push to main already runs CI: that run is awaited and reused. The checks only run
+  # here when the commit has no CI run (a tag on an older commit, a manual run on another branch).
+  gate:
+    name: Look for the CI run of this commit
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    outputs:
+      run_checks: ${{ steps.ci.outputs.run_checks }}
+    steps:
+      - id: ci
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+        run: |
+          # Latest CI run of the commit as "status conclusion", empty when there is none.
+          latest() {
+            gh api "repos/$REPO/actions/workflows/ci.yml/runs?head_sha=$SHA&per_page=1" \
+              --jq '.workflow_runs[0] | select(. != null) | "\(.status) \(.conclusion)"'
+          }
+          for attempt in $(seq 1 50); do
+            state=$(latest || true)
+            case "$state" in
+              "completed success")
+                echo "CI passed on $SHA: its result is reused."
+                echo "run_checks=false" >> "$GITHUB_OUTPUT"
+                exit 0
+                ;;
+              completed*)
+                echo "::error::CI did not pass on $SHA ($state): nothing is released."
+                exit 1
+                ;;
+              "")
+                # The run of a commit pushed together with its tag can take a moment to appear.
+                if [ "$attempt" -ge 4 ]; then
+                  echo "No CI run for $SHA: the checks run here."
+                  echo "run_checks=true" >> "$GITHUB_OUTPUT"
+                  exit 0
+                fi
+                ;;
+              *) echo "CI is $state on $SHA, waiting." ;;
+            esac
+            sleep 30
+          done
+          echo "CI did not finish in time: the checks run here."
+          echo "run_checks=true" >> "$GITHUB_OUTPUT"
+
   checks:
     name: Checks
+    needs: gate
+    if: needs.gate.outputs.run_checks == 'true'
     uses: ./.github/workflows/ci.yml
     permissions:
       contents: read
 
   build:
     name: ${{ matrix.os }}
-    needs: checks
+    needs: [gate, checks]
+    # `checks` is skipped when the CI run of the commit was reused.
+    if: ${{ !cancelled() && needs.gate.result == 'success' && (needs.checks.result == 'success' || needs.checks.result == 'skipped') }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     strategy:
@@ -89,12 +141,19 @@ jobs:
             release/SHA256SUMS-*.txt
           if-no-files-found: error
 
+      - name: Take the release notes from the changelog
+        if: startsWith(github.ref, 'refs/tags/v') || inputs.publish
+        shell: bash
+        run: node scripts/release-notes.mjs "${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || format('v{0}', steps.version.outputs.version) }}" > release-notes.md
+
       - name: Attach the binaries to the GitHub Release
         if: startsWith(github.ref, 'refs/tags/v') || inputs.publish
         uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || format('v{0}', steps.version.outputs.version) }}
           name: Markdown Paged Studio ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || format('v{0}', steps.version.outputs.version) }}
+          # The section of CHANGELOG.md for this version, followed by the list of commits GitHub generates.
+          body_path: release-notes.md
           generate_release_notes: true
           files: |
             release/*.exe

@@ -1,0 +1,21 @@
+name: Feature request
+description: An idea to make the studio more useful
+labels: [enhancement]
+body:
+  - type: textarea
+    id: need
+    attributes:
+      label: What you are trying to do
+      description: The document or the workflow you have in mind, rather than the solution.
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: What you would like
+      description: How it could look or work. A Markdown or CSS example helps.
+  - type: textarea
+    id: today
+    attributes:
+      label: What you do today
+      description: A workaround, another tool, or nothing.

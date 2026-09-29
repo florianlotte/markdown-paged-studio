@@ -294,7 +294,7 @@ The build context includes the gitignored `local/` folder, so an image built on 
 
 ## Development
 
-GitHub Actions workflows in `.github/workflows/`: `ci.yml` runs on every push and pull request (lint, Prettier check, the web, desktop and MCP test suites, the Vite build, a Docker build with a smoke test of the container); `release-desktop.yml` builds and publishes the desktop binaries on `v*` tags or on demand, after running the same checks; `pages.yml` deploys the web app to GitHub Pages once `ci.yml` has passed on `main`. A commit that fails the tests is neither deployed nor released. Dependabot keeps npm packages and the actions up to date.
+GitHub Actions workflows in `.github/workflows/`: `ci.yml` runs on every push and pull request (lint, Prettier check, the web, desktop and MCP test suites, the Vite build, a Docker build with a smoke test of the container); `release-desktop.yml` builds and publishes the desktop binaries on `v*` tags or on demand, once the same checks have passed on that commit (it waits for the CI run of the commit and only runs the checks itself when there is none), with release notes taken from `CHANGELOG.md`; `pages.yml` deploys the web app to GitHub Pages once `ci.yml` has passed on `main`. A commit that fails the tests is neither deployed nor released. Dependabot keeps npm packages and the actions up to date.
 
 | Script                  | What it does                                                                            |
 | ----------------------- | --------------------------------------------------------------------------------------- |
@@ -310,7 +310,7 @@ GitHub Actions workflows in `.github/workflows/`: `ci.yml` runs on every push an
 | `npm run test:desktop`  | Playwright smoke test of the desktop app (after `npm run build`)                        |
 | `npm run mcp`           | Start the MCP server on stdio (after `npm run build`)                                   |
 | `npm run test:mcp`      | End-to-end test of the MCP server with a real MCP client (after `npm run build`)        |
-| `npm run test:unit`     | Unit tests of the Markdown, image and font helpers (Node test runner)                   |
+| `npm run test:unit`     | Unit tests of the Markdown, image and font helpers, and of the changelog (Node runner)  |
 
 Project layout:
 
@@ -354,7 +354,7 @@ Recent Chromium-based browsers (Chrome, Edge, Brave, Arc) are the reference for 
 
 ## Contributing
 
-Issues and pull requests are welcome. Before opening a pull request, run `npm run lint`, `npm run format` and `npm test`, and check the preview, the export and the print flow in a Chromium-based browser.
+Issues and pull requests are welcome: [CONTRIBUTING.md](CONTRIBUTING.md) explains how to set up the project, what to run before a pull request and the few rules of the code base. What changed in each version is in [CHANGELOG.md](CHANGELOG.md). To report a security problem, follow the [security policy](SECURITY.md).
 
 ## About me
 
