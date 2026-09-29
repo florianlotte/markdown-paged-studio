@@ -1,6 +1,6 @@
 {
   "name": "markdown-paged-studio",
-  "version": "1.9.0",
+  "version": "1.10.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -17,10 +17,10 @@
     "test:desktop": "playwright test --config playwright.desktop.config.js",
     "mcp": "node mcp/server.mjs",
     "test:mcp": "node --test tests/mcp.test.mjs",
-    "test:unit": "node --test tests/markdown.test.mjs tests/images.test.mjs"
+    "test:unit": "node --test tests/markdown.test.mjs tests/images.test.mjs tests/fonts.test.mjs"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.30.1",
+    "@modelcontextprotocol/sdk": "^1.31.0",
     "markdown-it": "^15.0.2",
     "mermaid": "^12.0.0",
     "pagedjs": "^0.4.3",
@@ -29,6 +29,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@fontsource-variable/inter": "^5.3.0",
     "@playwright/test": "^1.63.0",
     "electron": "^44.4.5",
     "electron-builder": "^26.15.3",
@@ -57,5 +58,8 @@
   },
   "bin": {
     "markdown-paged-studio-mcp": "mcp/server.mjs"
+  },
+  "overrides": {
+    "lodash-es": "^4.18.1"
   }
 }

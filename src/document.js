@@ -2,6 +2,7 @@
 // and the standalone file used for export, print and PDF. The class names here are public API (see README).
 import { LANGUAGE_TAG, PAGE_HEIGHT_MM, state } from './config.js';
 import { escCssString, escapeHtml } from './escape.js';
+import { inlineFontCss } from './fonts.js';
 import { md, renderDiagrams } from './markdown.js';
 
 // Typographic quotes used by markdown-it's typographer, per primary language.
@@ -132,8 +133,13 @@ const AFTER_PAGINATION = {
 export async function standaloneHtml({ mode = 'export' } = {}) {
   const content = await documentHtml();
   const css = documentCss();
+  // Kept away from Paged.js, which would parse the inlined font files for nothing.
+  const fonts = await inlineFontCss(content, css).catch(error => {
+    console.warn('The document font could not be embedded', error);
+    return '';
+  });
   // A literal "</script" inside the inlined library would end the script element early.
   const library = (await loadPagedPolyfill()).replace(/<\/script/gi, '<\\/script');
   const after = AFTER_PAGINATION[mode] ?? '';
-  return `<!doctype html>\n<html lang="${documentLanguage()}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(state.title)}</title><style>${css}</style><script>window.PagedConfig={auto:true${after}};</script><script>${library}</script></head><body>${content}</body></html>`;
+  return `<!doctype html>\n<html lang="${documentLanguage()}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(state.title)}</title>${fonts ? `<style data-pagedjs-ignore>${fonts}</style>` : ''}<style>${css}</style><script>window.PagedConfig={auto:true${after}};</script><script>${library}</script></head><body>${content}</body></html>`;
 }

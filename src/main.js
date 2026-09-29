@@ -2,7 +2,7 @@
 // See CLAUDE.md for the module map.
 import './ui.css';
 import { AUTOMATION, installAutomationApi } from './automation.js';
-import { flushPersist, loadStoredConfig, LOCAL_IMAGES, state } from './config.js';
+import { flushPersist, loadStoredConfig, LOCAL_IMAGES, restoreLogo, state } from './config.js';
 import { loadImages, onImagesChange, setBuiltinImages } from './images.js';
 import { render, scheduleRender } from './render.js';
 import { initUi } from './ui.js';
@@ -21,8 +21,8 @@ window.addEventListener('pagehide', () => {
 installAutomationApi();
 setBuiltinImages(LOCAL_IMAGES);
 if (!AUTOMATION) {
-  // Images first, so the first render already resolves them; then every change of the library re-renders.
-  loadImages().finally(() => {
+  // Images and logo first, so the first render already shows them; then every change of the library re-renders.
+  Promise.allSettled([loadImages(), restoreLogo()]).then(() => {
     onImagesChange(reason => {
       if (reason === 'library') scheduleRender();
     });

@@ -1,7 +1,7 @@
 // Document settings: defaults (built-in, then personal ones from local/), the mutable `state`, validation of
 // anything that enters it, and the autosave in localStorage.
 
-import { IMAGE_DATA_URL } from './images.js';
+import { IMAGE_DATA_URL, loadLogo, saveLogo } from './images.js';
 
 export const STORAGE_KEY = 'markdown-paged-studio:document';
 export const PAGE_SIZES = ['A4', 'Letter', 'A5'];
@@ -152,6 +152,32 @@ export function clearStoredConfig() {
   } catch {
     // Storage unavailable: nothing to clear.
   }
+  savedLogo = undefined;
+  saveLogo(undefined);
+}
+
+// The logo is saved in IndexedDB: as a data URL it can outgrow the few megabytes of localStorage, and the
+// whole autosave would then fail. `savedLogo` is what IndexedDB holds (undefined: nothing).
+let savedLogo;
+
+// Brings the saved logo into the state. A logo found in localStorage comes from an older version: it is
+// moved to IndexedDB by the next autosave.
+export async function restoreLogo() {
+  const stored = await loadLogo();
+  if (stored === undefined) {
+    if (state.logoDataUrl !== DEFAULTS.logoDataUrl) schedulePersist();
+    return;
+  }
+  savedLogo = stored;
+  state.logoDataUrl = stored;
+}
+
+function persistLogo() {
+  // A logo equal to the default one is not saved, so a newer default applies.
+  const logo = state.logoDataUrl === DEFAULTS.logoDataUrl ? undefined : state.logoDataUrl;
+  if (logo === savedLogo) return;
+  savedLogo = logo;
+  saveLogo(logo);
 }
 
 let persistTimer = null;
@@ -159,14 +185,16 @@ function persistNow() {
   clearTimeout(persistTimer);
   persistTimer = null;
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...state, logoDataUrl: undefined }));
   } catch (error) {
-    // Quota exceeded (large logo) or storage disabled: the app keeps working without autosave.
+    // Quota exceeded or storage disabled: the app keeps working without autosave.
     console.warn('Autosave failed', error);
   }
 }
 
 export function schedulePersist() {
+  // Written at once: a transaction started when the page closes still completes.
+  persistLogo();
   clearTimeout(persistTimer);
   persistTimer = setTimeout(persistNow, 500);
 }

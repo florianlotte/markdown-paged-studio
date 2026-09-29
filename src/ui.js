@@ -8,8 +8,10 @@ import {
   exportImages,
   findImage,
   listImages,
+  MAX_LOGO_WIDTH,
   missingImages,
   onImagesChange,
+  prepareImage,
   removeImage,
   replaceImages,
   sanitizeImages,
@@ -97,15 +99,19 @@ function download(name, content, type) {
 }
 
 function bindFiles() {
-  document.getElementById('logo').addEventListener('change', e => {
+  document.getElementById('logo').addEventListener('change', async e => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      state.logoDataUrl = String(reader.result || '');
+    try {
+      // Like the images of the document, a large logo is scaled down: it prints at most 55 mm wide.
+      const { dataUrl } = await prepareImage(file, MAX_LOGO_WIDTH);
+      state.logoDataUrl = sanitizeConfig({ logoDataUrl: dataUrl }).logoDataUrl ?? '';
       scheduleRender();
-    };
-    reader.readAsDataURL(file);
+    } catch (error) {
+      console.error(error);
+      e.target.value = '';
+      alert(`The logo could not be read: ${error?.message || error}`);
+    }
   });
 
   document.getElementById('clearLogo').addEventListener('click', () => {

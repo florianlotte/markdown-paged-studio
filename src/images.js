@@ -6,10 +6,15 @@
 export const IMAGE_DATA_URL = /^data:image\/[a-z0-9.+-]+(?:;[a-z0-9=-]+)*,[^\s"<>]*$/i;
 // Wider raster images are scaled down on upload: 2400 px is 300 dpi across the text column of an A4 page.
 export const MAX_IMAGE_WIDTH = 2400;
+// The cover logo is printed at most 55 mm wide: 1200 px is already more than 500 dpi.
+export const MAX_LOGO_WIDTH = 1200;
 const MAX_NAME_LENGTH = 200;
 const RESIZABLE_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
 const DATABASE = 'markdown-paged-studio';
 const STORE = 'images';
+// Key-value store for what belongs to the document but is too large for localStorage: the cover logo.
+const DOCUMENT_STORE = 'document';
+const LOGO_KEY = 'logo';
 
 const library = new Map(); // key -> { key, name, dataUrl, bytes, width?, height?, builtin? }
 let builtin = []; // images bundled from local/images/, always present
@@ -96,19 +101,23 @@ function notify(reason = 'library') {
 
 function openDatabase() {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open(DATABASE, 1);
-    request.onupgradeneeded = () => request.result.createObjectStore(STORE, { keyPath: 'key' });
+    const request = indexedDB.open(DATABASE, 2);
+    request.onupgradeneeded = () => {
+      const stores = request.result.objectStoreNames;
+      if (!stores.contains(STORE)) request.result.createObjectStore(STORE, { keyPath: 'key' });
+      if (!stores.contains(DOCUMENT_STORE)) request.result.createObjectStore(DOCUMENT_STORE);
+    };
     request.onsuccess = () => resolve(request.result);
     request.onerror = () => reject(request.error);
   });
 }
 
-async function inStore(mode, action) {
+async function inStore(mode, action, name = STORE) {
   const database = await openDatabase();
   try {
     return await new Promise((resolve, reject) => {
-      const transaction = database.transaction(STORE, mode);
-      const result = action(transaction.objectStore(STORE));
+      const transaction = database.transaction(name, mode);
+      const result = action(transaction.objectStore(name));
       transaction.oncomplete = () => resolve(result?.result);
       transaction.onerror = () => reject(transaction.error);
       transaction.onabort = () => reject(transaction.error);
@@ -118,13 +127,31 @@ async function inStore(mode, action) {
   }
 }
 
-async function persist(action, mode = 'readwrite') {
+async function persist(action, mode = 'readwrite', name = STORE) {
   try {
-    return await inStore(mode, action);
+    return await inStore(mode, action, name);
   } catch (error) {
     console.warn('Images are kept for this session only', error);
     return undefined;
   }
+}
+
+// ---- Cover logo. It is part of the document state (`state.logoDataUrl`) but saved here, not in localStorage.
+
+// The saved logo: a data URL, '' when it was removed on purpose, undefined when none was ever saved.
+export async function loadLogo() {
+  const stored = await persist(store => store.get(LOGO_KEY), 'readonly', DOCUMENT_STORE);
+  if (stored === '' || (typeof stored === 'string' && IMAGE_DATA_URL.test(stored))) return stored;
+  return undefined;
+}
+
+// Saves the logo; `undefined` forgets it, so the default one applies again.
+export function saveLogo(dataUrl) {
+  return persist(
+    store => (dataUrl === undefined ? store.delete(LOGO_KEY) : store.put(dataUrl, LOGO_KEY)),
+    'readwrite',
+    DOCUMENT_STORE,
+  );
 }
 
 function resetLibrary(entries) {
@@ -200,15 +227,15 @@ function decode(dataUrl) {
   });
 }
 
-// Data URL and pixel size of a file, scaled down when it is a raster image wider than MAX_IMAGE_WIDTH.
-async function prepare(file) {
+// Data URL and pixel size of a file, scaled down when it is a raster image wider than `maxWidth`.
+export async function prepareImage(file, maxWidth = MAX_IMAGE_WIDTH) {
   const original = await readAsDataUrl(file);
   const image = await decode(original);
   const { naturalWidth: width, naturalHeight: height } = image;
-  if (!RESIZABLE_TYPES.includes(file.type) || width <= MAX_IMAGE_WIDTH) return { dataUrl: original, width, height };
+  if (!RESIZABLE_TYPES.includes(file.type) || width <= maxWidth) return { dataUrl: original, width, height };
   const canvas = document.createElement('canvas');
-  canvas.width = MAX_IMAGE_WIDTH;
-  canvas.height = Math.round((height * MAX_IMAGE_WIDTH) / width);
+  canvas.width = maxWidth;
+  canvas.height = Math.round((height * maxWidth) / width);
   canvas.getContext('2d').drawImage(image, 0, 0, canvas.width, canvas.height);
   return { dataUrl: canvas.toDataURL(file.type, 0.9), width: canvas.width, height: canvas.height, resized: true };
 }
@@ -224,7 +251,7 @@ export async function addImageFiles(files, { rename } = {}) {
       continue;
     }
     try {
-      const { dataUrl, width, height, resized } = await prepare(file);
+      const { dataUrl, width, height, resized } = await prepareImage(file);
       if (!IMAGE_DATA_URL.test(dataUrl)) throw new Error('Unsupported image data');
       const image = makeEntry(name, dataUrl, { width, height });
       library.set(image.key, image);

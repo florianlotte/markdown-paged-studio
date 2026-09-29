@@ -7,6 +7,7 @@ import { schedulePersist, state } from './config.js';
 import { setMissingImages } from './images.js';
 import { enhanceResizables } from './resize-controls.js';
 import { documentCss, documentHtml } from './document.js';
+import { loadPreviewFonts } from './fonts.js';
 import { applyView } from './view.js';
 
 let renderTimer;
@@ -52,11 +53,14 @@ export async function render() {
   stage.setAttribute('aria-hidden', 'true');
   document.body.appendChild(stage);
 
-  const styleUrl = URL.createObjectURL(new Blob([documentCss()], { type: 'text/css' }));
+  const css = documentCss();
+  const styleUrl = URL.createObjectURL(new Blob([css], { type: 'text/css' }));
   let previewer = null;
   try {
     // Diagrams render first (async, possibly loading Mermaid); a stale token here means a newer edit arrived.
     const html = await documentHtml();
+    // The fonts must be there before pagination: text measured with a fallback font breaks elsewhere.
+    await loadPreviewFonts(html, css);
     if (token !== renderToken) return;
     previewer = new Previewer();
     pendingPreviewer = previewer;
@@ -122,15 +126,56 @@ function editInPlace(editor, next) {
   return done;
 }
 
-// Replaces the Markdown source (used when the preview edits it), keeps the editor in sync and re-renders.
-function applyMarkdown(markdown) {
-  if (markdown === state.markdown) return;
+// Changes made from the preview, so they can be undone from the preview too: Ctrl+Z in the editor only works
+// while the editor has the focus, and not at all for a change made while it was hidden.
+const HISTORY_LIMIT = 100;
+const undone = [];
+const done = [];
+let historyBound = false;
+
+function writeMarkdown(markdown) {
   const editor = document.getElementById('markdown');
   // A textarea holds line breaks as "\n" whatever the source used.
   const next = markdown.replace(/\r\n?/g, '\n');
   if (editor && editor.value !== next && !editInPlace(editor, next)) editor.value = next;
   state.markdown = editor ? editor.value : markdown;
   scheduleRender();
+}
+
+// Undoes (or redoes) the last change made from the preview, unless the source was edited since.
+function travel(from, to, source, target) {
+  const entry = from.at(-1);
+  if (!entry || entry[source] !== state.markdown) return false;
+  from.pop();
+  to.push(entry);
+  writeMarkdown(entry[target]);
+  return true;
+}
+
+function bindHistory() {
+  if (historyBound) return;
+  historyBound = true;
+  document.addEventListener('keydown', event => {
+    if (!(event.ctrlKey || event.metaKey) || event.altKey) return;
+    const key = event.key.toLowerCase();
+    const redo = key === 'y' || (key === 'z' && event.shiftKey);
+    if (!redo && key !== 'z') return;
+    // Text fields keep their own undo.
+    if (event.target.closest?.('input, textarea, select, [contenteditable]')) return;
+    const moved = redo ? travel(undone, done, 'before', 'after') : travel(done, undone, 'after', 'before');
+    if (moved) event.preventDefault();
+  });
+}
+
+// Replaces the Markdown source (used when the preview edits it), keeps the editor in sync and re-renders.
+function applyMarkdown(markdown) {
+  if (markdown === state.markdown) return;
+  bindHistory();
+  const before = state.markdown;
+  writeMarkdown(markdown);
+  done.push({ before, after: state.markdown });
+  if (done.length > HISTORY_LIMIT) done.shift();
+  undone.length = 0;
 }
 
 // Debounced re-render after a state change; also schedules the autosave.

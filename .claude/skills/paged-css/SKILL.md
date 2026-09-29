@@ -41,6 +41,6 @@ description: Reference for the rendered-document CSS contract and the Paged.js p
 
 - `.cover-page` gets `min-height` from `PAGE_HEIGHT_MM[state.pageSize]` (`src/config.js`): A4 297mm, A5 210mm, Letter 279.4mm. Add an entry there when adding a page size.
 - Paged.js reads only the CSS you pass it. Studio chrome styles in `src/ui.css` never reach the document, except the `.preview .pagedjs_page` rules that position rendered pages inside the app.
-- `Inter` is referenced but never loaded; it silently falls back to Arial/system fonts.
+- `Inter` is bundled (`src/fonts.js`): the subsets the text needs are loaded before each pagination and inlined in exports. Text in a script Inter does not cover (CJK, Arabic...) falls back to the next family of the stack.
 - Print flow: `window.open(blobUrl)` on the auto-print variant of the export; the opened page prints itself. The blob URL is revoked after 30 s. Pop-up blocking is reported with an `alert()`.
 - Units: document CSS uses mm and pt (print), studio CSS uses px.

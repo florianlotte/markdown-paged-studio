@@ -27,6 +27,7 @@
 ## Features
 
 - **Live paged preview** powered by [Paged.js](https://pagedjs.org): what you see is what prints.
+- **Bundled font**: Inter ships with the studio and is embedded in every export, so the preview, the print and the PDF look the same on any machine.
 - **Cover page** with title, subtitle, author, date and an optional logo.
 - **Running header** (left and right), **footer**, and an automatic `Page X / Y` counter.
 - **A4, Letter or A5** with configurable margins.
@@ -90,7 +91,7 @@ flowchart LR
 | `width`   | `10%` to `100%`, or a size in `mm` | Width as a share of the text column, or absolute; the height follows |
 | `align`   | `left`, `center`, `right`          | Horizontal position, centered by default                             |
 
-You rarely need to type them: hover or click a diagram in the preview to get size presets (25, 50, 75, 100 %, natural size), alignment buttons and a handle to drag, which also answers to the arrow keys in 5 % steps. A clicked diagram keeps its tools open, also on touch screens, until you click elsewhere or press Escape, so several adjustments can follow one another. Every change is written back to that opening line as an ordinary edit of the editor (Ctrl+Z undoes it), so the size travels with the Markdown into exports, the desktop app and the MCP server. Without attributes a diagram keeps its natural size, and it is never taller than the text area of a page.
+You rarely need to type them: hover or click a diagram in the preview to get size presets (25, 50, 75, 100 %, natural size), alignment buttons and a handle to drag, which also answers to the arrow keys in 5 % steps. A clicked diagram keeps its tools open, also on touch screens, until you click elsewhere or press Escape, so several adjustments can follow one another. Every change is written back to that opening line as an ordinary edit of the editor: Ctrl+Z undoes it, in the editor or, with the pointer in the preview, straight from there (also when the sidebar is hidden), so the size travels with the Markdown into exports, the desktop app and the MCP server. Without attributes a diagram keeps its natural size, and it is never taller than the text area of a page.
 
 Every diagram type supported by [Mermaid](https://mermaid.js.org) works. Diagrams are rendered before pagination, so Paged.js knows their exact size, and the resulting SVG is part of the exported file. A diagram with a syntax error shows its error message and source in place, without breaking the rest of the document. Mermaid is loaded on demand the first time a document contains a diagram.
 
@@ -136,7 +137,7 @@ Good to know:
 
 ### Cover page, header and footer
 
-- **Content** tab: title, subtitle, author, date, the cover page toggle, and the logo (any image, kept as a data URL).
+- **Content** tab: title, subtitle, author, date, the cover page toggle, and the logo (any image; wider than 1200 px it is scaled down).
 - **Design** tab: header title (top left), header name (top right) and footer text (bottom left). The page counter always sits at the bottom right.
 
 ### Page setup
@@ -200,7 +201,7 @@ To start every session with your own name, company logo, stylesheet or document 
 
 ### Saving your work
 
-The document autosaves in the browser after every change. **Reset** discards it and restores the sample. **Save config** downloads everything (texts, Markdown, CSS, logo, page setup) as one JSON file, and **Load config** restores it. Unknown keys and invalid values in an imported file are ignored.
+The document autosaves in the browser after every change (the logo and the images in IndexedDB, which has room for them). **Reset** discards it and restores the sample. **Save config** downloads everything (texts, Markdown, CSS, logo, page setup) as one JSON file, and **Load config** restores it. Unknown keys and invalid values in an imported file are ignored.
 
 ### Export and print
 
@@ -295,7 +296,7 @@ GitHub Actions workflows in `.github/workflows/`: `ci.yml` runs on every push an
 | `npm run test:desktop`  | Playwright smoke test of the desktop app (after `npm run build`)                        |
 | `npm run mcp`           | Start the MCP server on stdio (after `npm run build`)                                   |
 | `npm run test:mcp`      | End-to-end test of the MCP server with a real MCP client (after `npm run build`)        |
-| `npm run test:unit`     | Unit tests of the Markdown and image helpers (Node test runner)                         |
+| `npm run test:unit`     | Unit tests of the Markdown, image and font helpers (Node test runner)                   |
 
 Project layout:
 
@@ -305,7 +306,9 @@ vite.config.js      build-time constants: version and commit shown in the sideba
 src/main.js         wires the modules: restore, UI, view, first render
 src/config.js       defaults (built-in and local/), state, validation, autosave
 src/markdown.js     markdown-it and Mermaid diagrams, fence attributes
-src/images.js       image library: matching by file name, storage, upload
+src/images.js       image library: matching by file name, storage, upload; logo storage
+src/fonts.js        bundled document font: loaded for the preview, inlined in exports
+src/font-faces.js   which font subsets a text needs (pure helpers)
 src/resize-controls.js resize controls on the diagrams and images of the preview
 src/document.js     document CSS and HTML, standalone export
 src/render.js       Paged.js preview lifecycle
@@ -322,7 +325,7 @@ Dockerfile          two-stage image: Vite build, then nginx serving dist/
 docs/screenshots/   images used in this README
 ```
 
-The rendered document is styled only by the CSS generated in `documentCss()`, never by `src/ui.css`. The integration tests in `tests/` drive the real studio in a headless Chromium, since Paged.js needs a browser to lay out pages: rendering, scrolling, re-render hygiene, Mermaid, autosave, config validation, layout and zoom, export, print and the JSON round trip. Run `npx playwright install chromium --only-shell` once before `npm test`.
+The rendered document is styled only by the CSS generated in `documentCss()`, never by `src/ui.css`. The integration tests in `tests/studio-*.spec.js` (one file per domain, shared helpers in `tests/helpers/studio.mjs`) drive the real studio in a headless Chromium, since Paged.js needs a browser to lay out pages: rendering, scrolling, re-render hygiene, Mermaid, autosave, config validation, layout and zoom, export, print and the JSON round trip. Run `npx playwright install chromium --only-shell` once before `npm test`.
 
 ## Browser support
 
@@ -332,7 +335,6 @@ Recent Chromium-based browsers (Chrome, Edge, Brave, Arc) are the reference for 
 
 - Table of contents with page numbers (`target-counter`)
 - Running headers taken from headings (`string-set`) and left/right page styles
-- Bundled font so preview, print and export always match
 - Cover page templates
 - Syntax highlighting in code blocks
 - Code signing of the desktop binaries (Windows and macOS)
@@ -352,3 +354,5 @@ If the studio saves you time, you can support its development through [GitHub Sp
 ## License
 
 [MIT](LICENSE) © 2026 Florian Lotte
+
+The bundled font, [Inter](https://rsms.me/inter/), is licensed under the [SIL Open Font License 1.1](https://openfontlicense.org).
