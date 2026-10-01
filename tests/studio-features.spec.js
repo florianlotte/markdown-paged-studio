@@ -2,7 +2,7 @@
 // highlighting, running header, facing pages and cover templates.
 import { test, expect } from '@playwright/test';
 import { readFileSync } from 'node:fs';
-import { marginBoxContent, openDocument, pages, setMarkdown, status } from './helpers/studio.mjs';
+import { marginBoxContent, openDocument, pages, setMarkdown, status, exportVia } from './helpers/studio.mjs';
 
 const REPORT = [
   '# Report',
@@ -88,7 +88,7 @@ test('page breaks split the document and the table of contents shows the page nu
 
 test('the exported document carries the page numbers of the table of contents', async ({ page, context }) => {
   await openDocument(page, REPORT, 'Report');
-  const [download] = await Promise.all([page.waitForEvent('download'), page.locator('#exportHtml').click()]);
+  const [download] = await Promise.all([page.waitForEvent('download'), exportVia(page, 'exportHtml')]);
   const exported = await context.newPage();
   await exported.setContent(readFileSync(await download.path(), 'utf8'));
   await expect(exported.locator('.pagedjs_page')).toHaveCount(4);
@@ -123,7 +123,7 @@ test('code blocks are highlighted with the chosen theme, diagrams and images tak
   await expect(blocks.nth(0)).not.toHaveClass(/code-block/);
   await expect(blocks.nth(0).locator('span')).toHaveCount(0);
 
-  const [download] = await Promise.all([page.waitForEvent('download'), page.locator('#saveConfig').click()]);
+  const [download] = await Promise.all([page.waitForEvent('download'), exportVia(page, 'exportProject')]);
   expect(JSON.parse(readFileSync(await download.path(), 'utf8')).codeTheme).toBe('none');
 });
 
@@ -196,7 +196,7 @@ test('cover templates rearrange the same cover with the accent colour', async ({
   await expect(cover.locator('.cover-title')).toHaveText('Architecture Report');
 
   // Unknown templates and colours of an imported configuration are ignored.
-  await page.locator('#configFile').setInputFiles({
+  await page.locator('#importFile').setInputFiles({
     name: 'config.json',
     mimeType: 'application/json',
     buffer: Buffer.from(JSON.stringify({ coverTemplate: 'fancy', accentColor: 'red;}', codeTheme: 'neon' })),
@@ -274,7 +274,7 @@ test('footnotes go to the foot of the page that calls them, task lists show chec
   );
 
   // The exported document lays the notes out the same way.
-  const [download] = await Promise.all([page.waitForEvent('download'), page.locator('#exportHtml').click()]);
+  const [download] = await Promise.all([page.waitForEvent('download'), exportVia(page, 'exportHtml')]);
   const exported = await context.newPage();
   await exported.setContent(readFileSync(await download.path(), 'utf8'));
   await expect(exported.locator('.pagedjs_page')).toHaveCount(expected.length);

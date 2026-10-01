@@ -41,7 +41,8 @@
 - **Preview controls**: one page or two pages side by side, zoom, fit to width, Ctrl + wheel, and a collapsible sidebar.
 - **Autosave** in the browser, plus export and import of the whole configuration as JSON.
 - **Personal defaults** (your name, company logo, stylesheet, template) from a gitignored `local/` folder.
-- **Standalone HTML export** that paginates offline, and **Export PDF**: the print dialog in the browser, a direct file in the desktop app.
+- **Export menu**: PDF with project, PDF only, HTML with project (a standalone page that paginates offline) or the project alone. The PDF comes from the print dialog in the browser, as a direct file in the desktop app.
+- **Editable exports**: the HTML export and the PDF with project carry the document, its settings and its images, and **Import…** reopens them.
 - **Desktop app** for Windows (x64 and ARM64), Linux and macOS (Apple Silicon and Intel), portable, no installation.
 - **MCP server** so a local AI assistant can generate reports through the same rendering pipeline.
 - **Static build** you can host anywhere: GitHub Pages, Netlify, Cloudflare Pages, nginx, or the provided Docker image.
@@ -162,7 +163,7 @@ Captions are not numbered automatically: write the number yourself. Every image 
 
 Good to know:
 
-- Images are stored in the browser (IndexedDB) and travel in the configuration file of **Save config**, which is then a complete document. **Reset** removes them.
+- Images are stored in the browser (IndexedDB) and travel in the project file (**Export → Project only**), which is then a complete document. **Reset** removes them.
 - A raster image wider than 2400 px is scaled down to that width on upload (300 dpi across an A4 text column); SVG and GIF files are never modified.
 - Remote images (`https://…`) are left to the browser: they need the network, also in an exported file.
 - Two images with the same file name in different folders cannot be told apart: rename one of them.
@@ -226,7 +227,7 @@ Use print units (`mm`, `pt`) and paged-media properties such as `break-before: p
 }
 ```
 
-**Sample CSS** restores the default stylesheet.
+**Default CSS** restores the default stylesheet.
 
 ### Preview controls
 
@@ -257,15 +258,27 @@ To start every session with your own name, company logo, stylesheet or document 
 
 ### Saving your work
 
-The document autosaves in the browser after every change (the logo and the images in IndexedDB, which has room for them). **Reset** discards it and restores the sample. **Save config** downloads everything (texts, Markdown, CSS, logo, images, page setup and options) as one JSON file, and **Load config** restores it. Unknown keys and invalid values in an imported file are ignored.
+The document autosaves in the browser after every change (the logo and the images in IndexedDB, which has room for them). **Reset** discards it and restores the sample. **Export → Project only** downloads everything (texts, Markdown, CSS, logo, images, page setup and options) as one JSON file, and **Import…** restores it, from that JSON or from an HTML or PDF exported by the studio (see [Reopening an export](#reopening-an-export)). Unknown keys and invalid values in an imported file are ignored.
 
 ### Export and print
 
-- **Export HTML** downloads a single self-contained file: content, styles, images, diagrams, the font and the Paged.js runtime. It paginates on open, offline, in any modern browser.
-- **Export PDF** is the same button everywhere, with the best implementation available:
+The **Export** button exports the PDF with the project; its arrow opens the four exports:
+
+- **PDF with project** (the default): settings, Markdown and images attached, so the file reopens in the studio; **PDF only** is the document alone. Both use the best implementation available:
   - in the browser it opens the print-ready document in a new tab and triggers the print dialog once pagination is complete; choose _Save as PDF_. Allow pop-ups for the site if nothing opens. Ctrl+P (Cmd+P on macOS) does the same;
   - in the desktop app it writes the PDF directly through the embedded Chromium engine, no dialog other than the file picker.
+- **HTML with project** downloads a single self-contained file: content, styles, images, diagrams, the font, the Paged.js runtime and the project. It paginates on open, offline, in any modern browser.
+- **Project only** downloads the JSON file described in [Saving your work](#saving-your-work).
 - **Printing on paper**: in the browser, the same print dialog; in the desktop app, **File → Print…** (Ctrl+P).
+
+### Reopening an export
+
+An exported file carries everything needed to edit it again: the Markdown, every setting, the logo and the images, in the same form as a project file.
+
+- The **HTML export** holds them in a data block.
+- A **PDF** holds them as file attachments (`markdown-paged-studio.json` and `document.md`), which PDF readers list in their attachments panel. The desktop app and the MCP server attach them when they write the PDF. In the browser the print dialog writes the PDF outside the studio, so after **Export** a banner asks for the file you saved: choose it, and the studio downloads it again as `<name>-with-project.pdf`. **PDF only** skips all this.
+
+**Import…** opens all three: a project JSON, an HTML or a PDF exported by the studio. The desktop app has the same commands in its **File** menu (Ctrl+O imports).
 
 Chromium-based browsers give the most faithful print output for paged media.
 
@@ -302,7 +315,7 @@ The same application ships as a portable desktop app built with Electron, with C
 
 The portable Windows executable keeps the saved document and the view settings in a `markdown-paged-studio-data` folder next to it. Each release also carries `SHA256SUMS-<os>.txt` files to verify the downloads. The binaries are not code-signed, so Windows SmartScreen and macOS Gatekeeper will ask for confirmation on first launch.
 
-In the desktop app, **Export PDF** writes the file directly through the embedded Chromium engine instead of going through a print dialog, and **File → Print…** (Ctrl+P) prints on paper. Links of the document open in the system browser. Everything else works exactly as in the browser, including the personal defaults from `local/` baked in at build time. The application menu is in French on a French system.
+In the desktop app, the PDF exports write the file directly through the embedded Chromium engine instead of going through a print dialog, and **File → Print…** (Ctrl+P) prints on paper. Links of the document open in the system browser. Everything else works exactly as in the browser, including the personal defaults from `local/` baked in at build time. The application menu is in French on a French system.
 
 From the sources:
 
@@ -377,6 +390,7 @@ src/markdown.js     markdown-it rules: images, anchors, table of contents, page 
 src/images.js       image library: matching by file name, storage, upload; logo storage
 src/i18n.js         interface language: French translations, applied to the markup
 src/editor.js       edits of the Markdown editor that keep its undo history
+src/pdf-sources.js  the sources of the document as PDF attachments: attach, read back
 src/fonts.js        bundled document font: loaded for the preview, inlined in exports
 src/font-faces.js   which font subsets a text needs (pure helpers)
 src/resize-controls.js resize controls on the diagrams and images of the preview
@@ -429,4 +443,4 @@ If the studio saves you time, you can support its development through [GitHub Sp
 
 [MIT](LICENSE) © 2026 Florian Lotte
 
-The specification examples used by the conformance tests ([CommonMark](https://spec.commonmark.org), [GFM](https://github.github.com/gfm/)) are under CC BY-SA 4.0 and are not part of the application. Code highlighting uses [highlight.js](https://highlightjs.org) (BSD 3-Clause). The bundled font, [Inter](https://rsms.me/inter/), is licensed under the [SIL Open Font License 1.1](https://openfontlicense.org).
+The specification examples used by the conformance tests ([CommonMark](https://spec.commonmark.org), [GFM](https://github.github.com/gfm/)) are under CC BY-SA 4.0 and are not part of the application. Code highlighting uses [highlight.js](https://highlightjs.org) (BSD 3-Clause) and PDF attachments [pdf-lib](https://pdf-lib.js.org) (MIT). The bundled font, [Inter](https://rsms.me/inter/), is licensed under the [SIL Open Font License 1.1](https://openfontlicense.org).

@@ -22,8 +22,16 @@ test('the interface switches to French and back, and remembers the choice', asyn
   await expect(page.getByRole('tab')).toHaveText(['Contenu', 'Style', 'Page']);
   await expect(page.locator('label', { hasText: 'Sous-titre' })).toBeVisible();
   await expect(page.locator('label.check').first()).toHaveText('Afficher la page de couverture');
-  await expect(page.locator('#exportPdf')).toHaveText('Exporter en PDF');
-  await expect(page.locator('#exportPdf')).toHaveAttribute('title', /Enregistrer au format PDF/);
+  await expect(page.locator('#exportDefault')).toHaveText('Exporter');
+  await expect(page.locator('#exportOptions [role="menuitem"] strong')).toHaveText([
+    'PDF avec projet',
+    'PDF seul',
+    'HTML avec projet',
+    'Projet seul',
+  ]);
+  await expect(page.locator('#import')).toHaveText('Importer…');
+  await expect(page.locator('#projectBannerClose')).toHaveText('Plus tard');
+  await expect(page.locator('#exportDefault')).toHaveAttribute('title', /Enregistrer au format PDF/);
   await expect(page.locator('#toggleSidebar')).toHaveAttribute('aria-label', 'Masquer la barre latérale');
   await expect(page.locator('#zoomIn')).toHaveAttribute('aria-label', 'Zoom avant');
   await expect(page.locator('.images-hint')).toHaveText(
@@ -51,7 +59,7 @@ test('the interface switches to French and back, and remembers the choice', asyn
 
   await language.selectOption('en');
   await expect(page.getByRole('tab')).toHaveText(['Content', 'Design', 'Page']);
-  await expect(page.locator('#exportPdf')).toHaveText('Export PDF');
+  await expect(page.locator('#exportDefault')).toHaveText('Export');
   await expect(page.locator('#toggleSidebar')).toHaveAttribute('aria-label', 'Hide sidebar');
   await expect(page.locator('#imageList button')).toHaveText(['Insert', 'Remove']);
 });

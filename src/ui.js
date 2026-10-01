@@ -1,7 +1,7 @@
 // The studio's controls: form fields bound to the state, tabs, file imports, downloads, export and print.
 // The markup itself lives in index.html.
 import { clearStoredConfig, DEFAULTS, sanitizeConfig, state } from './config.js';
-import { standaloneHtml } from './document.js';
+import { sourcesOfHtml, standaloneHtml } from './document.js';
 import { insertBlock } from './editor.js';
 import {
   addImageFiles,
@@ -155,27 +155,18 @@ function bindFiles() {
     .getElementById('downloadMarkdown')
     .addEventListener('click', () => download('document.md', state.markdown, 'text/markdown;charset=utf-8'));
 
-  document.getElementById('saveConfig').addEventListener('click', () => {
-    // The images travel with the configuration, so the file is a complete, portable document.
-    const config = { ...state, images: exportImages() };
-    download('markdown-paged-config.json', JSON.stringify(config, null, 2), 'application/json');
+  document.getElementById('import').addEventListener('click', () => document.getElementById('importFile').click());
+  document.getElementById('importFile').addEventListener('change', async e => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    try {
+      loadSources(await sourcesOfFile(file));
+    } catch (error) {
+      console.error(error);
+      alert(t('This file could not be opened: {error}', { error: error?.message || error }));
+    }
   });
-
-  document.getElementById('loadConfig').addEventListener('click', () => document.getElementById('configFile').click());
-  document.getElementById('configFile').addEventListener('change', e =>
-    readTextFile(e.target, text => {
-      let loaded;
-      try {
-        loaded = JSON.parse(text);
-      } catch {
-        alert(t('Invalid JSON file.'));
-        return;
-      }
-      // A configuration saved before images existed has no `images` key: keep the current ones.
-      if (loaded && typeof loaded === 'object' && 'images' in loaded) replaceImages(sanitizeImages(loaded.images));
-      applyConfig(loaded);
-    }),
-  );
 
   document.getElementById('resetDocument').addEventListener('click', () => {
     if (!confirm(t('Discard the current document and its images, and restore the sample?'))) return;
@@ -184,9 +175,76 @@ function bindFiles() {
     document.getElementById('logo').value = '';
     applyConfig(DEFAULTS);
   });
+}
 
-  document.getElementById('exportHtml').addEventListener('click', async () => {
-    download('document.html', await standaloneHtml(), 'text/html;charset=utf-8');
+// The two exports that are plain downloads: the self-contained HTML page and the project file.
+async function exportHtml() {
+  download('document.html', await standaloneHtml({ source: sourceJson() }), 'text/html;charset=utf-8');
+}
+
+function exportProject() {
+  download('markdown-paged-studio-project.json', sourceJson(2), 'application/json');
+}
+
+// ---- The sources of the document: the project file, what the exports carry.
+
+// The images travel with the configuration, so the file is a complete, portable document.
+function sourceJson(indent = 0) {
+  return JSON.stringify({ ...state, images: exportImages() }, null, indent);
+}
+
+// The configuration text held by a file: a project JSON, or an HTML or PDF exported by the studio.
+async function sourcesOfFile(file) {
+  const head = new TextDecoder().decode(new Uint8Array(await file.slice(0, 16).arrayBuffer()));
+  if (head.startsWith('%PDF-')) {
+    const { readSources } = await import('./pdf-sources.js');
+    const found = await readSources(await file.arrayBuffer());
+    if (!found) throw new Error(t('this PDF holds no studio sources'));
+    return found.json;
+  }
+  const text = await file.text();
+  if (/^\s*<(!doctype html|html)/i.test(text)) {
+    const found = sourcesOfHtml(text);
+    if (found === null) throw new Error(t('this HTML file holds no studio sources'));
+    return found;
+  }
+  return text;
+}
+
+// Applies a configuration text to the document: validated like any import, images included.
+function loadSources(text) {
+  let loaded;
+  try {
+    loaded = JSON.parse(text);
+  } catch {
+    throw new Error(t('not a valid JSON file'));
+  }
+  // A configuration saved before images existed has no `images` key: keep the current ones.
+  if (loaded && typeof loaded === 'object' && 'images' in loaded) replaceImages(sanitizeImages(loaded.images));
+  applyConfig(loaded);
+}
+
+// Browser only, after "PDF with project": the print dialog wrote the PDF outside the studio, so the banner
+// asks for that file and gives it back with the project inside.
+function bindProjectBanner() {
+  const banner = document.getElementById('projectBanner');
+  const input = document.getElementById('projectPdfFile');
+  document.getElementById('projectPdfChoose').addEventListener('click', () => input.click());
+  document.getElementById('projectBannerClose').addEventListener('click', () => (banner.hidden = true));
+  input.addEventListener('change', async () => {
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file) return;
+    try {
+      const { attachSources } = await import('./pdf-sources.js');
+      const bytes = await attachSources(await file.arrayBuffer(), { json: sourceJson(), markdown: state.markdown });
+      download(file.name.replace(/(-with-project)?\.pdf$/i, '') + '-with-project.pdf', bytes, 'application/pdf');
+      document.getElementById('status').textContent = t('Project attached');
+      banner.hidden = true;
+    } catch (error) {
+      console.error(error);
+      alert(t('The project could not be attached: {error}', { error: error?.message || error }));
+    }
   });
 }
 
@@ -206,14 +264,31 @@ async function openPrintWindow() {
   setTimeout(() => URL.revokeObjectURL(url), 30000);
 }
 
-// Desktop only: the preload script exposes `window.desktop.exportPdf`, which renders the standalone HTML in
-// a hidden Chromium window and writes the PDF where the user chooses, without any dialog in between.
-async function exportPdfDirect() {
-  const button = document.getElementById('exportPdf');
+// Desktop only: `window.desktop.exportPdf` renders the standalone HTML in a hidden Chromium window and hands
+// the PDF back with a token for the place the user chose; the project is attached here when asked, then
+// `window.desktop.writePdf` writes the file. The desktop package has no node_modules: pdf-lib lives in the
+// page bundle, so this is the only place it can run.
+async function exportPdfDirect({ project }) {
+  const button = document.getElementById('exportDefault');
+  const status = document.getElementById('status');
   button.disabled = true;
   try {
     const result = await window.desktop.exportPdf(await standaloneHtml({ mode: 'pdf' }));
-    if (!result.canceled) document.getElementById('status').textContent = t('PDF saved');
+    if (result.canceled) return;
+    let bytes = result.pdf;
+    let saved = t('PDF saved');
+    if (project) {
+      try {
+        const { attachSources } = await import('./pdf-sources.js');
+        bytes = await attachSources(result.pdf, { json: sourceJson(), markdown: state.markdown });
+        saved = t('PDF saved with its project');
+      } catch (error) {
+        console.error(error);
+        saved = t('PDF saved without its project');
+      }
+    }
+    await window.desktop.writePdf(result.token, bytes);
+    status.textContent = saved;
   } catch (error) {
     console.error(error);
     alert(t('PDF export failed: {error}', { error: error?.message || error }));
@@ -222,27 +297,89 @@ async function exportPdfDirect() {
   }
 }
 
+// Export PDF, with or without the project: a direct file in the desktop app; in the browser the print
+// dialog (which must open inside the user gesture), then the banner to add the project to the saved file.
+function exportPdf({ project }) {
+  if (window.desktop) return exportPdfDirect({ project });
+  openPrintWindow();
+  document.getElementById('projectBanner').hidden = !project;
+}
+
+// The arrow next to Export opens the four exports as a menu: Escape, a click elsewhere or leaving it closes
+// it; the arrow keys move between its entries.
+function bindExportMenu() {
+  const arrow = document.getElementById('exportMenu');
+  const menu = document.getElementById('exportOptions');
+  const items = [...menu.querySelectorAll('[role="menuitem"]')];
+  const open = () => {
+    menu.hidden = false;
+    arrow.setAttribute('aria-expanded', 'true');
+    items[0].focus();
+  };
+  const close = ({ focus = false } = {}) => {
+    if (menu.hidden) return;
+    menu.hidden = true;
+    arrow.setAttribute('aria-expanded', 'false');
+    if (focus) arrow.focus();
+  };
+  arrow.addEventListener('click', () => (menu.hidden ? open() : close()));
+  menu.addEventListener('keydown', event => {
+    const index = items.indexOf(document.activeElement);
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      close({ focus: true });
+    } else if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      event.preventDefault();
+      items[(index + (event.key === 'ArrowDown' ? 1 : items.length - 1)) % items.length].focus();
+    }
+  });
+  document.addEventListener('pointerdown', event => {
+    if (!event.target.closest('.menu-button')) close();
+  });
+  menu.addEventListener('focusout', event => {
+    if (!menu.contains(event.relatedTarget) && event.relatedTarget !== arrow) close();
+  });
+  const actions = {
+    exportPdfProject: () => exportPdf({ project: true }),
+    exportPdfOnly: () => exportPdf({ project: false }),
+    exportHtml,
+    exportProject,
+  };
+  for (const [id, action] of Object.entries(actions)) {
+    document.getElementById(id).addEventListener('click', () => {
+      close();
+      action();
+    });
+  }
+}
+
 function bindPdf() {
-  const button = document.getElementById('exportPdf');
-  // One "Export PDF" button everywhere: direct file in the desktop app, print dialog in the browser.
-  button.addEventListener('click', () => (window.desktop ? exportPdfDirect() : openPrintWindow()));
+  const button = document.getElementById('exportDefault');
+  // The main part of the split button is the default export: the PDF with the project.
+  button.addEventListener('click', () => exportPdf({ project: true }));
+  bindExportMenu();
 
   if (window.desktop) {
     // File menu entries of the desktop app.
     window.desktop.onCommand(command => {
-      if (command === 'export-pdf') exportPdfDirect();
+      if (command === 'export-pdf') exportPdfDirect({ project: true });
+      else if (command === 'export-pdf-plain') exportPdfDirect({ project: false });
+      else if (command === 'export-html') exportHtml();
+      else if (command === 'export-project') exportProject();
+      else if (command === 'import') document.getElementById('importFile').click();
       else if (command === 'print') openPrintWindow();
       else if (command === 'toggle-sidebar') toggleSidebar();
     });
   } else {
-    const describe = () => (button.title = t('Opens the print dialog: choose "Save as PDF"'));
+    const describe = () => (button.title = t('PDF with project: opens the print dialog, choose "Save as PDF"'));
     describe();
     onLanguageChange(describe);
+    bindProjectBanner();
     // Ctrl/Cmd+P prints the document rather than the studio page. On desktop the menu accelerator does this.
     document.addEventListener('keydown', event => {
       if ((event.ctrlKey || event.metaKey) && !event.altKey && event.key.toLowerCase() === 'p') {
         event.preventDefault();
-        openPrintWindow();
+        exportPdf({ project: true });
       }
     });
   }

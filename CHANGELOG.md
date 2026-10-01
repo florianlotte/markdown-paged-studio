@@ -7,6 +7,23 @@ All notable changes to Markdown Paged Studio are listed here, newest first. The 
 
 ## [Unreleased]
 
+## [1.16.0] - 2026-10-01
+
+### Added
+
+- Editable exports and a simpler toolbar: one **Export** menu (PDF with project, the default; PDF only; HTML
+  with project; project only) and one **Import…** button that opens a PDF, an HTML or a project file. The
+  project (settings, Markdown, logo, images) travels inside the PDF as attachments and inside the HTML as a
+  data block. In the browser, where the print dialog writes the PDF, a banner then asks for the saved file
+  and gives it back with the project. The desktop File menu has the same commands; the MCP server attaches
+  the project unless `project` is `false`.
+
+### Changed
+
+- **Save config** and **Load config** are replaced by **Export → Project only** and **Import…**; the project
+  file is named `markdown-paged-studio-project.json`.
+- The **Sample CSS** button of the Design tab is named **Default CSS**.
+
 ## [1.15.1] - 2026-10-01
 
 ### Added
@@ -255,7 +272,8 @@ All notable changes to Markdown Paged Studio are listed here, newest first. The 
 - Portable desktop app for Windows, Linux and macOS with direct PDF export.
 - Docker image, Playwright integration tests and CI.
 
-[Unreleased]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.15.1...HEAD
+[Unreleased]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.16.0...HEAD
+[1.16.0]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.15.1...v1.16.0
 [1.15.1]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.15.0...v1.15.1
 [1.15.0]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.14.0...v1.15.0
 [1.14.0]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.13.2...v1.14.0

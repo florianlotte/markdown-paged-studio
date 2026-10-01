@@ -108,6 +108,10 @@ function sendCommand(command) {
 const MENU_FR = {
   File: 'Fichier',
   'Export PDF…': 'Exporter en PDF…',
+  'Export PDF without project…': 'Exporter en PDF sans projet…',
+  'Export HTML…': 'Exporter en HTML…',
+  'Save project…': 'Enregistrer le projet…',
+  'Import…': 'Importer…',
   'Print…': 'Imprimer…',
   View: 'Affichage',
   'Toggle Sidebar': 'Afficher ou masquer la barre latérale',
@@ -122,6 +126,12 @@ function buildMenu() {
       label: label('File'),
       submenu: [
         { label: label('Export PDF…'), accelerator: 'CmdOrCtrl+Shift+E', click: () => sendCommand('export-pdf') },
+        { label: label('Export PDF without project…'), click: () => sendCommand('export-pdf-plain') },
+        { label: label('Export HTML…'), click: () => sendCommand('export-html') },
+        { label: label('Save project…'), click: () => sendCommand('export-project') },
+        { type: 'separator' },
+        { label: label('Import…'), accelerator: 'CmdOrCtrl+O', click: () => sendCommand('import') },
+        { type: 'separator' },
         { label: label('Print…'), accelerator: 'CmdOrCtrl+P', click: () => sendCommand('print') },
         { type: 'separator' },
         { role: isMac ? 'close' : 'quit' },
@@ -154,7 +164,13 @@ async function waitForPagination(webContents) {
   throw new Error('Pagination did not complete in time');
 }
 
-// Render the standalone HTML in a hidden window, wait for Paged.js, and print it to PDF.
+// Places chosen for a PDF, waiting for its bytes: token -> { filePath, expires }. The page never sees the
+// path and can only write where the user pointed, once.
+const pendingWrites = new Map();
+const WRITE_TIMEOUT_MS = 10 * 60_000;
+
+// Render the standalone HTML in a hidden window, wait for Paged.js, and print it to PDF. The bytes go back
+// to the page, which attaches the sources of the document and asks `write-pdf` to save the result.
 ipcMain.handle('export-pdf', async (event, html) => {
   if (typeof html !== 'string' || html.length === 0 || html.length > 100 * 1024 * 1024) {
     throw new Error('Invalid document');
@@ -181,12 +197,24 @@ ipcMain.handle('export-pdf', async (event, html) => {
       printBackground: true,
       margins: { marginType: 'custom', top: 0, bottom: 0, left: 0, right: 0 },
     });
-    await writeFile(filePath, pdf);
-    return { canceled: false, filePath };
+    const token = randomUUID();
+    pendingWrites.set(token, { filePath, expires: Date.now() + WRITE_TIMEOUT_MS });
+    return { canceled: false, token, pdf: new Uint8Array(pdf) };
   } finally {
     pdfJobs.delete(id);
     if (!worker.isDestroyed()) worker.destroy();
   }
+});
+
+ipcMain.handle('write-pdf', async (event, token, bytes) => {
+  const pending = typeof token === 'string' ? pendingWrites.get(token) : undefined;
+  pendingWrites.delete(token);
+  if (!pending || pending.expires < Date.now()) throw new Error('No PDF export is waiting for these bytes');
+  if (!(bytes instanceof Uint8Array) || bytes.length === 0 || bytes.length > 200 * 1024 * 1024) {
+    throw new Error('Invalid PDF');
+  }
+  await writeFile(pending.filePath, bytes);
+  return { filePath: pending.filePath };
 });
 
 if (!app.requestSingleInstanceLock()) {

@@ -161,7 +161,7 @@
               <div class="row-actions">
                 <button id="loadCss" class="secondary">Import .css</button>
                 <input id="cssFile" type="file" accept=".css,text/css" hidden />
-                <button id="resetCss" class="secondary">Sample CSS</button>
+                <button id="resetCss" class="secondary">Default CSS</button>
               </div>
             </div>
 
@@ -288,13 +288,73 @@
             </div>
             <div class="toolbar-actions">
               <button id="resetDocument" class="secondary">Reset</button>
-              <button id="saveConfig" class="secondary">Save config</button>
-              <button id="loadConfig" class="secondary">Load config</button>
-              <input id="configFile" type="file" accept="application/json,.json" hidden />
-              <button id="exportHtml" class="secondary">Export HTML</button>
-              <button id="exportPdf" class="primary">Export PDF</button>
+              <button id="import" class="secondary" title="A PDF, an HTML or a project exported by the studio">
+                Import…
+              </button>
+              <input
+                id="importFile"
+                type="file"
+                accept="application/json,.json,application/pdf,.pdf,text/html,.html"
+                hidden
+              />
+              <div class="menu-button">
+                <button id="exportDefault" class="primary" title="PDF with project">Export</button>
+                <button
+                  id="exportMenu"
+                  class="primary menu-arrow"
+                  type="button"
+                  aria-haspopup="menu"
+                  aria-expanded="false"
+                  aria-controls="exportOptions"
+                  aria-label="Export options"
+                  title="Export options"
+                >
+                  <svg viewBox="0 0 20 20" width="14" height="14" aria-hidden="true" focusable="false">
+                    <path
+                      d="M5 8l5 5 5-5"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.8"
+                      stroke-linecap="round"
+                    />
+                  </svg>
+                </button>
+                <ul id="exportOptions" class="menu" role="menu" aria-label="Export" hidden>
+                  <li role="none">
+                    <button id="exportPdfProject" role="menuitem" type="button">
+                      <strong>PDF with project</strong>
+                      <span>Settings, Markdown and images attached: the file reopens in the studio</span>
+                    </button>
+                  </li>
+                  <li role="none">
+                    <button id="exportPdfOnly" role="menuitem" type="button">
+                      <strong>PDF only</strong>
+                      <span>The document alone</span>
+                    </button>
+                  </li>
+                  <li role="separator" class="menu-separator"></li>
+                  <li role="none">
+                    <button id="exportHtml" role="menuitem" type="button">
+                      <strong>HTML with project</strong>
+                      <span>One self-contained page that paginates itself, project included</span>
+                    </button>
+                  </li>
+                  <li role="none">
+                    <button id="exportProject" role="menuitem" type="button">
+                      <strong>Project only</strong>
+                      <span>Settings, Markdown and images as a JSON file</span>
+                    </button>
+                  </li>
+                </ul>
+              </div>
+              <input id="projectPdfFile" type="file" accept="application/pdf,.pdf" hidden />
             </div>
           </header>
+          <div id="projectBanner" class="banner" role="status" hidden>
+            <span>Saved the PDF? Choose it to add the project.</span>
+            <button id="projectPdfChoose" class="secondary" type="button">Choose PDF…</button>
+            <button id="projectBannerClose" class="secondary" type="button">Not now</button>
+          </div>
           <section class="preview-shell">
             <div id="preview" class="preview"></div>
           </section>

@@ -55,7 +55,7 @@ const TRANSLATIONS = {
     None: 'Aucune',
     'Custom CSS': 'CSS personnalisé',
     'Import .css': 'Importer .css',
-    'Sample CSS': "CSS d'exemple",
+    'Default CSS': 'CSS par défaut',
     'Page size': 'Format de page',
     'Language (hyphenation and quotes)': 'Langue (césure et guillemets)',
     'Top (mm)': 'Haut (mm)',
@@ -94,17 +94,37 @@ const TRANSLATIONS = {
     Fit: 'Ajuster',
     'Fit to the available width': 'Ajuster à la largeur disponible',
     Reset: 'Réinitialiser',
-    'Save config': 'Enregistrer la config',
-    'Load config': 'Charger une config',
-    'Export HTML': 'Exporter en HTML',
-    'Export PDF': 'Exporter en PDF',
-    'Opens the print dialog: choose "Save as PDF"':
-      "Ouvre la boîte de dialogue d'impression : choisir « Enregistrer au format PDF »",
+    'Import…': 'Importer…',
+    'A PDF, an HTML or a project exported by the studio': 'Un PDF, un HTML ou un projet exportés par le studio',
+    Export: 'Exporter',
+    'Export options': "Options d'export",
+    'HTML with project': 'HTML avec projet',
+    'One self-contained page that paginates itself, project included':
+      'Une page autonome qui se pagine elle-même, projet inclus',
+    'Project only': 'Projet seul',
+    'Settings, Markdown and images as a JSON file': 'Réglages, Markdown et images dans un fichier JSON',
+    'PDF with project: opens the print dialog, choose "Save as PDF"':
+      "PDF avec projet : ouvre la boîte de dialogue d'impression, choisir « Enregistrer au format PDF »",
     'PDF saved': 'PDF enregistré',
+    'PDF saved with its project': 'PDF enregistré avec son projet',
+    'PDF saved without its project': 'PDF enregistré sans son projet',
+    'PDF with project': 'PDF avec projet',
+    'Settings, Markdown and images attached: the file reopens in the studio':
+      'Réglages, Markdown et images joints : le fichier se rouvre dans le studio',
+    'PDF only': 'PDF seul',
+    'The document alone': 'Le document seul',
+    'Saved the PDF? Choose it to add the project.': 'PDF enregistré ? Choisissez-le pour y ajouter le projet.',
+    'Choose PDF…': 'Choisir le PDF…',
+    'Not now': 'Plus tard',
+    'Project attached': 'Projet joint',
+    'The project could not be attached: {error}': "Le projet n'a pas pu être joint : {error}",
+    'This file could not be opened: {error}': "Ce fichier n'a pas pu être ouvert : {error}",
+    'this PDF holds no studio sources': 'ce PDF ne contient pas de sources du studio',
+    'this HTML file holds no studio sources': 'ce fichier HTML ne contient pas de sources du studio',
+    'not a valid JSON file': 'ce n’est pas un fichier JSON valide',
 
     // Messages
     'The logo could not be read: {error}': "Le logo n'a pas pu être lu : {error}",
-    'Invalid JSON file.': 'Fichier JSON invalide.',
     'Discard the current document and its images, and restore the sample?':
       "Abandonner le document en cours et ses images, et restaurer l'exemple ?",
     'The browser blocked the print window. Allow pop-ups for this site.':

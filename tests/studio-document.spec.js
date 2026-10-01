@@ -1,7 +1,9 @@
 // Integration tests of the document itself: rendering, autosave, configuration, exports, language, cover.
 import { test, expect } from '@playwright/test';
 import { readFileSync } from 'node:fs';
+import { PDFDocument } from 'pdf-lib';
 import { png } from './helpers/png.mjs';
+import { readSources } from '../src/pdf-sources.js';
 import {
   STATUS_DONE,
   appendMarkdown,
@@ -10,6 +12,7 @@ import {
   pages,
   setMarkdown,
   status,
+  exportVia,
 } from './helpers/studio.mjs';
 
 test('renders the sample document as pages with cover, header, footer and counter', async ({ page }) => {
@@ -104,7 +107,7 @@ test('ignores unknown keys and invalid values in a stored configuration', async 
 
 test('exports a standalone HTML file that paginates offline', async ({ page, context }) => {
   await openFreshStudio(page);
-  const [download] = await Promise.all([page.waitForEvent('download'), page.locator('#exportHtml').click()]);
+  const [download] = await Promise.all([page.waitForEvent('download'), exportVia(page, 'exportHtml')]);
   expect(download.suggestedFilename()).toBe('document.html');
   const html = readFileSync(await download.path(), 'utf8');
   expect(html).not.toContain('unpkg.com');
@@ -126,7 +129,7 @@ test('Export PDF in the browser opens the print window inside the gesture and pr
 }) => {
   await openFreshStudio(page);
   await expect(page.locator('#printPdf')).toHaveCount(0);
-  await expect(page.locator('#exportPdf')).toBeVisible();
+  await expect(page.locator('#exportDefault')).toBeVisible();
   const stubWindowOpen = () =>
     page.evaluate(() => {
       window.__print = { openedSync: false, url: null };
@@ -141,29 +144,64 @@ test('Export PDF in the browser opens the print window inside the gesture and pr
     });
 
   await stubWindowOpen();
-  await page.locator('#exportPdf').click();
+  await page.locator('#exportDefault').click();
   await expect.poll(() => page.evaluate(() => window.__print.url)).toMatch(/^blob:/);
   expect(await page.evaluate(() => window.__print.openedSync)).toBe(true);
   const html = await page.evaluate(() => fetch(window.__print.url).then(r => r.text()));
   expect(html).toContain('after:()=>setTimeout(()=>window.print()');
   expect(html).toContain('<article class="document-content" lang="en">');
+  // The default export is with the project: the banner asks for the saved PDF.
+  const banner = page.locator('#projectBanner');
+  await expect(banner).toBeVisible();
+  await page.locator('#projectBannerClose').click();
+  await expect(banner).toBeHidden();
+
+  // The arrow opens the menu; "PDF only" prints without the banner. Escape and a click elsewhere close it.
+  const menu = page.locator('#exportOptions');
+  await page.locator('#exportMenu').click();
+  await expect(menu).toBeVisible();
+  await expect(page.locator('#exportPdfProject')).toBeFocused();
+  await page.keyboard.press('ArrowDown');
+  await expect(page.locator('#exportPdfOnly')).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(menu).toBeHidden();
+  await expect(page.locator('#exportMenu')).toBeFocused();
+  await page.locator('#exportMenu').click();
+  await expect(menu).toBeVisible();
+  await page.locator('.preview-shell').click({ position: { x: 5, y: 5 } });
+  await expect(menu).toBeHidden();
+  await stubWindowOpen();
+  await page.locator('#exportMenu').click();
+  await page.locator('#exportPdfOnly').click();
+  await expect(menu).toBeHidden();
+  await expect.poll(() => page.evaluate(() => window.__print.url)).toMatch(/^blob:/);
+  await expect(banner).toBeHidden();
+
+  // The two other entries are plain downloads: the HTML page and the project file.
+  const [htmlDownload] = await Promise.all([page.waitForEvent('download'), exportVia(page, 'exportHtml')]);
+  expect(htmlDownload.suggestedFilename()).toBe('document.html');
+  const [project] = await Promise.all([page.waitForEvent('download'), exportVia(page, 'exportProject')]);
+  expect(project.suggestedFilename()).toBe('markdown-paged-studio-project.json');
+  expect(JSON.parse(readFileSync(await project.path(), 'utf8')).title).toBe('Architecture Report');
+  await expect(menu).toBeHidden();
 
   // Ctrl+P prints the document, not the studio page.
   await stubWindowOpen();
   await page.locator('#title').focus();
   await page.keyboard.press('Control+p');
   await expect.poll(() => page.evaluate(() => window.__print.url)).toMatch(/^blob:/);
+  await expect(banner).toBeVisible();
 });
 
 test('saves and loads the configuration as JSON', async ({ page }) => {
   await openFreshStudio(page);
-  const [download] = await Promise.all([page.waitForEvent('download'), page.locator('#saveConfig').click()]);
+  const [download] = await Promise.all([page.waitForEvent('download'), exportVia(page, 'exportProject')]);
   const saved = JSON.parse(readFileSync(await download.path(), 'utf8'));
   expect(saved).toMatchObject({ title: 'Architecture Report', pageSize: 'A4', cover: true });
   expect(saved.customCss).toContain('.document-content');
 
   const modified = { ...saved, title: 'From JSON', marginTop: 40, footerText: 'Loaded' };
-  await page.locator('#configFile').setInputFiles({
+  await page.locator('#importFile').setInputFiles({
     name: 'config.json',
     mimeType: 'application/json',
     buffer: Buffer.from(JSON.stringify(modified)),
@@ -185,7 +223,7 @@ test('the document language drives lang attributes and typographic quotes', asyn
   await expect(page.locator('#preview .cover-page')).toHaveAttribute('lang', 'fr');
   await expect(page.locator('#preview')).toContainText('« bonjour »');
 
-  const [download] = await Promise.all([page.waitForEvent('download'), page.locator('#exportHtml').click()]);
+  const [download] = await Promise.all([page.waitForEvent('download'), exportVia(page, 'exportHtml')]);
   expect(readFileSync(await download.path(), 'utf8')).toContain('<html lang="fr">');
 
   // An invalid tag falls back to "en" in the document and is dropped from the saved configuration.
@@ -243,7 +281,7 @@ test('the document font is bundled: loaded for the preview, inlined in the expor
   await expect(page.locator('#preview .document-content h1')).toHaveText('Fonts');
   expect(await loaded()).toEqual(['italic U+0-FF', 'italic U+301', 'normal U+0-FF', 'normal U+301']);
 
-  const [download] = await Promise.all([page.waitForEvent('download'), page.locator('#exportHtml').click()]);
+  const [download] = await Promise.all([page.waitForEvent('download'), exportVia(page, 'exportHtml')]);
   const html = readFileSync(await download.path(), 'utf8');
   expect(html.match(/@font-face\{font-family:Inter;/g)).toHaveLength(4);
   expect(html).toContain('<style data-pagedjs-ignore>@font-face');
@@ -267,7 +305,7 @@ test('the logo is scaled down, saved outside localStorage and restored', async (
   await expect.poll(() => logo.evaluate(el => el.naturalWidth)).toBe(1200);
 
   // The configuration file still carries the logo.
-  const [download] = await Promise.all([page.waitForEvent('download'), page.locator('#saveConfig').click()]);
+  const [download] = await Promise.all([page.waitForEvent('download'), exportVia(page, 'exportProject')]);
   expect(JSON.parse(readFileSync(await download.path(), 'utf8')).logoDataUrl).toMatch(/^data:image\/png;base64,/);
 
   await page.locator('#clearLogo').click();
@@ -297,4 +335,77 @@ test('a logo saved in localStorage by an older version is moved to IndexedDB', a
   await page.reload();
   await expect(status(page)).toHaveText(STATUS_DONE);
   await expect.poll(() => logo.evaluate(el => el.naturalWidth)).toBe(200);
+});
+
+test('an exported HTML file carries the document and reopens with Load config', async ({ page }) => {
+  await openFreshStudio(page);
+  page.on('dialog', dialog => dialog.accept());
+  await page.locator('#imageFiles').setInputFiles({ name: 'plan.png', mimeType: 'image/png', buffer: png(40, 30) });
+  await page.locator('#title').fill('Round trip');
+  await setMarkdown(page, '# Round trip\n\n![Plan](plan.png){width=50%}\n\nText.\n');
+  await expect(page.locator('#preview .document-image > img')).toHaveCount(1);
+  const [download] = await Promise.all([page.waitForEvent('download'), exportVia(page, 'exportHtml')]);
+  const html = readFileSync(await download.path(), 'utf8');
+  expect(html).toContain('<script type="application/json" id="markdown-paged-studio-source">');
+  expect(html).not.toMatch(/id="markdown-paged-studio-source">[^]*<\/script>[^]*<script type="application\/json"/);
+
+  await page.locator('#resetDocument').click();
+  await expect(page.locator('#title')).toHaveValue('Architecture Report');
+  await expect(page.locator('#imageList li')).toHaveCount(0);
+  await page
+    .locator('#importFile')
+    .setInputFiles({ name: 'document.html', mimeType: 'text/html', buffer: Buffer.from(html) });
+  await expect(page.locator('#title')).toHaveValue('Round trip');
+  await expect(page.locator('#markdown')).toHaveValue(/!\[Plan\]\(plan\.png\)\{width=50%\}/);
+  await expect(page.locator('#imageList li')).toHaveText([/plan\.png/]);
+  await expect(page.locator('#preview .document-image > img')).toHaveCount(1);
+});
+
+test('the project is added to a saved PDF in the browser, and such a PDF reopens', async ({ page }) => {
+  await openFreshStudio(page);
+  page.on('dialog', dialog => dialog.accept());
+  await page.locator('#imageFiles').setInputFiles({ name: 'plan.png', mimeType: 'image/png', buffer: png(40, 30) });
+  await page.locator('#title').fill('From a PDF');
+  await setMarkdown(page, '# From a PDF\n\n![Plan](plan.png)\n');
+  await expect(page.locator('#preview .document-image > img')).toHaveCount(1);
+
+  // Export PDF with the project: the print window opens, then the banner asks for the saved file.
+  await page.evaluate(() => (window.open = () => ({ set location(value) {} })));
+  await page.locator('#exportDefault').click();
+  await expect(page.locator('#projectBanner')).toBeVisible();
+  // The PDF the print dialog would have saved.
+  const blank = await PDFDocument.create();
+  blank.addPage();
+  const printed = Buffer.from(await blank.save());
+  const [chooser] = await Promise.all([page.waitForEvent('filechooser'), page.locator('#projectPdfChoose').click()]);
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    chooser.setFiles({ name: 'report.pdf', mimeType: 'application/pdf', buffer: printed }),
+  ]);
+  expect(download.suggestedFilename()).toBe('report-with-project.pdf');
+  await expect(status(page)).toHaveText('Project attached');
+  await expect(page.locator('#projectBanner')).toBeHidden();
+  const editable = readFileSync(await download.path());
+  const sources = JSON.parse((await readSources(editable)).json);
+  expect(sources.title).toBe('From a PDF');
+  expect(Object.keys(sources.images)).toEqual(['plan.png']);
+
+  await page.locator('#resetDocument').click();
+  await expect(page.locator('#title')).toHaveValue('Architecture Report');
+  await page
+    .locator('#importFile')
+    .setInputFiles({ name: 'report-with-project.pdf', mimeType: 'application/pdf', buffer: editable });
+  await expect(page.locator('#title')).toHaveValue('From a PDF');
+  await expect(page.locator('#preview .document-image > img')).toHaveCount(1);
+
+  // A PDF without sources is refused and the document is left alone.
+  const messages = [];
+  page.removeAllListeners('dialog');
+  page.on('dialog', dialog => {
+    messages.push(dialog.message());
+    dialog.accept();
+  });
+  await page.locator('#importFile').setInputFiles({ name: 'plain.pdf', mimeType: 'application/pdf', buffer: printed });
+  await expect.poll(() => messages).toEqual(['This file could not be opened: this PDF holds no studio sources']);
+  await expect(page.locator('#title')).toHaveValue('From a PDF');
 });

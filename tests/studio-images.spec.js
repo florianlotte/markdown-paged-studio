@@ -13,6 +13,7 @@ import {
   selectImage,
   status,
   upload,
+  exportVia,
 } from './helpers/studio.mjs';
 
 test('images are matched by file name whatever the path, and kept across reloads', async ({ page }) => {
@@ -86,7 +87,7 @@ test('the configuration file carries the images, Reset removes them', async ({ p
   await upload(page, pngFile('plan.png'));
   await expect(page.locator('#preview .document-image > img')).toHaveCount(1);
 
-  const [download] = await Promise.all([page.waitForEvent('download'), page.locator('#saveConfig').click()]);
+  const [download] = await Promise.all([page.waitForEvent('download'), exportVia(page, 'exportProject')]);
   const saved = JSON.parse(readFileSync(await download.path(), 'utf8'));
   expect(Object.keys(saved.images)).toEqual(['plan.png']);
   expect(saved.images['plan.png']).toMatch(/^data:image\/png;base64,/);
@@ -100,7 +101,7 @@ test('the configuration file carries the images, Reset removes them', async ({ p
     ...saved,
     images: { ...saved.images, 'bad.png': 'javascript:alert(1)', 'page.html': 'data:text/html,x' },
   };
-  await page.locator('#configFile').setInputFiles({
+  await page.locator('#importFile').setInputFiles({
     name: 'config.json',
     mimeType: 'application/json',
     buffer: Buffer.from(JSON.stringify(hostile)),
@@ -131,7 +132,7 @@ test('images are inserted from the list, by pasting, and exported inline', async
   await expect(page.locator('#preview .document-image > img')).toHaveCount(2);
   await expect(imageItems(page)).toHaveCount(2);
 
-  const [download] = await Promise.all([page.waitForEvent('download'), page.locator('#exportHtml').click()]);
+  const [download] = await Promise.all([page.waitForEvent('download'), exportVia(page, 'exportHtml')]);
   const html = readFileSync(await download.path(), 'utf8');
   expect(html.match(/<span class="document-image is-block"[^>]*><img src="data:image\/png;base64,/g)).toHaveLength(2);
   expect(html).not.toContain('diagram-tools');

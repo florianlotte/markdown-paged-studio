@@ -14,6 +14,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
 import { z } from 'zod';
+import { attachSources } from '../src/pdf-sources.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DIST = path.join(ROOT, 'dist');
@@ -91,7 +92,7 @@ function missingImages(html) {
   return [...new Set([...html.matchAll(/class="image-missing" data-image="([^"]*)"/g)].map(match => match[1]))];
 }
 
-async function renderPdf(config, images) {
+async function renderPdf(config, images, { project = true } = {}) {
   return withStudio(async (page, context) => {
     const html = await renderHtml(page, config, 'pdf', images);
     const printPage = await context.newPage();
@@ -99,11 +100,15 @@ async function renderPdf(config, images) {
     await printPage.setContent(html, { waitUntil: 'load' });
     await printPage.waitForFunction(() => document.documentElement.dataset.pagedReady === 'true');
     const pages = await printPage.locator('.pagedjs_page').count();
-    const pdf = await printPage.pdf({
+    const printed = await printPage.pdf({
       preferCSSPageSize: true,
       printBackground: true,
       margin: { top: 0, right: 0, bottom: 0, left: 0 },
     });
+    if (!project) return { pdf: printed, pages, missing: missingImages(html) };
+    // The validated configuration and the Markdown travel inside the PDF, which the studio can reopen.
+    const source = await page.evaluate(() => window.studio.source());
+    const pdf = Buffer.from(await attachSources(printed, { json: source, markdown: JSON.parse(source).markdown }));
     return { pdf, pages, missing: missingImages(html) };
   });
 }
@@ -245,7 +250,9 @@ server.registerTool(
     description:
       'Turns Markdown into a paginated PDF with cover page, running header, footer and page numbers, ' +
       'using Markdown Paged Studio. Mermaid code fences are rendered as diagrams. Writes the file to ' +
-      'output_path and returns its path, size and page count.',
+      'output_path and returns its path, size and page count. Unless project is false, the PDF carries its ' +
+      'sources as attachments (markdown-paged-studio.json with the settings, Markdown and images; ' +
+      'document.md), so the studio can reopen and edit it.',
     inputSchema: {
       markdown: markdownField,
       config: configField,
@@ -255,13 +262,19 @@ server.registerTool(
         .describe('Where to write the PDF (absolute, or relative to MPS_OUTPUT_DIR or the server cwd)'),
       overwrite: z.boolean().optional().describe('Replace the file if it already exists (default: refuse)'),
       images: imagesField,
+      project: z
+        .boolean()
+        .optional()
+        .describe(
+          'Attach the project (settings, Markdown, images) to the PDF so the studio can reopen it (default: true)',
+        ),
     },
   },
-  async ({ markdown, config, output_path, overwrite, images }) => {
+  async ({ markdown, config, output_path, overwrite, images, project = true }) => {
     try {
-      const { pdf, pages, missing } = await renderPdf({ ...config, markdown }, await readImages(images));
+      const { pdf, pages, missing } = await renderPdf({ ...config, markdown }, await readImages(images), { project });
       const target = await writeOutput(output_path, pdf, { overwrite });
-      const result = { path: target, pages, bytes: pdf.length, missing_images: missing };
+      const result = { path: target, pages, bytes: pdf.length, missing_images: missing, editable: project };
       return { content: [{ type: 'text', text: JSON.stringify(result) }], structuredContent: result };
     } catch (error) {
       return toolError(error);

@@ -8,6 +8,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { after, before, test } from 'node:test';
 import { png } from './helpers/png.mjs';
+import { readSources } from '../src/pdf-sources.js';
 
 const dir = mkdtempSync(path.join(tmpdir(), 'mps-mcp-'));
 const client = new Client({ name: 'mcp-test', version: '0.0.0' });
@@ -57,6 +58,23 @@ test('render_pdf writes a paginated PDF honouring the config', async () => {
   assert.equal(pdf.subarray(0, 5).toString(), '%PDF-');
   assert.ok(info.pages >= 3, `expected a cover plus body pages, got ${info.pages}`);
   assert.equal((pdf.toString('latin1').match(/\/Type\s*\/Page(?![a-z])/gi) || []).length, info.pages);
+  // The PDF carries the validated configuration, ready to be reopened by the studio.
+  assert.equal(info.editable, true);
+  const sources = JSON.parse((await readSources(pdf)).json);
+  assert.equal(sources.title, 'Quarterly report');
+  assert.equal(sources.pageSize, 'A5');
+  assert.equal(sources.markdown, markdown);
+  assert.deepEqual(sources.images, {});
+
+  // Without the project the PDF is the document alone.
+  const plain = path.join(dir, 'plain.pdf');
+  const bare = await client.callTool({
+    name: 'render_pdf',
+    arguments: { markdown: '# Plain\n\nText.\n', config: { cover: false }, output_path: plain, project: false },
+  });
+  assert.equal(bare.isError, undefined, JSON.stringify(bare.content));
+  assert.equal(JSON.parse(bare.content[0].text).editable, false);
+  assert.equal(await readSources(readFileSync(plain)), null);
 });
 
 test('render_html returns a standalone document with the diagram and French quotes', async () => {

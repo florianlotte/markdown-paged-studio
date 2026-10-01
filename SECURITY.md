@@ -26,7 +26,9 @@ Knowing the design helps to judge whether a behaviour is a vulnerability.
 - **No server, no account.** The studio runs in the browser. Documents, images and settings stay on the machine
   (localStorage and IndexedDB) and are never sent anywhere.
 - **Untrusted documents.** Raw HTML in Markdown is not rendered. A configuration file is validated key by key on
-  import; unknown keys and invalid values are dropped. Text placed in the page or in CSS strings is escaped.
+  import; unknown keys and invalid values are dropped. A PDF or HTML export reopened with **Load config** is
+  only read for the configuration it carries (a PDF attachment, a data block), which goes through the same
+  validation; nothing else in the file is interpreted. Text placed in the page or in CSS strings is escaped.
   Mermaid runs with its strict security level.
 - **Custom CSS is trusted input.** A stylesheet is applied as written to the document, and an exported HTML file
   carries it. Only load stylesheets and configuration files you trust: CSS can load remote resources such as

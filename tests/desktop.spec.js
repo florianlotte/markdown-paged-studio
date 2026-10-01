@@ -6,6 +6,7 @@ import { existsSync, mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { png } from './helpers/png.mjs';
+import { readSources } from '../src/pdf-sources.js';
 
 test('the desktop app renders the document and exports a PDF directly', async () => {
   const dir = mkdtempSync(path.join(tmpdir(), 'mps-desktop-'));
@@ -19,7 +20,7 @@ test('the desktop app renders the document and exports a PDF directly', async ()
     await expect(page.locator('#status')).toHaveText('3 pages');
     await expect(page.locator('#preview .pagedjs_page')).toHaveCount(3);
     expect(await page.title()).toBe('Markdown Paged Studio');
-    await expect(page.locator('#exportPdf')).toBeVisible();
+    await expect(page.locator('#exportDefault')).toBeVisible();
 
     // The footer shows what was built: the package version and, outside the dev server, the commit.
     const { version } = JSON.parse(readFileSync('package.json', 'utf8'));
@@ -34,8 +35,8 @@ test('the desktop app renders the document and exports a PDF directly', async ()
       dialog.showSaveDialog = async () => ({ canceled: false, filePath });
     }, target);
 
-    await page.locator('#exportPdf').click();
-    await expect(page.locator('#status')).toHaveText('PDF saved');
+    await page.locator('#exportDefault').click();
+    await expect(page.locator('#status')).toHaveText('PDF saved with its project');
     expect(existsSync(target)).toBe(true);
     const pdf = readFileSync(target);
     expect(pdf.subarray(0, 5).toString()).toBe('%PDF-');
@@ -79,11 +80,55 @@ test('the desktop app renders the document and exports a PDF directly', async ()
       dialog.showSaveDialog = async () => ({ canceled: false, filePath });
     }, withImages);
     await page.locator('#status').evaluate(el => (el.textContent = ''));
-    await page.locator('#exportPdf').click();
-    await expect(page.locator('#status')).toHaveText('PDF saved');
+    await page.locator('#exportDefault').click();
+    await expect(page.locator('#status')).toHaveText('PDF saved with its project');
     const illustrated = readFileSync(withImages).toString('latin1');
     expect((illustrated.match(/\/Subtype\s*\/Image/g) || []).length).toBeGreaterThanOrEqual(2);
     expect(illustrated).toMatch(/\/FontName\s*\/[A-Z]{6}\+Inter/);
+    // The PDF carries its sources, attached by the page before the file was written.
+    const sources = JSON.parse((await readSources(readFileSync(withImages))).json);
+    expect(sources.markdown).toContain('![Plan](plan.png){width=50%}');
+    expect(Object.keys(sources.images)).toEqual(['plan.png']);
+    expect(sources.logoDataUrl).toMatch(/^data:image\/png;base64,/);
+    // "Export PDF without project…" of the File menu writes a plain PDF; no banner on desktop.
+    const plain = path.join(dir, 'plain.pdf');
+    await app.evaluate(({ dialog, BrowserWindow }, filePath) => {
+      dialog.showSaveDialog = async () => ({ canceled: false, filePath });
+      BrowserWindow.getAllWindows()[0].webContents.send('command', 'export-pdf-plain');
+    }, plain);
+    await expect(page.locator('#status')).toHaveText('PDF saved');
+    expect(await readSources(readFileSync(plain))).toBe(null);
+    await expect(page.locator('#projectBanner')).toBeHidden();
+    await expect(page.locator('#attachSources')).toHaveCount(0);
+    // The other File menu entries: HTML and project downloads, and the import file dialog.
+    const send = command =>
+      app.evaluate(
+        ({ BrowserWindow }, name) => BrowserWindow.getAllWindows()[0].webContents.send('command', name),
+        command,
+      );
+    // Downloads go through the session of the main process: record their names there and cancel them.
+    await app.evaluate(({ session }) => {
+      globalThis.downloads = [];
+      session.defaultSession.on('will-download', (event, item) => {
+        globalThis.downloads.push(item.getFilename());
+        item.cancel();
+      });
+    });
+    await send('export-html');
+    await expect.poll(() => app.evaluate(() => globalThis.downloads)).toEqual(['document.html']);
+    await send('export-project');
+    await expect
+      .poll(() => app.evaluate(() => globalThis.downloads))
+      .toEqual(['document.html', 'markdown-paged-studio-project.json']);
+    const [chooser] = await Promise.all([page.waitForEvent('filechooser'), send('import')]);
+    expect(chooser.isMultiple()).toBe(false);
+    // Such a PDF reopens the document.
+    page.on('dialog', dialog => dialog.accept());
+    await page.locator('#resetDocument').click();
+    await expect(page.locator('#imageList li')).toHaveCount(0);
+    await page.locator('#importFile').setInputFiles(withImages);
+    await expect(page.locator('#markdown')).toHaveValue(/!\[Plan\]\(plan\.png\)\{width=50%\}/);
+    await expect.poll(() => image.evaluate(el => el.naturalWidth)).toBe(600);
 
     // Undo from the preview: the Edit menu of the application must not swallow the shortcut.
     const editor = page.locator('#markdown');

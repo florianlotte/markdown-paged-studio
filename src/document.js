@@ -221,6 +221,14 @@ function loadPagedPolyfill() {
 //   'export' nothing (the file is meant to be opened later),
 //   'print'  the print dialog opens,
 //   'pdf'    a `data-paged-ready` flag is set for the desktop app and the MCP server, which then print to PDF.
+export const SOURCE_BLOCK_ID = 'markdown-paged-studio-source';
+
+// The configuration a studio HTML export carries, as text, or null.
+export function sourcesOfHtml(html) {
+  const match = new RegExp(`<script type="application/json" id="${SOURCE_BLOCK_ID}">([^]*?)</script>`).exec(html);
+  return match ? match[1] : null;
+}
+
 const AFTER_PAGINATION = {
   export: '',
   print: ',after:()=>setTimeout(()=>window.print(),100)',
@@ -228,7 +236,9 @@ const AFTER_PAGINATION = {
 };
 
 // Self-contained HTML: same content and CSS as the preview, with Paged.js inlined so it works offline.
-export async function standaloneHtml({ mode = 'export' } = {}) {
+// `source` is the configuration JSON (the content of a Save config file): the exported HTML carries it in
+// a data block, so that Load config can reopen the file.
+export async function standaloneHtml({ mode = 'export', source = '' } = {}) {
   const content = await documentHtml();
   const css = documentCss();
   // Kept away from Paged.js, which would parse the inlined font files for nothing.
@@ -239,5 +249,9 @@ export async function standaloneHtml({ mode = 'export' } = {}) {
   // A literal "</script" inside the inlined library would end the script element early.
   const library = (await loadPagedPolyfill()).replace(/<\/script/gi, '<\\/script');
   const after = AFTER_PAGINATION[mode] ?? '';
-  return `<!doctype html>\n<html lang="${documentLanguage()}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(state.title)}</title>${fonts ? `<style data-pagedjs-ignore>${fonts}</style>` : ''}<style>${css}</style><script>window.PagedConfig={auto:true${after}};</script><script>${library}</script></head><body>${content}</body></html>`;
+  // A "<" in the JSON could end the script element: written as its escape, which JSON reads back as is.
+  const sources = source
+    ? `<script type="application/json" id="${SOURCE_BLOCK_ID}">${source.replace(/</g, '\\u003c')}</script>`
+    : '';
+  return `<!doctype html>\n<html lang="${documentLanguage()}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(state.title)}</title>${fonts ? `<style data-pagedjs-ignore>${fonts}</style>` : ''}<style>${css}</style><script>window.PagedConfig={auto:true${after}};</script><script>${library}</script>${sources}</head><body>${content}</body></html>`;
 }

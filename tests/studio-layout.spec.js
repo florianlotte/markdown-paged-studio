@@ -97,6 +97,8 @@ test('the sidebar header stays fixed while the settings scroll in a short window
 
 test('the sidebar can be hidden and the choice is remembered', async ({ page }) => {
   await openFreshStudio(page);
+  // Three commands beside the view controls: the toolbar is one line at this width.
+  expect((await page.locator('.toolbar').boundingBox()).height).toBeLessThan(70);
   const toggle = page.locator('#toggleSidebar');
   const sidebar = page.locator('#sidebar');
   const previewWidth = () => page.locator('.preview-shell').evaluate(el => el.clientWidth);
@@ -133,7 +135,11 @@ test('on a phone the settings are a closed drawer and the preview fits the scree
   const pageBox = await page.locator('#preview .pagedjs_page').first().boundingBox();
   expect(pageBox.width).toBeLessThanOrEqual(390);
   expect(pageBox.y).toBeLessThan(200);
-  await expect(page.locator('#exportPdf')).toBeVisible();
+  await expect(page.locator('#exportDefault')).toBeVisible();
+  // The export menu opens in the phone toolbar too.
+  await page.locator('#exportMenu').click();
+  await expect(page.locator('#exportOptions')).toBeVisible();
+  await page.keyboard.press('Escape');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 
   await page.locator('#toggleSidebar').click();

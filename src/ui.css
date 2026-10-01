@@ -272,12 +272,15 @@ button:hover {
   background: #e7ebf0;
 }
 .toolbar {
+  /* Above the preview, so the export menu drops over the pages. */
+  position: relative;
+  z-index: 5;
   min-height: 64px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  padding: 10px 18px;
+  gap: 12px;
+  padding: 10px 14px;
   border-bottom: 1px solid #d4d9df;
   background: rgba(255, 255, 255, 0.88);
   backdrop-filter: blur(12px);
@@ -324,15 +327,102 @@ button:hover {
 }
 .toolbar-actions {
   display: flex;
-  gap: 8px;
+  gap: 6px;
   flex-wrap: wrap;
   justify-content: flex-end;
 }
-/* Compact labels: the five actions fit on one line beside the view controls, also in French. */
+/* Compact labels: the actions fit on one line beside the view controls at 1440 px in English. */
 .toolbar-actions button {
-  padding: 8px 10px;
+  padding: 8px 9px;
   font-size: 13px;
   white-space: nowrap;
+}
+.toolbar-actions .icon-button {
+  padding: 0;
+}
+/* Export PDF: a split button whose arrow opens the choice between a PDF with the project and a plain one. */
+.menu-button {
+  position: relative;
+  display: inline-flex;
+}
+.menu-button > .primary:first-child {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+.toolbar-actions .menu-arrow {
+  padding: 0 6px;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  border-left: 1px solid rgba(255, 255, 255, 0.25);
+  display: inline-flex;
+  align-items: center;
+}
+.menu-arrow[aria-expanded='true'] svg {
+  transform: rotate(180deg);
+}
+.menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 30;
+  min-width: 260px;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  background: #fff;
+  border: 1px solid #ccd2da;
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(17, 24, 39, 0.14);
+}
+.menu[hidden] {
+  display: none;
+}
+.toolbar-actions .menu button {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: #1f2328;
+  text-align: left;
+  white-space: normal;
+  font-weight: 500;
+}
+.menu-separator {
+  height: 1px;
+  margin: 4px 6px;
+  background: #e5e9ef;
+}
+.menu button span {
+  font-size: 12px;
+  font-weight: 400;
+  color: #59616b;
+}
+.menu button:hover,
+.menu button:focus-visible {
+  background: #f1f3f5;
+  outline: none;
+}
+/* Browser only, after Export PDF: the print dialog wrote the file, the project is added to it here. */
+.banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  background: #eef2ff;
+  border-bottom: 1px solid #c7d2fe;
+  color: #1e1b4b;
+  font-size: 13px;
+}
+.banner[hidden] {
+  display: none;
+}
+.banner button {
+  padding: 6px 10px;
+  font-size: 13px;
 }
 .preview-shell {
   flex: 1;
@@ -456,6 +546,14 @@ button:hover {
     overflow-x: auto;
     padding-bottom: 2px;
     scrollbar-width: thin;
+  }
+  /* The scrolling actions would clip the menu: fixed to the toolbar, it drops under the whole bar. */
+  .menu {
+    position: fixed;
+    top: 100%;
+    left: 10px;
+    right: 10px;
+    min-width: 0;
   }
   .toolbar-actions button {
     flex-shrink: 0;

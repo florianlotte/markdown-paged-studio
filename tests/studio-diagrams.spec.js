@@ -8,6 +8,7 @@ import {
   openDiagramDocument,
   openFreshStudio,
   setMarkdown,
+  exportVia,
 } from './helpers/studio.mjs';
 
 test('a diagram takes the width and alignment written on its fence line', async ({ page }) => {
@@ -74,7 +75,7 @@ test('diagrams are resized from the preview and the Markdown follows', async ({ 
 
   // The controls belong to the studio only: the export carries the size, not the tools.
   await expect.poll(async () => (await diagramGeometry(page))?.percent).toBe(55);
-  const [download] = await Promise.all([page.waitForEvent('download'), page.locator('#exportHtml').click()]);
+  const [download] = await Promise.all([page.waitForEvent('download'), exportVia(page, 'exportHtml')]);
   const html = readFileSync(await download.path(), 'utf8');
   expect(html).toContain('--diagram-width: 55%');
   expect(html).not.toContain('diagram-tools');
