@@ -143,6 +143,11 @@ test('on a phone the settings are a closed drawer and the preview fits the scree
   expect(drawer.width).toBe(390);
   await expect(page.locator('#title')).toBeVisible();
   await expect(page.locator('#closeSidebar')).toBeVisible();
+  // The language selector shares the header line with the close button, without overlapping it.
+  await expect(page.locator('#uiLanguage')).toBeVisible();
+  const language = await page.locator('.language-switch').boundingBox();
+  const close = await page.locator('#closeSidebar').boundingBox();
+  expect(language.x + language.width).toBeLessThanOrEqual(close.x);
 
   await page.locator('#closeSidebar').click();
   await expect(sidebar).toBeHidden();
@@ -155,6 +160,20 @@ test('the sidebar footer shows the running version and stays at the bottom', asy
   await openFreshStudio(page);
   const footer = page.locator('.sidebar-footer');
   await expect(footer).toBeVisible();
+  // The GitHub mark in front of the version leads to the repository.
+  const repository = footer.locator('#appRepository');
+  await expect(repository).toHaveAttribute('href', 'https://github.com/florianlotte/markdown-paged-studio');
+  await expect(repository).toHaveAttribute('target', '_blank');
+  await expect(repository.locator('svg')).toHaveCount(1);
+  // The author on the same line as the version: the name is the link, opening outside the studio.
+  const author = footer.locator('a.sidebar-author');
+  await expect(author).toHaveText(/^\s*Florian LOTTE\s*$/);
+  await expect(author.locator('svg')).toHaveCount(1);
+  await expect(author).toHaveAttribute('href', 'https://www.linkedin.com/in/florianlotte');
+  await expect(author).toHaveAttribute('target', '_blank');
+  await expect(author).toHaveAttribute('rel', 'noopener');
+  expect((await footer.boundingBox()).height).toBeLessThan(40);
+  await expect(footer.locator('select')).toHaveCount(0);
   await expect(page.locator('#appVersion')).toHaveText(`v${version}`);
   await expect(page.locator('#appVersion')).toHaveAttribute(
     'href',

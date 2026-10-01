@@ -70,13 +70,47 @@ button {
   color: #747b85;
   font-variant-numeric: tabular-nums;
 }
-.sidebar-footer .language-select {
-  width: auto;
+/* The GitHub mark in front of the version: same grey, GitHub black on hover. */
+.sidebar-footer .sidebar-mark {
+  display: inline-flex;
+  align-items: center;
+}
+.sidebar-footer a.sidebar-mark[href]:hover {
+  color: #24292f;
+}
+/* The author: as quiet as the version, the link (with its LinkedIn mark) shows itself on hover. */
+.sidebar-footer .sidebar-author {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  text-underline-offset: 2px;
+  transition: text-decoration-color 0.15s ease;
+}
+.sidebar-footer a.sidebar-author[href]:hover {
+  color: #0a66c2;
+  text-decoration-color: currentColor;
+}
+/* Interface language, in the fixed header of the sidebar: a globe and the short code of the language. */
+.language-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   margin: 0 0 0 auto;
-  padding: 3px 6px;
+  color: #747b85;
+  flex-shrink: 0;
+}
+.language-switch select {
+  width: auto;
+  height: 28px;
+  margin: 0;
+  padding: 0 4px;
   border-radius: 6px;
-  font-size: 11px;
-  color: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: #3e4550;
+  cursor: pointer;
 }
 .sidebar-footer a {
   color: inherit;

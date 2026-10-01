@@ -66,9 +66,11 @@ const TRANSLATIONS = {
     Pagination: 'Pagination',
     'The header, footer and': "L'en-tête, le pied de page et le compteur",
     'counter are computed by Paged.js.': 'sont calculés par Paged.js.',
+    'Source code on GitHub': 'Code source sur GitHub',
     'Release notes': 'Notes de version',
     'Commit this build was made from': 'Commit dont provient cette version',
     'Interface language': "Langue de l'interface",
+    'Florian LOTTE on LinkedIn': 'Florian LOTTE sur LinkedIn',
 
     // Toolbar
     'Hide sidebar': 'Masquer la barre latérale',

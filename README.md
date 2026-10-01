@@ -243,11 +243,11 @@ Use print units (`mm`, `pt`) and paged-media properties such as `break-before: p
 
 Layout, zoom and the sidebar state are remembered in the browser, separately from the document.
 
-The footer of the sidebar shows which build is running, for example `v1.13.1 · 2205ce9`: the version links to its release notes and the commit to the exact source. It tells apart two deployments of the online demo made between two releases.
+The footer of the sidebar shows which build is running, for example `v1.13.1 · 2205ce9`: the version links to its release notes and the commit to the exact source. It tells apart two deployments of the online demo made between two releases. The GitHub mark in front of it leads to the repository, and the author's name next to it to his LinkedIn profile.
 
 ### Interface language
 
-The studio speaks English and French. It follows the language of the browser and the selector at the bottom of the sidebar changes it; the choice is remembered on that device. It is a setting of the studio, not of the document: the language of the document, which drives hyphenation and quotes, is set in the **Page** tab.
+The studio speaks English and French. It follows the language of the browser and the selector at the top of the sidebar, next to the logo, changes it; the choice is remembered on that device. It is a setting of the studio, not of the document: the language of the document, which drives hyphenation and quotes, is set in the **Page** tab.
 
 ![The studio in French](docs/screenshots/french.png)
 

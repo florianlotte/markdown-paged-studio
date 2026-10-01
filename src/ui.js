@@ -19,7 +19,7 @@ import {
 } from './images.js';
 import { currentLanguage, LANGUAGES, onLanguageChange, setLanguage, t } from './i18n.js';
 import { scheduleRender } from './render.js';
-import { APP_COMMIT, APP_VERSION, COMMIT_URL, RELEASE_URL } from './version.js';
+import { APP_COMMIT, APP_VERSION, COMMIT_URL, RELEASE_URL, REPOSITORY_URL } from './version.js';
 import { applyView, toggleSidebar } from './view.js';
 
 // Every state key has a form control with the same id, except the logo (a file input).
@@ -250,6 +250,7 @@ function bindPdf() {
 
 // Sidebar footer: the version links to its release, the commit (when known) to the commit itself.
 function showVersion() {
+  document.getElementById('appRepository').href = REPOSITORY_URL;
   const version = document.getElementById('appVersion');
   version.textContent = `v${APP_VERSION}`;
   version.href = RELEASE_URL;
@@ -427,7 +428,12 @@ function bindPreviewLinks() {
 // Footer selector of the interface language. What was written through t() is rebuilt on a change.
 function bindLanguage() {
   const select = document.getElementById('uiLanguage');
-  select.replaceChildren(...Object.entries(LANGUAGES).map(([value, label]) => new Option(label, value)));
+  // Short codes keep the control small; the full name is the tooltip of each option.
+  select.replaceChildren(
+    ...Object.entries(LANGUAGES).map(([value, label]) =>
+      Object.assign(new Option(value.toUpperCase(), value), { title: label }),
+    ),
+  );
   select.value = currentLanguage();
   select.addEventListener('change', () => setLanguage(select.value));
   onLanguageChange(() => {

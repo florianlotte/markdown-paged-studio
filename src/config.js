@@ -77,13 +77,13 @@ const DEFAULT_CSS = `
 .document-content {
   font-family: Inter, Arial, sans-serif;
   color: #202124;
-  font-size: 10.5pt;
-  line-height: 1.55;
+  font-size: 8.5pt;
+  line-height: 1.45;
   hyphens: auto;
 }
-.document-content h1 { font-size: 24pt; margin: 0 0 8mm; }
-.document-content h2 { font-size: 17pt; margin-top: 10mm; }
-.document-content h3 { font-size: 13pt; margin-top: 7mm; }
+.document-content h1 { font-size: 22pt; margin: 0 0 8mm; }
+.document-content h2 { font-size: 15pt; margin-top: 10mm; }
+.document-content h3 { font-size: 11pt; margin-top: 7mm; }
 .document-content table { width: 100%; border-collapse: collapse; }
 .document-content th,
 .document-content td { border: .2mm solid #d0d4da; padding: 2.5mm 3mm; text-align: left; }

@@ -5,5 +5,6 @@ const REPOSITORY = 'https://github.com/florianlotte/markdown-paged-studio';
 export const APP_VERSION = __APP_VERSION__;
 export const APP_COMMIT = import.meta.env.DEV ? 'dev' : __APP_COMMIT__;
 
+export const REPOSITORY_URL = REPOSITORY;
 export const RELEASE_URL = `${REPOSITORY}/releases/tag/v${APP_VERSION}`;
 export const COMMIT_URL = /^[0-9a-f]{7,40}$/.test(APP_COMMIT) ? `${REPOSITORY}/commit/${APP_COMMIT}` : null;

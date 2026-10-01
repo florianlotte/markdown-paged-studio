@@ -218,7 +218,9 @@ test('footnotes go to the foot of the page that calls them, task lists show chec
   ].join('\n\n');
   await openDocument(page, markdown, 'Notes');
   await page.locator('#cover').uncheck();
-  await expect(status(page)).toHaveText('3 pages');
+  await expect(page.locator('#preview .cover-page')).toHaveCount(0);
+  await expect(page.locator('#preview')).not.toHaveClass(/is-stale/);
+  await expect(status(page)).toHaveText(/^[2-9] pages$/);
 
   // Where the calls and the notes are, page by page, with the numbers Paged.js gives them.
   const layout = target =>
@@ -231,12 +233,18 @@ test('footnotes go to the foot of the page that calls them, task lists show chec
         again: [...sheet.querySelectorAll('.footnote-ref')].map(ref => ref.textContent),
       })),
     );
-  const expected = [
-    { calls: 3, notes: ['The first note.', 'The second note.', 'Written in place.'], again: ['1'] },
-    { calls: 0, notes: [], again: [] },
-    { calls: 1, notes: ['A note on a later page.'], again: [] },
-  ];
-  expect(await layout(page.locator('#preview'))).toEqual(expected);
+  // First page: the three calls and their notes; last page: the fourth; nothing in between.
+  const check = result => {
+    expect(result[0]).toEqual({
+      calls: 3,
+      notes: ['The first note.', 'The second note.', 'Written in place.'],
+      again: ['1'],
+    });
+    expect(result.at(-1)).toEqual({ calls: 1, notes: ['A note on a later page.'], again: [] });
+    expect(result.slice(1, -1)).toEqual(result.slice(1, -1).map(() => ({ calls: 0, notes: [], again: [] })));
+  };
+  const expected = await layout(page.locator('#preview'));
+  check(expected);
 
   // The notes sit inside the sheet, under the text and above the footer of the page.
   const first = pages(page).first();
@@ -269,6 +277,6 @@ test('footnotes go to the foot of the page that calls them, task lists show chec
   const [download] = await Promise.all([page.waitForEvent('download'), page.locator('#exportHtml').click()]);
   const exported = await context.newPage();
   await exported.setContent(readFileSync(await download.path(), 'utf8'));
-  await expect(exported.locator('.pagedjs_page')).toHaveCount(3);
+  await expect(exported.locator('.pagedjs_page')).toHaveCount(expected.length);
   expect(await layout(exported.locator('body'))).toEqual(expected);
 });

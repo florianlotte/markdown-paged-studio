@@ -7,6 +7,20 @@ All notable changes to Markdown Paged Studio are listed here, newest first. The 
 
 ## [Unreleased]
 
+## [1.15.1] - 2026-10-01
+
+### Added
+
+- At the bottom of the sidebar, a GitHub mark linking to the repository in front of the version, and the
+  author's name, linked to his LinkedIn profile, next to it.
+
+### Changed
+
+- The language selector of the interface moves to the top of the sidebar, next to the logo, where it is
+  visible on every tab.
+- Default stylesheet: body text at 8.5 pt with a line height of 1.45 (was 10.5 pt and 1.55), headings at
+  22, 15 and 11 pt. It applies to new documents and after **Reset**; a saved document keeps its own CSS.
+
 ## [1.15.0] - 2026-09-29
 
 ### Added
@@ -241,7 +255,8 @@ All notable changes to Markdown Paged Studio are listed here, newest first. The 
 - Portable desktop app for Windows, Linux and macOS with direct PDF export.
 - Docker image, Playwright integration tests and CI.
 
-[Unreleased]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.15.0...HEAD
+[Unreleased]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.15.1...HEAD
+[1.15.1]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.15.0...v1.15.1
 [1.15.0]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.14.0...v1.15.0
 [1.14.0]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.13.2...v1.14.0
 [1.13.2]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.13.1...v1.13.2

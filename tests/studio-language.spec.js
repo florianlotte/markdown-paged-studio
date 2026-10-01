@@ -7,6 +7,12 @@ test('the interface switches to French and back, and remembers the choice', asyn
   await openFreshStudio(page);
   const language = page.locator('#uiLanguage');
   await expect(language).toHaveValue('en');
+  // In the fixed header of the sidebar, shown as a short code, whatever the tab.
+  await expect(page.locator('.sidebar-header #uiLanguage')).toHaveCount(1);
+  await expect(language.locator('option')).toHaveText(['EN', 'FR']);
+  await page.getByRole('tab', { name: 'Design' }).click();
+  await expect(language).toBeVisible();
+  await page.getByRole('tab', { name: 'Content' }).click();
   await expect(page.locator('html')).toHaveAttribute('lang', 'en');
   await page.locator('#imageFiles').setInputFiles({ name: 'plan.png', mimeType: 'image/png', buffer: png(30, 20) });
   await expect(page.locator('#imageList button').first()).toHaveText('Insert');
