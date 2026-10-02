@@ -103,8 +103,17 @@ const TRANSLATIONS = {
       'Une page autonome qui se pagine elle-même, projet inclus',
     'Project only': 'Projet seul',
     'Settings, Markdown and images as a JSON file': 'Réglages, Markdown et images dans un fichier JSON',
-    'PDF with project: opens the print dialog, choose "Save as PDF"':
-      "PDF avec projet : ouvre la boîte de dialogue d'impression, choisir « Enregistrer au format PDF »",
+    'PDF with project, drawn from the preview (pages as images with a text layer)':
+      "PDF avec projet, dessiné depuis l'aperçu (pages en images avec une couche de texte)",
+    'The document alone, through the print dialog': "Le document seul, par la boîte de dialogue d'impression",
+    'Drawing page {done} of {total}…': 'Dessin de la page {done} sur {total}…',
+    'Exporting the PDF…': 'Export du PDF…',
+    'The studio is locked until the file is ready.': "Le studio est verrouillé jusqu'à ce que le fichier soit prêt.",
+    'Writing the file…': 'Écriture du fichier…',
+    'Choose where to save it, then the pages are printed…':
+      "Choisissez où l'enregistrer, puis les pages sont imprimées…",
+    'the preview is still rendering, try again in a moment':
+      "l'aperçu est encore en cours de rendu, réessayez dans un instant",
     'PDF saved': 'PDF enregistré',
     'PDF saved with its project': 'PDF enregistré avec son projet',
     'PDF saved without its project': 'PDF enregistré sans son projet',
@@ -113,13 +122,9 @@ const TRANSLATIONS = {
       'Réglages, Markdown et images joints : le fichier se rouvre dans le studio',
     'PDF only': 'PDF seul',
     'The document alone': 'Le document seul',
-    'Saved the PDF? Choose it to add the project.': 'PDF enregistré ? Choisissez-le pour y ajouter le projet.',
-    'Choose PDF…': 'Choisir le PDF…',
-    'Not now': 'Plus tard',
-    'Project attached': 'Projet joint',
-    'The project could not be attached: {error}': "Le projet n'a pas pu être joint : {error}",
     'This file could not be opened: {error}': "Ce fichier n'a pas pu être ouvert : {error}",
-    'this PDF holds no studio sources': 'ce PDF ne contient pas de sources du studio',
+    'this PDF holds no project: import a PDF exported with its project':
+      'ce PDF ne contient pas de projet : importez un PDF exporté avec son projet',
     'this HTML file holds no studio sources': 'ce fichier HTML ne contient pas de sources du studio',
     'not a valid JSON file': 'ce n’est pas un fichier JSON valide',
 

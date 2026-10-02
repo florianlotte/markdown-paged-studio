@@ -37,6 +37,9 @@ test('the desktop app renders the document and exports a PDF directly', async ()
 
     await page.locator('#exportDefault').click();
     await expect(page.locator('#status')).toHaveText('PDF saved with its project');
+    // The lock shown meanwhile is gone.
+    await expect(page.locator('#busy')).toBeHidden();
+    expect(await page.evaluate(() => document.getElementById('app').inert)).toBe(false);
     expect(existsSync(target)).toBe(true);
     const pdf = readFileSync(target);
     expect(pdf.subarray(0, 5).toString()).toBe('%PDF-');
@@ -90,7 +93,7 @@ test('the desktop app renders the document and exports a PDF directly', async ()
     expect(sources.markdown).toContain('![Plan](plan.png){width=50%}');
     expect(Object.keys(sources.images)).toEqual(['plan.png']);
     expect(sources.logoDataUrl).toMatch(/^data:image\/png;base64,/);
-    // "Export PDF without project…" of the File menu writes a plain PDF; no banner on desktop.
+    // "Export PDF without project…" of the File menu writes a plain PDF.
     const plain = path.join(dir, 'plain.pdf');
     await app.evaluate(({ dialog, BrowserWindow }, filePath) => {
       dialog.showSaveDialog = async () => ({ canceled: false, filePath });
@@ -98,8 +101,7 @@ test('the desktop app renders the document and exports a PDF directly', async ()
     }, plain);
     await expect(page.locator('#status')).toHaveText('PDF saved');
     expect(await readSources(readFileSync(plain))).toBe(null);
-    await expect(page.locator('#projectBanner')).toBeHidden();
-    await expect(page.locator('#attachSources')).toHaveCount(0);
+    await expect(page.locator('#projectBanner')).toHaveCount(0);
     // The other File menu entries: HTML and project downloads, and the import file dialog.
     const send = command =>
       app.evaluate(

@@ -138,6 +138,15 @@ function bindHistory() {
   });
 }
 
+// Every style rule the displayed pages rely on: the sheets Paged.js inserted (its base rules and the
+// processed document CSS) and the sheet it fills afterwards through the CSSOM (page numbers of the table
+// of contents, footnote counters). pdf-render.js redraws the pages with them.
+export function previewCss() {
+  const sheets = [...document.querySelectorAll('style[data-pagedjs-inserted-styles]')].map(style => style.sheet);
+  if (activePreviewer?.polisher?.styleSheet) sheets.push(activePreviewer.polisher.styleSheet);
+  return sheets.flatMap(sheet => [...(sheet?.cssRules ?? [])].map(rule => rule.cssText)).join('\n');
+}
+
 // Replaces the Markdown source (used when the preview edits it), keeps the editor in sync and re-renders.
 function applyMarkdown(markdown) {
   if (markdown === state.markdown) return;

@@ -7,6 +7,16 @@ All notable changes to Markdown Paged Studio are listed here, newest first. The 
 
 ## [Unreleased]
 
+## [1.17.0] - 2026-10-02
+
+### Changed
+
+- In the browser, **PDF with project** is produced in one step: the studio draws the pages itself (page images
+  at 192 dpi under a text layer that stays selectable and searchable, links kept) and attaches the project.
+  The two-step banner is gone. **PDF only** and Ctrl+P keep the print dialog and its vector PDF. While a PDF
+  is written, in the browser or in the desktop app, the studio is locked behind an overlay that reports the
+  progress.
+
 ## [1.16.0] - 2026-10-01
 
 ### Added
@@ -272,7 +282,8 @@ All notable changes to Markdown Paged Studio are listed here, newest first. The 
 - Portable desktop app for Windows, Linux and macOS with direct PDF export.
 - Docker image, Playwright integration tests and CI.
 
-[Unreleased]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.16.0...HEAD
+[Unreleased]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.17.0...HEAD
+[1.17.0]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.16.0...v1.17.0
 [1.16.0]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.15.1...v1.16.0
 [1.15.1]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.15.0...v1.15.1
 [1.15.0]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.14.0...v1.15.0

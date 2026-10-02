@@ -262,11 +262,10 @@ The document autosaves in the browser after every change (the logo and the image
 
 ### Export and print
 
-The **Export** button exports the PDF with the project; its arrow opens the four exports:
+The **Export** button exports the PDF with the project; its arrow opens the four exports.
 
-- **PDF with project** (the default): settings, Markdown and images attached, so the file reopens in the studio; **PDF only** is the document alone. Both use the best implementation available:
-  - in the browser it opens the print-ready document in a new tab and triggers the print dialog once pagination is complete; choose _Save as PDF_. Allow pop-ups for the site if nothing opens. Ctrl+P (Cmd+P on macOS) does the same;
-  - in the desktop app it writes the PDF directly through the embedded Chromium engine, no dialog other than the file picker.
+- **PDF with project** (the default): settings, Markdown and images attached, so the file reopens in the studio. The desktop app and the MCP server write it through the embedded Chromium print engine, so it is a vector PDF. The browser has no print engine a page can use, so there the studio draws the PDF itself from the preview: each page is stored as an image (2 pixels per CSS pixel, about 192 dpi) under an invisible text layer that keeps the text selectable and searchable, with the links of the document kept as links. It downloads in one step, behind a lock that reports the progress; count on a few hundred kilobytes per page.
+- **PDF only** is the document alone, as a vector PDF: in the browser it opens the print-ready document in a new tab and triggers the print dialog once pagination is complete; choose _Save as PDF_. Allow pop-ups for the site if nothing opens. Ctrl+P (Cmd+P on macOS) does the same. In the desktop app it writes the file directly.
 - **HTML with project** downloads a single self-contained file: content, styles, images, diagrams, the font, the Paged.js runtime and the project. It paginates on open, offline, in any modern browser.
 - **Project only** downloads the JSON file described in [Saving your work](#saving-your-work).
 - **Printing on paper**: in the browser, the same print dialog; in the desktop app, **File → Print…** (Ctrl+P).
@@ -276,7 +275,7 @@ The **Export** button exports the PDF with the project; its arrow opens the four
 An exported file carries everything needed to edit it again: the Markdown, every setting, the logo and the images, in the same form as a project file.
 
 - The **HTML export** holds them in a data block.
-- A **PDF** holds them as file attachments (`markdown-paged-studio.json` and `document.md`), which PDF readers list in their attachments panel. The desktop app and the MCP server attach them when they write the PDF. In the browser the print dialog writes the PDF outside the studio, so after **Export** a banner asks for the file you saved: choose it, and the studio downloads it again as `<name>-with-project.pdf`. **PDF only** skips all this.
+- A **PDF** holds them as file attachments (`markdown-paged-studio.json` and `document.md`), which PDF readers list in their attachments panel. The desktop app and the MCP server attach them when they write the PDF. In the browser the print dialog writes the PDF outside the studio, in the browser the studio draws the PDF itself and attaches them (see above).
 
 **Import…** opens all three: a project JSON, an HTML or a PDF exported by the studio. The desktop app has the same commands in its **File** menu (Ctrl+O imports).
 

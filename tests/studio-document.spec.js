@@ -1,7 +1,7 @@
 // Integration tests of the document itself: rendering, autosave, configuration, exports, language, cover.
 import { test, expect } from '@playwright/test';
 import { readFileSync } from 'node:fs';
-import { PDFDocument } from 'pdf-lib';
+import { decodePDFRawStream, PDFArray, PDFDocument, PDFName } from 'pdf-lib';
 import { png } from './helpers/png.mjs';
 import { readSources } from '../src/pdf-sources.js';
 import {
@@ -124,7 +124,7 @@ test('exports a standalone HTML file that paginates offline', async ({ page, con
   await expect(offline.locator('.cover-title')).toHaveText('Architecture Report');
 });
 
-test('Export PDF in the browser opens the print window inside the gesture and prints when paginated', async ({
+test('PDF only opens the print window inside the gesture, the Export menu works with the keyboard', async ({
   page,
 }) => {
   await openFreshStudio(page);
@@ -143,20 +143,7 @@ test('Export PDF in the browser opens the print window inside the gesture and pr
       };
     });
 
-  await stubWindowOpen();
-  await page.locator('#exportDefault').click();
-  await expect.poll(() => page.evaluate(() => window.__print.url)).toMatch(/^blob:/);
-  expect(await page.evaluate(() => window.__print.openedSync)).toBe(true);
-  const html = await page.evaluate(() => fetch(window.__print.url).then(r => r.text()));
-  expect(html).toContain('after:()=>setTimeout(()=>window.print()');
-  expect(html).toContain('<article class="document-content" lang="en">');
-  // The default export is with the project: the banner asks for the saved PDF.
-  const banner = page.locator('#projectBanner');
-  await expect(banner).toBeVisible();
-  await page.locator('#projectBannerClose').click();
-  await expect(banner).toBeHidden();
-
-  // The arrow opens the menu; "PDF only" prints without the banner. Escape and a click elsewhere close it.
+  // The arrow opens the menu; "PDF only" goes through the print dialog. Escape and a click elsewhere close it.
   const menu = page.locator('#exportOptions');
   await page.locator('#exportMenu').click();
   await expect(menu).toBeVisible();
@@ -175,7 +162,10 @@ test('Export PDF in the browser opens the print window inside the gesture and pr
   await page.locator('#exportPdfOnly').click();
   await expect(menu).toBeHidden();
   await expect.poll(() => page.evaluate(() => window.__print.url)).toMatch(/^blob:/);
-  await expect(banner).toBeHidden();
+  expect(await page.evaluate(() => window.__print.openedSync)).toBe(true);
+  const html = await page.evaluate(() => fetch(window.__print.url).then(r => r.text()));
+  expect(html).toContain('after:()=>setTimeout(()=>window.print()');
+  expect(html).toContain('<article class="document-content" lang="en">');
 
   // The two other entries are plain downloads: the HTML page and the project file.
   const [htmlDownload] = await Promise.all([page.waitForEvent('download'), exportVia(page, 'exportHtml')]);
@@ -190,7 +180,6 @@ test('Export PDF in the browser opens the print window inside the gesture and pr
   await page.locator('#title').focus();
   await page.keyboard.press('Control+p');
   await expect.poll(() => page.evaluate(() => window.__print.url)).toMatch(/^blob:/);
-  await expect(banner).toBeVisible();
 });
 
 test('saves and loads the configuration as JSON', async ({ page }) => {
@@ -361,32 +350,64 @@ test('an exported HTML file carries the document and reopens with Load config', 
   await expect(page.locator('#preview .document-image > img')).toHaveCount(1);
 });
 
-test('the project is added to a saved PDF in the browser, and such a PDF reopens', async ({ page }) => {
+test('PDF with project is drawn by the browser in one step, and such a PDF reopens', async ({ page }) => {
   await openFreshStudio(page);
   page.on('dialog', dialog => dialog.accept());
   await page.locator('#imageFiles').setInputFiles({ name: 'plan.png', mimeType: 'image/png', buffer: png(40, 30) });
   await page.locator('#title').fill('From a PDF');
-  await setMarkdown(page, '# From a PDF\n\n![Plan](plan.png)\n');
+  await setMarkdown(
+    page,
+    '# From a PDF\n\n[[toc]]\n\n## Part one\n\n![Plan](plan.png)\n\nSee [the site](https://example.com/page) and [part two](#part-two)[^n].\n\n\\newpage\n\n## Part two\n\nText.\n\n[^n]: A note.\n',
+  );
   await expect(page.locator('#preview .document-image > img')).toHaveCount(1);
+  await expect(page.locator('#preview')).not.toHaveClass(/is-stale/);
+  await expect(status(page)).toHaveText('3 pages');
 
-  // Export PDF with the project: the print window opens, then the banner asks for the saved file.
-  await page.evaluate(() => (window.open = () => ({ set location(value) {} })));
-  await page.locator('#exportDefault').click();
-  await expect(page.locator('#projectBanner')).toBeVisible();
-  // The PDF the print dialog would have saved.
-  const blank = await PDFDocument.create();
-  blank.addPage();
-  const printed = Buffer.from(await blank.save());
-  const [chooser] = await Promise.all([page.waitForEvent('filechooser'), page.locator('#projectPdfChoose').click()]);
-  const [download] = await Promise.all([
-    page.waitForEvent('download'),
-    chooser.setFiles({ name: 'report.pdf', mimeType: 'application/pdf', buffer: printed }),
-  ]);
-  expect(download.suggestedFilename()).toBe('report-with-project.pdf');
-  await expect(status(page)).toHaveText('Project attached');
-  await expect(page.locator('#projectBanner')).toBeHidden();
-  const editable = readFileSync(await download.path());
-  const sources = JSON.parse((await readSources(editable)).json);
+  // No print window: the pages are drawn and the file downloaded straight away. Meanwhile the studio is
+  // locked behind an overlay that reports the progress, and the app is inert.
+  await page.evaluate(() => {
+    window.open = () => {
+      throw new Error('the print window must not open');
+    };
+    window.__busy = [];
+    const busy = document.getElementById('busy');
+    new MutationObserver(() => {
+      if (!busy.hidden) {
+        window.__busy.push(
+          `${document.getElementById('app').inert}|${document.getElementById('busyDetail').textContent}`,
+        );
+      }
+    }).observe(busy, { attributes: true, childList: true, subtree: true, characterData: true });
+  });
+  const [download] = await Promise.all([page.waitForEvent('download'), page.locator('#exportDefault').click()]);
+  expect(download.suggestedFilename()).toBe('From a PDF.pdf');
+  await expect(status(page)).toHaveText('PDF saved with its project');
+  await expect(page.locator('#busy')).toBeHidden();
+  expect(await page.evaluate(() => document.getElementById('app').inert)).toBe(false);
+  const seen = await page.evaluate(() => window.__busy);
+  expect(seen.some(entry => entry.startsWith('true|Drawing page 1 of 3'))).toBe(true);
+  expect(seen.some(entry => entry.startsWith('true|Writing the file'))).toBe(true);
+  const bytes = readFileSync(await download.path());
+  expect(bytes.subarray(0, 5).toString()).toBe('%PDF-');
+  const pdf = await PDFDocument.load(bytes);
+  expect(pdf.getPageCount()).toBe(3);
+  expect(pdf.getTitle()).toBe('From a PDF');
+  // One page image per page, an invisible text layer (render mode 3), and the links as annotations.
+  const text = bytes.toString('latin1');
+  expect((text.match(/\/Subtype \/Image/g) || []).length).toBe(3);
+  const content = pdf.getPages().map(pdfPage => {
+    const contents = pdfPage.node.Contents();
+    const streams = contents instanceof PDFArray ? contents.asArray().map(ref => pdf.context.lookup(ref)) : [contents];
+    return streams.map(stream => Buffer.from(decodePDFRawStream(stream).decode()).toString('latin1')).join('\n');
+  });
+  expect(content[1]).toContain('3 Tr');
+  // pdf-lib writes the text of standard fonts as hex strings.
+  expect(content[1].toUpperCase()).toContain(Buffer.from('Part one', 'latin1').toString('hex').toUpperCase());
+  expect(content[1]).toMatch(/Tj/);
+  expect(text).toContain('/URI (https://example.com/page)');
+  expect((text.match(/\/Subtype \/Link/g) || []).length).toBeGreaterThanOrEqual(4);
+  expect(pdf.getPages()[1].node.get(PDFName.of('Annots'))).toBeDefined();
+  const sources = JSON.parse((await readSources(bytes)).json);
   expect(sources.title).toBe('From a PDF');
   expect(Object.keys(sources.images)).toEqual(['plan.png']);
 
@@ -394,18 +415,23 @@ test('the project is added to a saved PDF in the browser, and such a PDF reopens
   await expect(page.locator('#title')).toHaveValue('Architecture Report');
   await page
     .locator('#importFile')
-    .setInputFiles({ name: 'report-with-project.pdf', mimeType: 'application/pdf', buffer: editable });
+    .setInputFiles({ name: 'From a PDF.pdf', mimeType: 'application/pdf', buffer: bytes });
   await expect(page.locator('#title')).toHaveValue('From a PDF');
   await expect(page.locator('#preview .document-image > img')).toHaveCount(1);
 
-  // A PDF without sources is refused and the document is left alone.
+  // A PDF without a project is refused and the document is left alone.
+  const blank = await PDFDocument.create();
+  blank.addPage();
+  const plain = Buffer.from(await blank.save());
   const messages = [];
   page.removeAllListeners('dialog');
   page.on('dialog', dialog => {
     messages.push(dialog.message());
     dialog.accept();
   });
-  await page.locator('#importFile').setInputFiles({ name: 'plain.pdf', mimeType: 'application/pdf', buffer: printed });
-  await expect.poll(() => messages).toEqual(['This file could not be opened: this PDF holds no studio sources']);
+  await page.locator('#importFile').setInputFiles({ name: 'plain.pdf', mimeType: 'application/pdf', buffer: plain });
+  await expect
+    .poll(() => messages)
+    .toEqual(['This file could not be opened: this PDF holds no project: import a PDF exported with its project']);
   await expect(page.locator('#title')).toHaveValue('From a PDF');
 });

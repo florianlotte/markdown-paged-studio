@@ -30,8 +30,10 @@ test('the interface switches to French and back, and remembers the choice', asyn
     'Projet seul',
   ]);
   await expect(page.locator('#import')).toHaveText('Importer…');
-  await expect(page.locator('#projectBannerClose')).toHaveText('Plus tard');
-  await expect(page.locator('#exportDefault')).toHaveAttribute('title', /Enregistrer au format PDF/);
+  await expect(page.locator('#exportDefault')).toHaveAttribute('title', /PDF avec projet, dessiné/);
+  await expect(page.locator('#exportPdfOnly span')).toHaveText(
+    "Le document seul, par la boîte de dialogue d'impression",
+  );
   await expect(page.locator('#toggleSidebar')).toHaveAttribute('aria-label', 'Masquer la barre latérale');
   await expect(page.locator('#zoomIn')).toHaveAttribute('aria-label', 'Zoom avant');
   await expect(page.locator('.images-hint')).toHaveText(

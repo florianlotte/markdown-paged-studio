@@ -1,7 +1,7 @@
 // The studio's controls: form fields bound to the state, tabs, file imports, downloads, export and print.
 // The markup itself lives in index.html.
 import { clearStoredConfig, DEFAULTS, sanitizeConfig, state } from './config.js';
-import { sourcesOfHtml, standaloneHtml } from './document.js';
+import { documentCss, documentHtml, sourcesOfHtml, standaloneHtml } from './document.js';
 import { insertBlock } from './editor.js';
 import {
   addImageFiles,
@@ -199,7 +199,7 @@ async function sourcesOfFile(file) {
   if (head.startsWith('%PDF-')) {
     const { readSources } = await import('./pdf-sources.js');
     const found = await readSources(await file.arrayBuffer());
-    if (!found) throw new Error(t('this PDF holds no studio sources'));
+    if (!found) throw new Error(t('this PDF holds no project: import a PDF exported with its project'));
     return found.json;
   }
   const text = await file.text();
@@ -224,28 +224,68 @@ function loadSources(text) {
   applyConfig(loaded);
 }
 
-// Browser only, after "PDF with project": the print dialog wrote the PDF outside the studio, so the banner
-// asks for that file and gives it back with the project inside.
-function bindProjectBanner() {
-  const banner = document.getElementById('projectBanner');
-  const input = document.getElementById('projectPdfFile');
-  document.getElementById('projectPdfChoose').addEventListener('click', () => input.click());
-  document.getElementById('projectBannerClose').addEventListener('click', () => (banner.hidden = true));
-  input.addEventListener('change', async () => {
-    const file = input.files?.[0];
-    input.value = '';
-    if (!file) return;
-    try {
-      const { attachSources } = await import('./pdf-sources.js');
-      const bytes = await attachSources(await file.arrayBuffer(), { json: sourceJson(), markdown: state.markdown });
-      download(file.name.replace(/(-with-project)?\.pdf$/i, '') + '-with-project.pdf', bytes, 'application/pdf');
-      document.getElementById('status').textContent = t('Project attached');
-      banner.hidden = true;
-    } catch (error) {
-      console.error(error);
-      alert(t('The project could not be attached: {error}', { error: error?.message || error }));
-    }
-  });
+// Locks the studio while a PDF is written: the overlay covers it and the app is inert (no clicks, no keys),
+// so the document cannot change under the export. `detail` reports the progress.
+function lock(title) {
+  document.getElementById('busyTitle').textContent = title;
+  document.getElementById('busyDetail').textContent = '';
+  document.getElementById('busy').hidden = false;
+  document.getElementById('app').inert = true;
+}
+
+function progress(detail) {
+  document.getElementById('busyDetail').textContent = detail;
+}
+
+function unlock() {
+  document.getElementById('busy').hidden = true;
+  document.getElementById('app').inert = false;
+}
+
+// Browser only, "PDF with project": the print dialog cannot hand its file back, so the studio draws the
+// PDF itself from the preview (see pdf-render.js), puts the project in and downloads it in one go.
+async function exportPdfRendered() {
+  const status = document.getElementById('status');
+  const preview = document.getElementById('preview');
+  if (preview.classList.contains('is-stale') || preview.classList.contains('is-rendering')) {
+    alert(t('PDF export failed: {error}', { error: t('the preview is still rendering, try again in a moment') }));
+    return;
+  }
+  lock(t('Exporting the PDF…'));
+  try {
+    const [{ renderPreviewToPdf }, { attachSources }] = await Promise.all([
+      import('./pdf-render.js'),
+      import('./pdf-sources.js'),
+    ]);
+    const html = await documentHtml();
+    const pdf = await renderPreviewToPdf({
+      preview,
+      title: state.title,
+      html,
+      css: documentCss(),
+      onProgress: (done, total) => progress(t('Drawing page {done} of {total}…', { done, total })),
+    });
+    progress(t('Writing the file…'));
+    const bytes = await attachSources(pdf, { json: sourceJson(), markdown: state.markdown });
+    download(`${fileStem(state.title)}.pdf`, bytes, 'application/pdf');
+    status.textContent = t('PDF saved with its project');
+  } catch (error) {
+    console.error(error);
+    status.textContent = t('Render error');
+    alert(t('PDF export failed: {error}', { error: error?.message || error }));
+  } finally {
+    unlock();
+  }
+}
+
+// A file name made of the title: letters, digits and a few signs, "document" when nothing is left.
+function fileStem(title) {
+  const stem = String(title ?? '')
+    .trim()
+    .replace(/[\\/:*?"<>|\s]+/g, ' ')
+    .trim()
+    .slice(0, 80);
+  return stem || 'document';
 }
 
 // Opens the print-ready document in a new window; it prints itself once Paged.js is done. In the browser
@@ -269,12 +309,14 @@ async function openPrintWindow() {
 // `window.desktop.writePdf` writes the file. The desktop package has no node_modules: pdf-lib lives in the
 // page bundle, so this is the only place it can run.
 async function exportPdfDirect({ project }) {
-  const button = document.getElementById('exportDefault');
   const status = document.getElementById('status');
-  button.disabled = true;
+  lock(t('Exporting the PDF…'));
   try {
-    const result = await window.desktop.exportPdf(await standaloneHtml({ mode: 'pdf' }));
+    const html = await standaloneHtml({ mode: 'pdf' });
+    progress(t('Choose where to save it, then the pages are printed…'));
+    const result = await window.desktop.exportPdf(html);
     if (result.canceled) return;
+    progress(t('Writing the file…'));
     let bytes = result.pdf;
     let saved = t('PDF saved');
     if (project) {
@@ -293,16 +335,15 @@ async function exportPdfDirect({ project }) {
     console.error(error);
     alert(t('PDF export failed: {error}', { error: error?.message || error }));
   } finally {
-    button.disabled = false;
+    unlock();
   }
 }
 
 // Export PDF, with or without the project: a direct file in the desktop app; in the browser the print
-// dialog (which must open inside the user gesture), then the banner to add the project to the saved file.
+// dialog (which must open inside the user gesture) for the plain PDF, the drawing of the pages for the one with the project.
 function exportPdf({ project }) {
   if (window.desktop) return exportPdfDirect({ project });
-  openPrintWindow();
-  document.getElementById('projectBanner').hidden = !project;
+  return project ? exportPdfRendered() : openPrintWindow();
 }
 
 // The arrow next to Export opens the four exports as a menu: Escape, a click elsewhere or leaving it closes
@@ -371,15 +412,18 @@ function bindPdf() {
       else if (command === 'toggle-sidebar') toggleSidebar();
     });
   } else {
-    const describe = () => (button.title = t('PDF with project: opens the print dialog, choose "Save as PDF"'));
+    // In the browser the PDF with project is drawn by the studio, page by page: say so where the choice is made.
+    const describe = () => {
+      button.title = t('PDF with project, drawn from the preview (pages as images with a text layer)');
+      document.querySelector('#exportPdfOnly span').textContent = t('The document alone, through the print dialog');
+    };
     describe();
     onLanguageChange(describe);
-    bindProjectBanner();
     // Ctrl/Cmd+P prints the document rather than the studio page. On desktop the menu accelerator does this.
     document.addEventListener('keydown', event => {
       if ((event.ctrlKey || event.metaKey) && !event.altKey && event.key.toLowerCase() === 'p') {
         event.preventDefault();
-        exportPdf({ project: true });
+        openPrintWindow();
       }
     });
   }

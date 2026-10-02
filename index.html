@@ -347,18 +347,21 @@
                   </li>
                 </ul>
               </div>
-              <input id="projectPdfFile" type="file" accept="application/pdf,.pdf" hidden />
             </div>
           </header>
-          <div id="projectBanner" class="banner" role="status" hidden>
-            <span>Saved the PDF? Choose it to add the project.</span>
-            <button id="projectPdfChoose" class="secondary" type="button">Choose PDF…</button>
-            <button id="projectBannerClose" class="secondary" type="button">Not now</button>
-          </div>
           <section class="preview-shell">
             <div id="preview" class="preview"></div>
           </section>
         </main>
+      </div>
+    </div>
+    <!-- Shown while a PDF is being written: the studio is locked so the document cannot change meanwhile. -->
+    <div id="busy" class="busy" role="alert" aria-live="assertive" aria-busy="true" hidden>
+      <div class="busy-card">
+        <span class="busy-spinner" aria-hidden="true"></span>
+        <strong id="busyTitle">Exporting the PDF…</strong>
+        <span id="busyDetail"></span>
+        <span class="busy-hint">The studio is locked until the file is ready.</span>
       </div>
     </div>
     <script type="module" src="/src/main.js"></script>
