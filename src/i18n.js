@@ -95,12 +95,16 @@ const TRANSLATIONS = {
     'Fit to the available width': 'Ajuster à la largeur disponible',
     Reset: 'Réinitialiser',
     'Import…': 'Importer…',
-    'A PDF, an HTML or a project exported by the studio': 'Un PDF, un HTML ou un projet exportés par le studio',
+    'A PDF, an HTML, a Markdown or a project exported by the studio':
+      'Un PDF, un HTML, un Markdown ou un projet exportés par le studio',
     Export: 'Exporter',
     'Export options': "Options d'export",
     'HTML with project': 'HTML avec projet',
     'One self-contained page that paginates itself, project included':
       'Une page autonome qui se pagine elle-même, projet inclus',
+    'Markdown with project': 'Markdown avec projet',
+    'The Markdown with the settings and images in a YAML front matter':
+      'Le Markdown avec les réglages et les images en en-tête YAML',
     'Project only': 'Projet seul',
     'Settings, Markdown and images as a JSON file': 'Réglages, Markdown et images dans un fichier JSON',
     'PDF with project, drawn from the preview (pages as images with a text layer)':

@@ -132,7 +132,7 @@ export const position = async (page, selector) => {
   return { percent, left, right };
 };
 
-// Triggers one entry of the Export menu (exportPdfProject, exportPdfOnly, exportHtml, exportProject).
+// Triggers one entry of the Export menu (exportPdfProject, exportPdfOnly, exportHtml, exportMarkdown, exportProject).
 export async function exportVia(page, id) {
   await page.locator('#exportMenu').click();
   await page.locator(`#${id}`).click();

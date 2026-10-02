@@ -7,6 +7,15 @@ All notable changes to Markdown Paged Studio are listed here, newest first. The 
 
 ## [Unreleased]
 
+## [1.18.0] - 2026-10-02
+
+### Added
+
+- **Markdown with project** in the Export menu (and **File → Export Markdown…** on desktop): a `.md` file
+  whose YAML front matter carries the settings, CSS, logo and images, so any Markdown editor opens it and
+  **Import…** reopens it in the studio. **Import…** also accepts a plain Markdown file, which replaces the
+  Markdown, takes its first level 1 heading as the title and keeps the other settings and the images.
+
 ## [1.17.0] - 2026-10-02
 
 ### Changed
@@ -282,7 +291,8 @@ All notable changes to Markdown Paged Studio are listed here, newest first. The 
 - Portable desktop app for Windows, Linux and macOS with direct PDF export.
 - Docker image, Playwright integration tests and CI.
 
-[Unreleased]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.17.0...HEAD
+[Unreleased]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.18.0...HEAD
+[1.18.0]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.17.0...v1.18.0
 [1.17.0]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.16.0...v1.17.0
 [1.16.0]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.15.1...v1.16.0
 [1.15.1]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.15.0...v1.15.1

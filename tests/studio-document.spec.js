@@ -167,9 +167,14 @@ test('PDF only opens the print window inside the gesture, the Export menu works 
   expect(html).toContain('after:()=>setTimeout(()=>window.print()');
   expect(html).toContain('<article class="document-content" lang="en">');
 
-  // The two other entries are plain downloads: the HTML page and the project file.
+  // The three other entries are plain downloads: the HTML page, the Markdown and the project file.
   const [htmlDownload] = await Promise.all([page.waitForEvent('download'), exportVia(page, 'exportHtml')]);
   expect(htmlDownload.suggestedFilename()).toBe('document.html');
+  const [markdown] = await Promise.all([page.waitForEvent('download'), exportVia(page, 'exportMarkdown')]);
+  expect(markdown.suggestedFilename()).toBe('Architecture Report.md');
+  expect(readFileSync(await markdown.path(), 'utf8')).toMatch(
+    /^---\nmarkdown-paged-studio: 1\ntitle: Architecture Report\n/,
+  );
   const [project] = await Promise.all([page.waitForEvent('download'), exportVia(page, 'exportProject')]);
   expect(project.suggestedFilename()).toBe('markdown-paged-studio-project.json');
   expect(JSON.parse(readFileSync(await project.path(), 'utf8')).title).toBe('Architecture Report');
@@ -348,6 +353,57 @@ test('an exported HTML file carries the document and reopens with Load config', 
   await expect(page.locator('#markdown')).toHaveValue(/!\[Plan\]\(plan\.png\)\{width=50%\}/);
   await expect(page.locator('#imageList li')).toHaveText([/plan\.png/]);
   await expect(page.locator('#preview .document-image > img')).toHaveCount(1);
+});
+
+test('a Markdown export carries the project in its front matter, a plain Markdown replaces the text only', async ({
+  page,
+}) => {
+  await openFreshStudio(page);
+  page.on('dialog', dialog => dialog.accept());
+  await page.locator('#imageFiles').setInputFiles({ name: 'plan.png', mimeType: 'image/png', buffer: png(40, 30) });
+  await page.locator('#title').fill('Round trip');
+  await setMarkdown(page, '# Round trip\n\n![Plan](plan.png){width=50%}\n\nText.\n');
+  await expect(page.locator('#preview .document-image > img')).toHaveCount(1);
+  const [download] = await Promise.all([page.waitForEvent('download'), exportVia(page, 'exportMarkdown')]);
+  expect(download.suggestedFilename()).toBe('Round trip.md');
+  const text = readFileSync(await download.path(), 'utf8');
+  expect(text).toMatch(/^---\nmarkdown-paged-studio: 1\ntitle: Round trip\n/);
+  expect(text).toContain('\nimages:\n  plan.png: data:image/png;base64,');
+  expect(text).toMatch(/\n---\n# Round trip\n\n!\[Plan\]\(plan\.png\)\{width=50%\}\n\nText\.\n$/);
+
+  await page.locator('#resetDocument').click();
+  await expect(page.locator('#title')).toHaveValue('Architecture Report');
+  await expect(page.locator('#imageList li')).toHaveCount(0);
+  await page
+    .locator('#importFile')
+    .setInputFiles({ name: 'Round trip.md', mimeType: 'text/markdown', buffer: Buffer.from(text) });
+  await expect(page.locator('#title')).toHaveValue('Round trip');
+  await expect(page.locator('#markdown')).toHaveValue('# Round trip\n\n![Plan](plan.png){width=50%}\n\nText.\n');
+  await expect(page.locator('#imageList li')).toHaveText([/plan\.png/]);
+  await expect(page.locator('#preview .document-image > img')).toHaveCount(1);
+
+  // A Markdown without the studio's front matter replaces the text, takes its first level 1 heading as the
+  // title and keeps the other settings and the images.
+  await page
+    .locator('#importFile')
+    .setInputFiles({ name: 'notes.md', mimeType: 'text/markdown', buffer: Buffer.from('# Notes\n\nPlain.\n') });
+  await expect(page.locator('#markdown')).toHaveValue('# Notes\n\nPlain.\n');
+  await expect(page.locator('#title')).toHaveValue('Notes');
+  await expect(page.locator('#preview .cover-title')).toHaveText('Notes');
+  await expect(page.locator('#imageList li')).toHaveText([/plan\.png/]);
+  // Without a heading the title stays.
+  await page
+    .locator('#importFile')
+    .setInputFiles({ name: 'more.md', mimeType: 'text/markdown', buffer: Buffer.from('## Part\n\nMore.\n') });
+  await expect(page.locator('#markdown')).toHaveValue('## Part\n\nMore.\n');
+  await expect(page.locator('#title')).toHaveValue('Notes');
+
+  // The sidebar's Import .md also drops the front matter of such a file, and touches nothing but the text.
+  await page
+    .locator('#markdownFile')
+    .setInputFiles({ name: 'Round trip.md', mimeType: 'text/markdown', buffer: Buffer.from(text) });
+  await expect(page.locator('#markdown')).toHaveValue('# Round trip\n\n![Plan](plan.png){width=50%}\n\nText.\n');
+  await expect(page.locator('#title')).toHaveValue('Notes');
 });
 
 test('PDF with project is drawn by the browser in one step, and such a PDF reopens', async ({ page }) => {

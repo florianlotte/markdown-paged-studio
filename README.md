@@ -41,8 +41,8 @@
 - **Preview controls**: one page or two pages side by side, zoom, fit to width, Ctrl + wheel, and a collapsible sidebar.
 - **Autosave** in the browser, plus export and import of the whole configuration as JSON.
 - **Personal defaults** (your name, company logo, stylesheet, template) from a gitignored `local/` folder.
-- **Export menu**: PDF with project, PDF only, HTML with project (a standalone page that paginates offline) or the project alone. The PDF comes from the print dialog in the browser, as a direct file in the desktop app.
-- **Editable exports**: the HTML export and the PDF with project carry the document, its settings and its images, and **Import…** reopens them.
+- **Export menu**: PDF with project, PDF only, HTML with project (a standalone page that paginates offline), Markdown with project (a `.md` whose YAML front matter holds the settings and images) or the project alone. The PDF comes from the print dialog in the browser, as a direct file in the desktop app.
+- **Editable exports**: the HTML export, the Markdown export and the PDF with project carry the document, its settings and its images, and **Import…** reopens them.
 - **Desktop app** for Windows (x64 and ARM64), Linux and macOS (Apple Silicon and Intel), portable, no installation.
 - **MCP server** so a local AI assistant can generate reports through the same rendering pipeline.
 - **Static build** you can host anywhere: GitHub Pages, Netlify, Cloudflare Pages, nginx, or the provided Docker image.
@@ -258,15 +258,16 @@ To start every session with your own name, company logo, stylesheet or document 
 
 ### Saving your work
 
-The document autosaves in the browser after every change (the logo and the images in IndexedDB, which has room for them). **Reset** discards it and restores the sample. **Export → Project only** downloads everything (texts, Markdown, CSS, logo, images, page setup and options) as one JSON file, and **Import…** restores it, from that JSON or from an HTML or PDF exported by the studio (see [Reopening an export](#reopening-an-export)). Unknown keys and invalid values in an imported file are ignored.
+The document autosaves in the browser after every change (the logo and the images in IndexedDB, which has room for them). **Reset** discards it and restores the sample. **Export → Project only** downloads everything (texts, Markdown, CSS, logo, images, page setup and options) as one JSON file, and **Import…** restores it, from that JSON or from an HTML, a Markdown or a PDF exported by the studio (see [Reopening an export](#reopening-an-export)). Unknown keys and invalid values in an imported file are ignored.
 
 ### Export and print
 
-The **Export** button exports the PDF with the project; its arrow opens the four exports.
+The **Export** button exports the PDF with the project; its arrow opens the five exports.
 
 - **PDF with project** (the default): settings, Markdown and images attached, so the file reopens in the studio. The desktop app and the MCP server write it through the embedded Chromium print engine, so it is a vector PDF. The browser has no print engine a page can use, so there the studio draws the PDF itself from the preview: each page is stored as an image (2 pixels per CSS pixel, about 192 dpi) under an invisible text layer that keeps the text selectable and searchable, with the links of the document kept as links. It downloads in one step, behind a lock that reports the progress; count on a few hundred kilobytes per page.
 - **PDF only** is the document alone, as a vector PDF: in the browser it opens the print-ready document in a new tab and triggers the print dialog once pagination is complete; choose _Save as PDF_. Allow pop-ups for the site if nothing opens. Ctrl+P (Cmd+P on macOS) does the same. In the desktop app it writes the file directly.
 - **HTML with project** downloads a single self-contained file: content, styles, images, diagrams, the font, the Paged.js runtime and the project. It paginates on open, offline, in any modern browser.
+- **Markdown with project** downloads a `.md` file named after the title: the settings, CSS, logo and images sit in a YAML front matter (the `---` block Pandoc, Jekyll, Hugo or Obsidian use for metadata) above the Markdown, so any Markdown tool opens the document and the studio reopens the whole project. The images are embedded as data URLs, which makes the front matter long.
 - **Project only** downloads the JSON file described in [Saving your work](#saving-your-work).
 - **Printing on paper**: in the browser, the same print dialog; in the desktop app, **File → Print…** (Ctrl+P).
 
@@ -275,9 +276,10 @@ The **Export** button exports the PDF with the project; its arrow opens the four
 An exported file carries everything needed to edit it again: the Markdown, every setting, the logo and the images, in the same form as a project file.
 
 - The **HTML export** holds them in a data block.
+- The **Markdown export** holds them in its YAML front matter, recognised by its first key, `markdown-paged-studio: 1`.
 - A **PDF** holds them as file attachments (`markdown-paged-studio.json` and `document.md`), which PDF readers list in their attachments panel. The desktop app and the MCP server attach them when they write the PDF. In the browser the print dialog writes the PDF outside the studio, in the browser the studio draws the PDF itself and attaches them (see above).
 
-**Import…** opens all three: a project JSON, an HTML or a PDF exported by the studio. The desktop app has the same commands in its **File** menu (Ctrl+O imports).
+**Import…** opens all four: a project JSON, an HTML, a Markdown or a PDF exported by the studio. A Markdown file without that front matter (none, or another tool's) replaces the Markdown, takes its first level 1 heading (`# Title`) as the title of the cover, and keeps the other settings and the images; a foreign front matter stays in the text, where it is easy to remove. The desktop app has the same commands in its **File** menu (Ctrl+O imports).
 
 Chromium-based browsers give the most faithful print output for paged media.
 

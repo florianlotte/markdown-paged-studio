@@ -129,9 +129,12 @@ function bindFiles() {
     .getElementById('loadMarkdown')
     .addEventListener('click', () => document.getElementById('markdownFile').click());
   document.getElementById('markdownFile').addEventListener('change', e =>
-    readTextFile(e.target, text => {
-      state.markdown = text;
-      document.getElementById('markdown').value = text;
+    readTextFile(e.target, async text => {
+      // A Markdown exported with its project keeps its front matter out of the editor; the rest is kept.
+      const { sourcesOfMarkdown } = await import('./markdown-sources.js');
+      const { markdown } = JSON.parse(sourcesOfMarkdown(text).json);
+      state.markdown = markdown;
+      document.getElementById('markdown').value = markdown;
       scheduleRender();
     }),
   );
@@ -177,9 +180,16 @@ function bindFiles() {
   });
 }
 
-// The two exports that are plain downloads: the self-contained HTML page and the project file.
+// The three exports that are plain downloads: the self-contained HTML page, the Markdown with its front
+// matter and the project file.
 async function exportHtml() {
   download('document.html', await standaloneHtml({ source: sourceJson() }), 'text/html;charset=utf-8');
+}
+
+async function exportMarkdown() {
+  const { markdownWithSources } = await import('./markdown-sources.js');
+  const text = markdownWithSources({ json: sourceJson(), markdown: state.markdown });
+  download(`${fileStem(state.title)}.md`, text, 'text/markdown;charset=utf-8');
 }
 
 function exportProject() {
@@ -193,7 +203,8 @@ function sourceJson(indent = 0) {
   return JSON.stringify({ ...state, images: exportImages() }, null, indent);
 }
 
-// The configuration text held by a file: a project JSON, or an HTML or PDF exported by the studio.
+// The configuration text held by a file, told apart by content: a PDF, an HTML or a Markdown exported by
+// the studio, a project JSON, or a plain Markdown document, which holds the Markdown alone.
 async function sourcesOfFile(file) {
   const head = new TextDecoder().decode(new Uint8Array(await file.slice(0, 16).arrayBuffer()));
   if (head.startsWith('%PDF-')) {
@@ -202,13 +213,15 @@ async function sourcesOfFile(file) {
     if (!found) throw new Error(t('this PDF holds no project: import a PDF exported with its project'));
     return found.json;
   }
-  const text = await file.text();
+  const text = (await file.text()).replace(/^\uFEFF/, '');
   if (/^\s*<(!doctype html|html)/i.test(text)) {
     const found = sourcesOfHtml(text);
     if (found === null) throw new Error(t('this HTML file holds no studio sources'));
     return found;
   }
-  return text;
+  if (/^\s*\{/.test(text)) return text;
+  const { sourcesOfMarkdown } = await import('./markdown-sources.js');
+  return sourcesOfMarkdown(text).json;
 }
 
 // Applies a configuration text to the document: validated like any import, images included.
@@ -346,7 +359,7 @@ function exportPdf({ project }) {
   return project ? exportPdfRendered() : openPrintWindow();
 }
 
-// The arrow next to Export opens the four exports as a menu: Escape, a click elsewhere or leaving it closes
+// The arrow next to Export opens the five exports as a menu: Escape, a click elsewhere or leaving it closes
 // it; the arrow keys move between its entries.
 function bindExportMenu() {
   const arrow = document.getElementById('exportMenu');
@@ -384,6 +397,7 @@ function bindExportMenu() {
     exportPdfProject: () => exportPdf({ project: true }),
     exportPdfOnly: () => exportPdf({ project: false }),
     exportHtml,
+    exportMarkdown,
     exportProject,
   };
   for (const [id, action] of Object.entries(actions)) {
@@ -406,6 +420,7 @@ function bindPdf() {
       if (command === 'export-pdf') exportPdfDirect({ project: true });
       else if (command === 'export-pdf-plain') exportPdfDirect({ project: false });
       else if (command === 'export-html') exportHtml();
+      else if (command === 'export-markdown') exportMarkdown();
       else if (command === 'export-project') exportProject();
       else if (command === 'import') document.getElementById('importFile').click();
       else if (command === 'print') openPrintWindow();

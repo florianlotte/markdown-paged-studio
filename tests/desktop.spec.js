@@ -102,7 +102,7 @@ test('the desktop app renders the document and exports a PDF directly', async ()
     await expect(page.locator('#status')).toHaveText('PDF saved');
     expect(await readSources(readFileSync(plain))).toBe(null);
     await expect(page.locator('#projectBanner')).toHaveCount(0);
-    // The other File menu entries: HTML and project downloads, and the import file dialog.
+    // The other File menu entries: HTML, Markdown and project downloads, and the import file dialog.
     const send = command =>
       app.evaluate(
         ({ BrowserWindow }, name) => BrowserWindow.getAllWindows()[0].webContents.send('command', name),
@@ -118,10 +118,14 @@ test('the desktop app renders the document and exports a PDF directly', async ()
     });
     await send('export-html');
     await expect.poll(() => app.evaluate(() => globalThis.downloads)).toEqual(['document.html']);
+    await send('export-markdown');
+    await expect
+      .poll(() => app.evaluate(() => globalThis.downloads))
+      .toEqual(['document.html', 'Architecture Report.md']);
     await send('export-project');
     await expect
       .poll(() => app.evaluate(() => globalThis.downloads))
-      .toEqual(['document.html', 'markdown-paged-studio-project.json']);
+      .toEqual(['document.html', 'Architecture Report.md', 'markdown-paged-studio-project.json']);
     const [chooser] = await Promise.all([page.waitForEvent('filechooser'), send('import')]);
     expect(chooser.isMultiple()).toBe(false);
     // Such a PDF reopens the document.

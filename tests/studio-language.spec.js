@@ -27,6 +27,7 @@ test('the interface switches to French and back, and remembers the choice', asyn
     'PDF avec projet',
     'PDF seul',
     'HTML avec projet',
+    'Markdown avec projet',
     'Projet seul',
   ]);
   await expect(page.locator('#import')).toHaveText('Importer…');

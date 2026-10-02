@@ -288,13 +288,17 @@
             </div>
             <div class="toolbar-actions">
               <button id="resetDocument" class="secondary">Reset</button>
-              <button id="import" class="secondary" title="A PDF, an HTML or a project exported by the studio">
+              <button
+                id="import"
+                class="secondary"
+                title="A PDF, an HTML, a Markdown or a project exported by the studio"
+              >
                 Import…
               </button>
               <input
                 id="importFile"
                 type="file"
-                accept="application/json,.json,application/pdf,.pdf,text/html,.html"
+                accept="application/json,.json,application/pdf,.pdf,text/html,.html,text/markdown,.md,.markdown"
                 hidden
               />
               <div class="menu-button">
@@ -337,6 +341,12 @@
                     <button id="exportHtml" role="menuitem" type="button">
                       <strong>HTML with project</strong>
                       <span>One self-contained page that paginates itself, project included</span>
+                    </button>
+                  </li>
+                  <li role="none">
+                    <button id="exportMarkdown" role="menuitem" type="button">
+                      <strong>Markdown with project</strong>
+                      <span>The Markdown with the settings and images in a YAML front matter</span>
                     </button>
                   </li>
                   <li role="none">
