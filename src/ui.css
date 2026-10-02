@@ -218,9 +218,6 @@ textarea:focus {
   font-size: 12px;
   line-height: 1.5;
 }
-.markdown-editor {
-  min-height: 390px;
-}
 .css-editor {
   min-height: 440px;
 }
@@ -459,8 +456,94 @@ button:hover {
   background: #f1f3f5;
   outline: none;
 }
-.preview-shell {
+/* The workbench: the editor pane, a draggable splitter and the preview, shown together or alone according
+   to the view mode (data-mode on .workbench, set by applyView()). The editor width is a fraction of the
+   workbench (--editor-width). A strip of document tabs will sit at the top of the editor pane. */
+.workbench {
   flex: 1;
+  min-height: 0;
+  display: flex;
+}
+.editor-pane {
+  flex: 0 0 calc(var(--editor-width, 0.5) * 100%);
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border-right: 1px solid #d8dde4;
+}
+.editor-bar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 6px 10px;
+  border-bottom: 1px solid #e5e9ef;
+  background: #f8f9fb;
+}
+.editor-title {
+  font-size: 12px;
+  color: #4f5660;
+  margin-right: 4px;
+}
+.editor-bar-spacer {
+  flex: 1;
+}
+.editor-bar button {
+  padding: 5px 9px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.editor-pane .markdown-editor {
+  flex: 1;
+  min-height: 0;
+  height: auto;
+  resize: none;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  padding: 12px 14px;
+  font-size: 13px;
+}
+.editor-pane .markdown-editor:focus {
+  outline: 2px solid #b8c7ff;
+  outline-offset: -2px;
+  box-shadow: none;
+}
+.splitter {
+  flex: 0 0 6px;
+  cursor: col-resize;
+  background: #d8dde4;
+  touch-action: none;
+}
+.splitter:hover,
+.splitter:focus-visible,
+.workbench.is-resizing .splitter {
+  background: #8096e8;
+  outline: none;
+}
+.workbench.is-resizing {
+  user-select: none;
+  cursor: col-resize;
+}
+.workbench.is-resizing .markdown-editor,
+.workbench.is-resizing .preview-shell {
+  pointer-events: none;
+}
+.workbench[data-mode='view'] .editor-pane,
+.workbench[data-mode='view'] .splitter,
+.workbench[data-mode='edit'] .preview-shell,
+.workbench[data-mode='edit'] .splitter {
+  display: none;
+}
+.workbench[data-mode='edit'] .editor-pane {
+  flex-basis: 100%;
+  border-right: 0;
+}
+.preview-shell {
+  flex: 1 1 0;
+  min-width: 0;
   min-height: 0;
   overflow: auto;
   /* Reserve the scrollbar space so fit-to-width never reacts to a scrollbar appearing or disappearing. */
@@ -546,6 +629,60 @@ button:hover {
   white-space: pre-wrap;
   font-size: 12px;
 }
+/* The toolbar holds the title, three control groups and the actions on one line. Where they would not fit
+   (narrower windows, the longer French labels), the heading goes and the mode buttons keep their icon only,
+   their label staying readable by assistive technology and in the tooltip. */
+.mode-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+@media (max-width: 1440px) {
+  .toolbar {
+    gap: 8px;
+  }
+  .view-controls {
+    gap: 6px;
+  }
+  .segmented button {
+    padding-left: 9px;
+    padding-right: 9px;
+  }
+  .toolbar-heading {
+    display: none;
+  }
+  .mode-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+}
+@media (max-width: 1620px) {
+  html[lang='fr'] .toolbar {
+    gap: 8px;
+  }
+  html[lang='fr'] .view-controls {
+    gap: 6px;
+  }
+  html[lang='fr'] .segmented button {
+    padding-left: 9px;
+    padding-right: 9px;
+  }
+  html[lang='fr'] .toolbar-heading {
+    display: none;
+  }
+  html[lang='fr'] .mode-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+}
 @media (max-width: 980px) {
   .shell {
     grid-template-columns: 330px 1fr;
@@ -573,6 +710,14 @@ button:hover {
     flex-wrap: wrap;
     gap: 8px;
     padding: 8px 10px;
+  }
+  /* Split needs room: the phone switches between Edit and View. The mode group joins the title on the
+     first row, the layout and zoom groups take the second. */
+  #modeSplit {
+    display: none;
+  }
+  .view-controls {
+    display: contents;
   }
   .toolbar-actions {
     width: 100%;
@@ -613,7 +758,9 @@ button:hover {
 }
 @media print {
   .sidebar,
-  .toolbar {
+  .toolbar,
+  .editor-pane,
+  .splitter {
     display: none !important;
   }
   .preview {
@@ -624,6 +771,7 @@ button:hover {
   }
   .shell,
   .workspace,
+  .workbench,
   .preview-shell {
     display: block;
     height: auto;

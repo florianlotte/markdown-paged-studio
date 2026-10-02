@@ -71,7 +71,7 @@ test('a change made from the preview can be undone in the editor, with what was 
   await expect(page.locator('#preview .document-content')).not.toContainText('Typed words');
 });
 
-test('the resize handle keeps the focus across renders, and works with the sidebar hidden', async ({ page }) => {
+test('the resize handle keeps the focus across renders, and works with the editor hidden', async ({ page }) => {
   await openDiagramDocument(page, 'Keyboard');
   const editor = page.locator('#markdown');
   const diagram = page.locator('#preview .mermaid-diagram');
@@ -92,9 +92,9 @@ test('the resize handle keeps the focus across renders, and works with the sideb
   await expect.poll(async () => (await diagramGeometry(page))?.percent).toBe(60);
   await expect(handle).toBeFocused();
 
-  // Hidden sidebar: the editor cannot take the edit, the source is replaced directly.
-  await page.locator('#toggleSidebar').click();
-  await expect(page.locator('#sidebar')).toBeHidden();
+  // Editor hidden (View mode): it cannot take the edit, the source is replaced directly.
+  await page.locator('#modeView').click();
+  await expect(editor).toBeHidden();
   await expect(page.locator('#preview')).not.toHaveClass(/is-stale/);
   await diagram.scrollIntoViewIfNeeded();
   await diagram.hover();
@@ -107,8 +107,8 @@ test('a change made with the editor hidden is undone and redone from the preview
   await openDiagramDocument(page, 'Hidden');
   const editor = page.locator('#markdown');
   const diagram = page.locator('#preview .mermaid-diagram');
-  await page.locator('#toggleSidebar').click();
-  await expect(page.locator('#sidebar')).toBeHidden();
+  await page.locator('#modeView').click();
+  await expect(editor).toBeHidden();
   await expect(page.locator('#preview')).not.toHaveClass(/is-stale/);
 
   await diagram.scrollIntoViewIfNeeded();
@@ -168,10 +168,21 @@ test('what the insert buttons and pasted images write can be undone in the edito
   await page.keyboard.press('Control+Shift+z');
   await expect(editor).toHaveValue(/Typed\.\n\n\\newpage\n$/);
 
-  // With the editor out of sight the text is still written.
-  await page.getByRole('tab', { name: 'Design' }).click();
+  // With the preview alone, an insert brings the editor back first, so the text is written in a visible
+  // editor and stays undoable.
+  await page.locator('#modeView').click();
+  await expect(editor).toBeHidden();
   await editor.evaluate(el => el.setSelectionRange(el.value.length, el.value.length));
+  await page.locator('#imageList button', { hasText: 'Insert' }).click();
+  await expect(page.locator('#modeSplit')).toHaveAttribute('aria-pressed', 'true');
+  await expect(editor).toBeVisible();
+  await expect(editor).toHaveValue(/\\newpage\n\n!\[plan\]\(plan\.png\)\n$/);
+  await editor.focus();
+  await page.keyboard.press('Control+z');
+  await expect(editor).toHaveValue(/Typed\.\n\n\\newpage\n$/);
+  await page.locator('#modeView').click();
   await page.evaluate(() => document.getElementById('insertToc').click());
+  await expect(editor).toBeVisible();
   await expect(editor).toHaveValue(/\\newpage\n\n\[\[toc\]\]\n$/);
   await expect(page.locator('#preview .toc')).toHaveCount(2);
 });

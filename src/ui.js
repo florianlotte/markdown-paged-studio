@@ -20,7 +20,7 @@ import {
 import { currentLanguage, LANGUAGES, onLanguageChange, setLanguage, t } from './i18n.js';
 import { scheduleRender } from './render.js';
 import { APP_COMMIT, APP_VERSION, COMMIT_URL, RELEASE_URL, REPOSITORY_URL } from './version.js';
-import { applyView, toggleSidebar } from './view.js';
+import { applyView, revealEditor, setMode, toggleSidebar } from './view.js';
 
 // Every state key has a form control with the same id, except the logo (a file input).
 const ids = Object.keys(state).filter(k => k !== 'logoDataUrl');
@@ -425,6 +425,9 @@ function bindPdf() {
       else if (command === 'import') document.getElementById('importFile').click();
       else if (command === 'print') openPrintWindow();
       else if (command === 'toggle-sidebar') toggleSidebar();
+      else if (command === 'mode-edit') setMode('edit');
+      else if (command === 'mode-split') setMode('split');
+      else if (command === 'mode-view') setMode('view');
     });
   } else {
     // In the browser the PDF with project is drawn by the studio, page by page: say so where the choice is made.
@@ -473,7 +476,9 @@ function imageReference(name) {
   return `![${alt}](${destination})`;
 }
 
+// Inserts a block at the cursor of the editor, shown first when the preview was alone.
 function insertIntoEditor(text) {
+  revealEditor();
   insertBlock(document.getElementById('markdown'), text);
 }
 

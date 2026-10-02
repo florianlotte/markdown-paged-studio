@@ -22,7 +22,7 @@
 
 **Try it online: [florianlotte.github.io/markdown-paged-studio](https://florianlotte.github.io/markdown-paged-studio/)** (deployed from `main` by GitHub Actions; your documents stay in your browser).
 
-![Markdown Paged Studio: the editor on the left, the paged preview on the right](docs/screenshots/studio.png)
+![Markdown Paged Studio: the Markdown editor and the paged preview side by side, the settings in the sidebar](docs/screenshots/studio.png)
 
 ## Features
 
@@ -38,7 +38,7 @@
 - **Images** uploaded, dropped or pasted, matched to the Markdown by file name, resizable like the diagrams.
 - **Custom CSS** editor with import, applied to the document only.
 - **Interface in English or French**, following the browser or your choice.
-- **Preview controls**: one page or two pages side by side, zoom, fit to width, Ctrl + wheel, and a collapsible sidebar.
+- **Edit, Split or View**: the editor and the paged preview share the window with a draggable splitter, or one of them takes it all; plus one page or two pages side by side, zoom, fit to width, Ctrl + wheel, and a collapsible settings sidebar.
 - **Autosave** in the browser, plus export and import of the whole configuration as JSON.
 - **Personal defaults** (your name, company logo, stylesheet, template) from a gitignored `local/` folder.
 - **Export menu**: PDF with project, PDF only, HTML with project (a standalone page that paginates offline), Markdown with project (a `.md` whose YAML front matter holds the settings and images) or the project alone. The PDF comes from the print dialog in the browser, as a direct file in the desktop app.
@@ -67,7 +67,7 @@ Node.js 20.19 or newer (or 22.12+) is required by Vite 8.
 
 ### Writing
 
-The **Content** tab holds the Markdown editor. Import an existing `.md` file or download the current one. The parser is [markdown-it](https://github.com/markdown-it/markdown-it): all of [CommonMark](https://commonmark.org) and of GitHub Flavored Markdown (tables, strikethrough, task lists, automatic links), plus footnotes and typographic replacements. Raw HTML inside Markdown is intentionally disabled. [Markdown support](docs/markdown-support.md) lists what is understood, the four deliberate differences with the specification, what is not supported (formulas, definition lists…), and the conformance measured on the official examples.
+The Markdown editor sits in the main area, beside the paged preview (**Split**) or alone (**Edit**); **View** shows the preview alone. The bar above the editor inserts a page break or a table of contents, imports an existing `.md` file or downloads the current one. The **Content** tab of the sidebar holds the cover fields and the images. The parser is [markdown-it](https://github.com/markdown-it/markdown-it): all of [CommonMark](https://commonmark.org) and of GitHub Flavored Markdown (tables, strikethrough, task lists, automatic links), plus footnotes and typographic replacements. Raw HTML inside Markdown is intentionally disabled. [Markdown support](docs/markdown-support.md) lists what is understood, the four deliberate differences with the specification, what is not supported (formulas, definition lists…), and the conformance measured on the official examples.
 
 Whatever the studio writes into the editor for you (the insert buttons, a pasted image, a size set from the preview) is an ordinary edit: Ctrl+Z undoes it like something you typed.
 
@@ -100,7 +100,7 @@ flowchart LR
 
 You rarely need to type the size and the alignment: hover or click a diagram in the preview to get size presets (25, 50, 75, 100 %, natural size), alignment buttons and a handle to drag, which also answers to the arrow keys in 5 % steps. A clicked diagram keeps its tools open, also on touch screens, until you click elsewhere or press Escape, so several adjustments can follow one another.
 
-Every change is written back to that opening line, so the size travels with the Markdown into exports, the desktop app and the MCP server. Ctrl+Z undoes it, in the editor or straight from the preview (also when the sidebar is hidden). Without attributes a diagram keeps its natural size, and it is never taller than the text area of a page.
+Every change is written back to that opening line, so the size travels with the Markdown into exports, the desktop app and the MCP server. Ctrl+Z undoes it, in the editor or straight from the preview (also in View mode, when the editor is hidden). Without attributes a diagram keeps its natural size, and it is never taller than the text area of a page.
 
 Every diagram type supported by [Mermaid](https://mermaid.js.org) works. Diagrams are rendered before pagination, so Paged.js knows their exact size, and the resulting SVG is part of the exported file. A diagram with a syntax error shows its error message and source in place, without breaking the rest of the document. Mermaid is loaded on demand the first time a document contains a diagram.
 
@@ -231,18 +231,20 @@ Use print units (`mm`, `pt`) and paged-media properties such as `break-before: p
 
 ### Preview controls
 
-| Control                                  | Effect                                                                                                                           |
-| ---------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| **1 page** / **2 pages**                 | One continuous column, or two pages side by side                                                                                 |
-| **−** / **+**                            | Zoom out or in by 10 %, between 25 % and 300 %                                                                                   |
-| **Fit**                                  | Fit the page (or the pair of pages) to the available width, and keep following window resizes                                    |
-| **Ctrl + wheel** (Cmd on macOS)          | Zoom with the mouse over the preview                                                                                             |
-| **Sidebar toggle** (left of the toolbar) | Hide or show the settings sidebar to give the preview the full width; in the desktop app also **View → Toggle Sidebar** (Ctrl+B) |
-| **Links** of the document                | Open in a new tab (the system browser in the desktop app), so the studio stays in place                                          |
+| Control                                  | Effect                                                                                                                                                                                      |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Edit** / **Split** / **View**          | The editor alone, both side by side, or the preview alone: Ctrl+Shift+1/2/3 (Cmd+Alt+1/2/3 on macOS), in the desktop app also the **View** menu. On phones Split gives way to Edit and View |
+| **Splitter** between editor and preview  | Drag to share the width (20 to 80 %); arrow keys move it by 2 %, Home and End to the ends, a double-click resets the half                                                                   |
+| **1 page** / **2 pages**                 | One continuous column, or two pages side by side                                                                                                                                            |
+| **−** / **+**                            | Zoom out or in by 10 %, between 25 % and 300 %                                                                                                                                              |
+| **Fit**                                  | Fit the page (or the pair of pages) to the available width, and keep following window resizes                                                                                               |
+| **Ctrl + wheel** (Cmd on macOS)          | Zoom with the mouse over the preview                                                                                                                                                        |
+| **Sidebar toggle** (left of the toolbar) | Hide or show the settings sidebar to give the preview the full width; in the desktop app also **View → Toggle Sidebar** (Ctrl+B)                                                            |
+| **Links** of the document                | Open in a new tab (the system browser in the desktop app), so the studio stays in place                                                                                                     |
 
 ![Two pages side by side in the preview: table of contents, highlighted code and a captioned diagram](docs/screenshots/spread.png)
 
-Layout, zoom and the sidebar state are remembered in the browser, separately from the document.
+View mode, editor width, layout, zoom and the sidebar state are remembered in the browser, separately from the document.
 
 The footer of the sidebar shows which build is running, for example `v1.13.1 · 2205ce9`: the version links to its release notes and the commit to the exact source. It tells apart two deployments of the online demo made between two releases. The GitHub mark in front of it leads to the repository, and the author's name next to it to his LinkedIn profile.
 

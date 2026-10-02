@@ -128,6 +128,11 @@ test('the desktop app renders the document and exports a PDF directly', async ()
       .toEqual(['document.html', 'Architecture Report.md', 'markdown-paged-studio-project.json']);
     const [chooser] = await Promise.all([page.waitForEvent('filechooser'), send('import')]);
     expect(chooser.isMultiple()).toBe(false);
+    // The View menu switches the workbench mode.
+    await send('mode-view');
+    await expect(page.locator('#markdown')).toBeHidden();
+    await send('mode-split');
+    await expect(page.locator('#markdown')).toBeVisible();
     // Such a PDF reopens the document.
     page.on('dialog', dialog => dialog.accept());
     await page.locator('#resetDocument').click();

@@ -188,9 +188,18 @@ function enhance(diagram, target, commit, onSelect) {
     tools.style.right = 'auto';
     tools.style.left = `${left}%`;
     const sheet = diagram.closest('.pagedjs_page')?.getBoundingClientRect();
-    if (sheet && tools.getBoundingClientRect().right > sheet.right - 4) {
+    if (!sheet) return;
+    let toolsBox = tools.getBoundingClientRect();
+    if (toolsBox.right > sheet.right - 4) {
       tools.style.left = 'auto';
       tools.style.right = `${100 - right}%`;
+      toolsBox = tools.getBoundingClientRect();
+    }
+    // A small page at a low zoom: the toolbar, which keeps its screen size, is wider than the room beside
+    // the drawing. It then starts at the left edge of the page, where every button stays reachable.
+    if (toolsBox.left < sheet.left + 4) {
+      tools.style.right = 'auto';
+      tools.style.left = `${((sheet.left + 4 - box.left) / box.width) * 100}%`;
     }
   };
   place();

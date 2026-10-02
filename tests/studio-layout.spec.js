@@ -1,4 +1,5 @@
-// Integration tests of the studio chrome: preview scrolling, layouts and zoom, sidebar, tabs, phone layout.
+// Integration tests of the studio chrome: preview scrolling, view modes and the splitter, layouts and zoom,
+// sidebar, tabs, phone layout.
 import { test, expect } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import { STATUS_DONE, openFreshStudio, pages, status } from './helpers/studio.mjs';
@@ -80,6 +81,8 @@ test('sidebar tabs follow the ARIA tabs pattern with keyboard navigation', async
 test('the sidebar header stays fixed while the settings scroll in a short window', async ({ page }) => {
   await page.setViewportSize({ width: 1200, height: 520 });
   await openFreshStudio(page);
+  // The Design tab holds the tall CSS editor: its panel overflows the short window.
+  await page.locator('#tab-design').click();
   const body = page.locator('.sidebar-body');
   expect(await body.evaluate(el => el.scrollHeight > el.clientHeight)).toBe(true);
   const before = await page.locator('.sidebar-header').boundingBox();
@@ -102,7 +105,10 @@ test('the sidebar can be hidden and the choice is remembered', async ({ page }) 
   const toggle = page.locator('#toggleSidebar');
   const sidebar = page.locator('#sidebar');
   const previewWidth = () => page.locator('.preview-shell').evaluate(el => el.clientWidth);
+  const workbenchWidth = () => page.locator('.workbench').evaluate(el => el.clientWidth);
   const widthBefore = await previewWidth();
+  const workbenchBefore = await workbenchWidth();
+  const zoomBefore = await page.locator('#zoomValue').textContent();
   await expect(toggle).toHaveAttribute('aria-expanded', 'true');
   // The drawer close button belongs to the phone layout only.
   await expect(page.locator('#closeSidebar')).toBeHidden();
@@ -111,9 +117,11 @@ test('the sidebar can be hidden and the choice is remembered', async ({ page }) 
   await expect(sidebar).toBeHidden();
   await expect(toggle).toHaveAttribute('aria-expanded', 'false');
   await expect(toggle).toHaveAttribute('aria-label', 'Show sidebar');
-  await expect.poll(previewWidth).toBeGreaterThan(widthBefore + 300);
+  // The workbench takes the whole width; the editor keeps its share, the preview gets the other half.
+  await expect.poll(workbenchWidth).toBeGreaterThan(workbenchBefore + 300);
+  await expect.poll(previewWidth).toBeGreaterThan(widthBefore + 150);
   // Fit mode follows the wider preview.
-  await expect(page.locator('#zoomValue')).not.toHaveText('119 %');
+  await expect(page.locator('#zoomValue')).not.toHaveText(zoomBefore);
 
   await page.reload();
   await expect(status(page)).toHaveText(STATUS_DONE);
@@ -136,6 +144,16 @@ test('on a phone the settings are a closed drawer and the preview fits the scree
   expect(pageBox.width).toBeLessThanOrEqual(390);
   expect(pageBox.y).toBeLessThan(200);
   await expect(page.locator('#exportDefault')).toBeVisible();
+  // No room for two panes: Split gives way to a switch between Edit and View, View first.
+  await expect(page.locator('#modeSplit')).toBeHidden();
+  await expect(page.locator('#modeView')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#markdown')).toBeHidden();
+  await page.locator('#modeEdit').click();
+  await expect(page.locator('#markdown')).toBeVisible();
+  await expect(page.locator('.preview-shell')).toBeHidden();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await page.locator('#modeView').click();
+  await expect(page.locator('#preview .pagedjs_page').first()).toBeVisible();
   // The export menu opens in the phone toolbar too.
   await page.locator('#exportMenu').click();
   await expect(page.locator('#exportOptions')).toBeVisible();
@@ -160,10 +178,92 @@ test('on a phone the settings are a closed drawer and the preview fits the scree
   await expect(page.locator('#preview .pagedjs_page').first()).toBeVisible();
 });
 
+test('the editor shares the workspace: Edit, Split and View modes, the splitter and the phone', async ({ page }) => {
+  await openFreshStudio(page);
+  const editor = page.locator('#markdown');
+  const pane = page.locator('.editor-pane');
+  const shell = page.locator('.preview-shell');
+  const splitter = page.locator('.splitter');
+  const width = locator => locator.evaluate(el => el.getBoundingClientRect().width);
+  const zoom = () => page.locator('#preview').evaluate(el => Number(el.style.zoom));
+  // Split by default: both panes, the editor taking half of the workbench.
+  await expect(page.locator('#modeSplit')).toHaveAttribute('aria-pressed', 'true');
+  await expect(editor).toBeVisible();
+  await expect(page.locator('#preview .pagedjs_page').first()).toBeVisible();
+  const workbench = await width(page.locator('.workbench'));
+  expect(Math.abs((await width(pane)) - workbench / 2)).toBeLessThan(8);
+  await expect(splitter).toHaveAttribute('aria-valuenow', '50');
+
+  // The splitter is dragged, and the fit zoom follows the preview.
+  const zoomBefore = await zoom();
+  const box = await splitter.boundingBox();
+  const bench = await page.locator('.workbench').boundingBox();
+  await page.mouse.move(box.x + box.width / 2, box.y + 200);
+  await page.mouse.down();
+  await page.mouse.move(bench.x + bench.width * 0.3, box.y + 200, { steps: 8 });
+  await page.mouse.up();
+  await expect(splitter).toHaveAttribute('aria-valuenow', '30');
+  expect(Math.abs((await width(pane)) - workbench * 0.3)).toBeLessThan(8);
+  await expect.poll(zoom).toBeGreaterThan(zoomBefore);
+  // Keyboard on the separator: 2 % steps, Home and End, double-click resets the half.
+  await splitter.focus();
+  for (let i = 0; i < 5; i++) await page.keyboard.press('ArrowRight');
+  await expect(splitter).toHaveAttribute('aria-valuenow', '40');
+  await page.keyboard.press('Home');
+  await expect(splitter).toHaveAttribute('aria-valuenow', '20');
+  await page.keyboard.press('End');
+  await expect(splitter).toHaveAttribute('aria-valuenow', '80');
+  await splitter.dblclick();
+  await expect(splitter).toHaveAttribute('aria-valuenow', '50');
+
+  // View: the preview alone; Edit: the editor alone; Ctrl+Shift+2 brings the split back.
+  await page.locator('#modeView').click();
+  await expect(editor).toBeHidden();
+  await expect(splitter).toBeHidden();
+  expect(await width(shell)).toBe(workbench);
+  await page.locator('#modeEdit').click();
+  await expect(shell).toBeHidden();
+  await expect(editor).toBeVisible();
+  expect(await width(pane)).toBe(workbench);
+  await page.keyboard.press('Control+Shift+Digit2');
+  await expect(page.locator('#modeSplit')).toHaveAttribute('aria-pressed', 'true');
+  await expect(shell).toBeVisible();
+
+  // The mode and the editor width are remembered.
+  await splitter.focus();
+  await page.keyboard.press('Home');
+  await page.locator('#modeView').click();
+  await page.reload();
+  await expect(status(page)).toHaveText(STATUS_DONE);
+  await expect(page.locator('#modeView')).toHaveAttribute('aria-pressed', 'true');
+  await expect(splitter).toHaveAttribute('aria-valuenow', '20');
+  await page.locator('#modeSplit').click();
+  await expect(editor).toBeVisible();
+
+  // On a phone a remembered Split shows the preview, and comes back when the window grows; an explicit
+  // choice made on the phone is kept.
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.locator('#modeSplit')).toBeHidden();
+  await expect(page.locator('#modeView')).toHaveAttribute('aria-pressed', 'true');
+  await expect(editor).toBeHidden();
+  await page.setViewportSize({ width: 1400, height: 900 });
+  await expect(page.locator('#modeSplit')).toHaveAttribute('aria-pressed', 'true');
+  await expect(editor).toBeVisible();
+  await page.setViewportSize({ width: 390, height: 844 });
+  // The sidebar left open became the full-screen drawer of the phone: close it to reach the toolbar.
+  await page.locator('#closeSidebar').click();
+  await page.locator('#modeEdit').click();
+  await expect(shell).toBeHidden();
+  await page.setViewportSize({ width: 1400, height: 900 });
+  await expect(page.locator('#modeEdit')).toHaveAttribute('aria-pressed', 'true');
+  await expect(shell).toBeHidden();
+});
+
 test('the sidebar footer shows the running version and stays at the bottom', async ({ page }) => {
   const { version } = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
   await page.setViewportSize({ width: 1200, height: 520 });
   await openFreshStudio(page);
+  await page.locator('#tab-design').click();
   const footer = page.locator('.sidebar-footer');
   await expect(footer).toBeVisible();
   // The GitHub mark in front of the version leads to the repository.

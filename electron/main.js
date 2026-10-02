@@ -116,6 +116,9 @@ const MENU_FR = {
   'Print…': 'Imprimer…',
   View: 'Affichage',
   'Toggle Sidebar': 'Afficher ou masquer la barre latérale',
+  Edit: 'Édition',
+  'Side by side': 'Côte à côte',
+  Preview: 'Aperçu',
 };
 
 function buildMenu() {
@@ -143,6 +146,23 @@ function buildMenu() {
     {
       label: label('View'),
       submenu: [
+        // Same chords as the page: Ctrl+Alt is AltGr on European keyboards, Cmd+Shift+digits are macOS shots.
+        {
+          label: label('Edit'),
+          accelerator: isMac ? 'Cmd+Alt+1' : 'Ctrl+Shift+1',
+          click: () => sendCommand('mode-edit'),
+        },
+        {
+          label: label('Side by side'),
+          accelerator: isMac ? 'Cmd+Alt+2' : 'Ctrl+Shift+2',
+          click: () => sendCommand('mode-split'),
+        },
+        {
+          label: label('Preview'),
+          accelerator: isMac ? 'Cmd+Alt+3' : 'Ctrl+Shift+3',
+          click: () => sendCommand('mode-view'),
+        },
+        { type: 'separator' },
         { label: label('Toggle Sidebar'), accelerator: 'CmdOrCtrl+B', click: () => sendCommand('toggle-sidebar') },
         { type: 'separator' },
         { role: 'reload' },

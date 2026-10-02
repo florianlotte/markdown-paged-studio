@@ -7,6 +7,23 @@ All notable changes to Markdown Paged Studio are listed here, newest first. The 
 
 ## [Unreleased]
 
+## [1.19.0] - 2026-10-02
+
+### Changed
+
+- The Markdown editor leaves the sidebar for the main area, beside the paged preview. Three view modes in the
+  toolbar, **Edit**, **Split** (the default) and **View**, with a draggable splitter (arrow keys, Home, End,
+  double-click), keyboard shortcuts (Ctrl+Shift+1/2/3, Cmd+Alt+1/2/3 on macOS) and **View** menu entries in
+  the desktop app; the mode and the editor width are remembered. On phones, Split gives way to a switch
+  between Edit and View. The insert buttons and the Markdown import and download sit in a bar above the
+  editor; the **Content** tab keeps the cover fields and the images. An insert made while the editor is
+  hidden shows it first.
+
+### Fixed
+
+- The size toolbar of an image or a diagram stays inside the page at low zooms, where it is wider than the
+  room beside the drawing: it now starts at the left edge of the page instead of being clipped.
+
 ## [1.18.0] - 2026-10-02
 
 ### Added
@@ -291,7 +308,8 @@ All notable changes to Markdown Paged Studio are listed here, newest first. The 
 - Portable desktop app for Windows, Linux and macOS with direct PDF export.
 - Docker image, Playwright integration tests and CI.
 
-[Unreleased]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.18.0...HEAD
+[Unreleased]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.19.0...HEAD
+[1.19.0]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.18.0...v1.19.0
 [1.18.0]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.17.0...v1.18.0
 [1.17.0]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.16.0...v1.17.0
 [1.16.0]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.15.1...v1.16.0

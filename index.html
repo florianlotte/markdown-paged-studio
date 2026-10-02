@@ -113,18 +113,6 @@
               </div>
               <label>Logo<input id="logo" type="file" accept="image/*" /></label>
               <button id="clearLogo" class="secondary">Remove logo</button>
-              <label
-                >Markdown<textarea id="markdown" class="editor markdown-editor" spellcheck="false"></textarea>
-              </label>
-              <div class="row-actions">
-                <button id="insertPageBreak" class="secondary" title="Insert \newpage at the cursor">Page break</button>
-                <button id="insertToc" class="secondary" title="Insert [[toc]] at the cursor">Table of contents</button>
-              </div>
-              <div class="row-actions">
-                <button id="loadMarkdown" class="secondary">Import .md</button>
-                <input id="markdownFile" type="file" accept=".md,.markdown,text/markdown,text/plain" hidden />
-                <button id="downloadMarkdown" class="secondary">Download .md</button>
-              </div>
 
               <section class="images" aria-labelledby="imagesTitle">
                 <div class="images-header">
@@ -268,11 +256,48 @@
                 </svg>
               </button>
               <div>
-                <strong>Paged preview</strong>
+                <strong class="toolbar-heading">Paged preview</strong>
                 <span id="status">Starting…</span>
               </div>
             </div>
             <div class="view-controls">
+              <div class="segmented" role="group" aria-label="View mode">
+                <button id="modeEdit" class="mode-button" title="Markdown only" aria-pressed="false">
+                  <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true" fill="none">
+                    <path
+                      d="M4 14.5 13.5 5l2.5 2.5L6.5 17H4z"
+                      stroke="currentColor"
+                      stroke-width="1.6"
+                      stroke-linejoin="round"
+                    />
+                    <path d="M12 6.5 15.5 10" stroke="currentColor" stroke-width="1.6" />
+                  </svg>
+                  <span class="mode-label">Edit</span>
+                </button>
+                <button
+                  id="modeSplit"
+                  class="mode-button active"
+                  title="Editor and preview side by side"
+                  aria-pressed="true"
+                >
+                  <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true" fill="none">
+                    <rect x="3" y="4" width="14" height="12" rx="1.5" stroke="currentColor" stroke-width="1.6" />
+                    <path d="M10 4v12" stroke="currentColor" stroke-width="1.6" />
+                  </svg>
+                  <span class="mode-label">Split</span>
+                </button>
+                <button id="modeView" class="mode-button" title="Preview only" aria-pressed="false">
+                  <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true" fill="none">
+                    <path
+                      d="M2.5 10s3-5 7.5-5 7.5 5 7.5 5-3 5-7.5 5-7.5-5-7.5-5z"
+                      stroke="currentColor"
+                      stroke-width="1.6"
+                    />
+                    <circle cx="10" cy="10" r="2.5" stroke="currentColor" stroke-width="1.6" />
+                  </svg>
+                  <span class="mode-label">View</span>
+                </button>
+              </div>
               <div class="segmented" role="group" aria-label="Page layout">
                 <button id="layoutSingle" class="active" title="One continuous column" aria-pressed="true">
                   1 page
@@ -359,9 +384,41 @@
               </div>
             </div>
           </header>
-          <section class="preview-shell">
-            <div id="preview" class="preview"></div>
-          </section>
+          <div class="workbench" data-mode="split">
+            <section class="editor-pane" id="editorPane" aria-label="Markdown editor">
+              <!-- A strip of document tabs (.editor-tabs) will sit here, above the editor bar. -->
+              <div class="editor-bar">
+                <strong class="editor-title">Markdown</strong>
+                <button id="insertPageBreak" class="secondary" title="Insert \newpage at the cursor">Page break</button>
+                <button id="insertToc" class="secondary" title="Insert [[toc]] at the cursor">Table of contents</button>
+                <span class="editor-bar-spacer" aria-hidden="true"></span>
+                <button id="loadMarkdown" class="secondary">Import .md</button>
+                <input id="markdownFile" type="file" accept=".md,.markdown,text/markdown,text/plain" hidden />
+                <button id="downloadMarkdown" class="secondary">Download .md</button>
+              </div>
+              <textarea
+                id="markdown"
+                class="editor markdown-editor"
+                aria-label="Markdown"
+                spellcheck="false"
+              ></textarea>
+            </section>
+            <div
+              class="splitter"
+              role="separator"
+              aria-orientation="vertical"
+              aria-label="Editor width"
+              aria-valuemin="20"
+              aria-valuemax="80"
+              aria-valuenow="50"
+              aria-controls="editorPane"
+              tabindex="0"
+              title="Drag to resize the editor (arrow keys: 2 % steps, double-click: half)"
+            ></div>
+            <section class="preview-shell">
+              <div id="preview" class="preview"></div>
+            </section>
+          </div>
         </main>
       </div>
     </div>

@@ -115,8 +115,8 @@ try {
 
   // The studio with its sample document.
   let page = await openStudio(browser);
-  // Zoomed out so the cover and the first page of text both show.
-  for (let step = 0; step < 6; step++) await page.locator('#zoomOut').click();
+  // The editor beside the preview, fitted to its half: scrolled to the end of the cover and the first page
+  // of text.
   await page.locator('.preview-shell').evaluate(shell => (shell.scrollTop = 330));
   await page.waitForTimeout(300);
   await shot(page, 'studio.png');
@@ -125,12 +125,15 @@ try {
   // Two pages side by side: table of contents, highlighted code, captioned diagram.
   page = await openStudio(browser, { markdown: REPORT });
   await page.locator('#cover').uncheck();
+  // The preview alone: the pair of pages takes the whole workspace.
+  await page.locator('#modeView').click();
   await page.locator('#layoutSpread').click();
   await page.waitForTimeout(300);
   await rendered(page);
   await shot(page, 'spread.png');
 
   // A diagram with its tools.
+  await page.locator('#modeSplit').click();
   await page.locator('#layoutSingle').click();
   const diagram = page.locator('#preview .mermaid-diagram');
   await diagram.scrollIntoViewIfNeeded();

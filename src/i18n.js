@@ -93,6 +93,17 @@ const TRANSLATIONS = {
     'Zoom in': 'Zoom avant',
     Fit: 'Ajuster',
     'Fit to the available width': 'Ajuster à la largeur disponible',
+    'View mode': 'Mode d’affichage',
+    Edit: 'Édition',
+    'Markdown only': 'Markdown seul',
+    Split: 'Côte à côte',
+    'Editor and preview side by side': 'Éditeur et aperçu côte à côte',
+    View: 'Aperçu',
+    'Preview only': 'Aperçu seul',
+    'Markdown editor': 'Éditeur Markdown',
+    'Editor width': 'Largeur de l’éditeur',
+    'Drag to resize the editor (arrow keys: 2 % steps, double-click: half)':
+      'Glisser pour redimensionner l’éditeur (flèches : pas de 2 %, double-clic : moitié)',
     Reset: 'Réinitialiser',
     'Import…': 'Importer…',
     'A PDF, an HTML, a Markdown or a project exported by the studio':

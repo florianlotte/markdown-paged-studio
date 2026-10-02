@@ -37,6 +37,14 @@ test('the interface switches to French and back, and remembers the choice', asyn
   );
   await expect(page.locator('#toggleSidebar')).toHaveAttribute('aria-label', 'Masquer la barre latérale');
   await expect(page.locator('#zoomIn')).toHaveAttribute('aria-label', 'Zoom avant');
+  // The workbench: mode buttons, editor bar and splitter.
+  await expect(page.locator('.view-controls .segmented').first()).toHaveAttribute('aria-label', 'Mode d’affichage');
+  await expect(page.locator('.mode-label')).toHaveText(['Édition', 'Côte à côte', 'Aperçu']);
+  await expect(page.locator('#modeSplit')).toHaveAttribute('title', 'Éditeur et aperçu côte à côte');
+  await expect(page.locator('.editor-title')).toHaveText('Markdown');
+  await expect(page.locator('#insertPageBreak')).toHaveText('Saut de page');
+  await expect(page.locator('#loadMarkdown')).toHaveText('Importer .md');
+  await expect(page.locator('.splitter')).toHaveAttribute('aria-label', 'Largeur de l’éditeur');
   await expect(page.locator('.images-hint')).toHaveText(
     /Associées par nom de fichier[^]*photo\.png[^]*coller des images/,
   );
@@ -64,6 +72,8 @@ test('the interface switches to French and back, and remembers the choice', asyn
   await expect(page.getByRole('tab')).toHaveText(['Content', 'Design', 'Page']);
   await expect(page.locator('#exportDefault')).toHaveText('Export');
   await expect(page.locator('#toggleSidebar')).toHaveAttribute('aria-label', 'Hide sidebar');
+  await expect(page.locator('.mode-label')).toHaveText(['Edit', 'Split', 'View']);
+  await expect(page.locator('.splitter')).toHaveAttribute('aria-label', 'Editor width');
   await expect(page.locator('#imageList button')).toHaveText(['Insert', 'Remove']);
 });
 
