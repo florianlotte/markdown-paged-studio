@@ -7,6 +7,17 @@ All notable changes to Markdown Paged Studio are listed here, newest first. The 
 
 ## [Unreleased]
 
+## [1.19.2] - 2026-10-03
+
+### Fixed
+
+- The size toolbar of an image or a diagram is placed again when the zoom changes (zoom buttons, Ctrl + wheel,
+  the splitter), so it no longer sticks out of the page after zooming out.
+- The sidebar closes when the window becomes as narrow as a phone, where it would cover the whole screen, and
+  comes back when the window grows.
+- The description of the project attached to a PDF, and the documentation, name **Import…** instead of the
+  former Load config.
+
 ## [1.19.1] - 2026-10-03
 
 ### Changed
@@ -315,7 +326,8 @@ All notable changes to Markdown Paged Studio are listed here, newest first. The 
 - Portable desktop app for Windows, Linux and macOS with direct PDF export.
 - Docker image, Playwright integration tests and CI.
 
-[Unreleased]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.19.1...HEAD
+[Unreleased]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.19.2...HEAD
+[1.19.2]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.19.1...v1.19.2
 [1.19.1]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.19.0...v1.19.1
 [1.19.0]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.18.0...v1.19.0
 [1.18.0]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.17.0...v1.18.0

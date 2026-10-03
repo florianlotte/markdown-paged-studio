@@ -236,8 +236,8 @@ const AFTER_PAGINATION = {
 };
 
 // Self-contained HTML: same content and CSS as the preview, with Paged.js inlined so it works offline.
-// `source` is the configuration JSON (the content of a Save config file): the exported HTML carries it in
-// a data block, so that Load config can reopen the file.
+// `source` is the project JSON (the content of a project file): the exported HTML carries it in a data
+// block, so that Import… can reopen the file.
 export async function standaloneHtml({ mode = 'export', source = '' } = {}) {
   const content = await documentHtml();
   const css = documentCss();

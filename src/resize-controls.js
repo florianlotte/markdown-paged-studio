@@ -4,6 +4,10 @@
 import { t } from './i18n.js';
 import { DIAGRAM_WIDTH_MAX, DIAGRAM_WIDTH_MIN, updateFenceAttributes, updateImageAttributes } from './markdown.js';
 
+// How to place the tools of each resizable element again: their position depends on the zoom of the preview
+// and on the room in the page, which change without a render (zoom buttons, Ctrl + wheel, the splitter).
+const placers = new WeakMap();
+
 const BLOCK_ALIGNMENTS = { options: ['left', 'center', 'right'], fallback: 'center' };
 const INLINE_ALIGNMENTS = { options: ['inline', 'left', 'center', 'right'], fallback: 'inline' };
 
@@ -202,6 +206,7 @@ function enhance(diagram, target, commit, onSelect) {
       tools.style.left = `${((sheet.left + 4 - box.left) / box.width) * 100}%`;
     }
   };
+  placers.set(diagram, place);
   place();
 
   const preview = percentValue => {
@@ -262,6 +267,11 @@ function enhance(diagram, target, commit, onSelect) {
   diagram.append(tools, handle);
   // Now that the toolbar is laid out, its width is known: check that it fits in the page.
   place();
+}
+
+// Places the tools of every resizable element of the preview again, after the zoom or the layout changed.
+export function placeResizables(preview) {
+  for (const element of preview.querySelectorAll('.resizable')) placers.get(element)?.();
 }
 
 // Adds the controls to every rendered diagram and image of the preview. `getMarkdown` returns the current

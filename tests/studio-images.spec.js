@@ -211,6 +211,23 @@ test('an image inside text floats with the text around it, or takes a line of it
     return buttons.length === 9 && buttons.every(box => box.left >= sheet.left && box.right <= sheet.right);
   });
   expect(inside).toBe(true);
+  // The tools keep their screen size: zoomed out, without any render, they are placed again. They no longer
+  // fit beside the image, nor quite in the page: they start at its left edge instead of being cut off there.
+  const toolBoxes = () =>
+    image.evaluate(element => {
+      const sheet = element.closest('.pagedjs_page').getBoundingClientRect();
+      const boxes = [...element.querySelectorAll('.diagram-tools button')].map(button =>
+        button.getBoundingClientRect(),
+      );
+      return {
+        startsInside: boxes.every(box => box.left >= sheet.left),
+        inside: boxes.every(box => box.left >= sheet.left && box.right <= sheet.right),
+      };
+    });
+  await page.locator('#zoomOut').click();
+  await expect.poll(async () => (await toolBoxes()).startsInside).toBe(true);
+  await page.locator('#zoomFit').click();
+  await expect.poll(async () => (await toolBoxes()).inside).toBe(true);
   const beside = await page.evaluate(() => {
     const wrapper = document.querySelector('#preview .document-image');
     const paragraph = wrapper.closest('p');

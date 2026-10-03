@@ -246,12 +246,15 @@ test('the editor shares the workspace: Edit, Split and View modes, the splitter 
   await expect(page.locator('#modeSplit')).toBeHidden();
   await expect(page.locator('#modeView')).toHaveAttribute('aria-pressed', 'true');
   await expect(editor).toBeHidden();
+  // The sidebar would be a drawer over the whole screen: it closes as the window narrows, and comes back.
+  await expect(page.locator('#sidebar')).toBeHidden();
+  await expect(page.locator('#preview .pagedjs_page').first()).toBeVisible();
   await page.setViewportSize({ width: 1400, height: 900 });
+  await expect(page.locator('#sidebar')).toBeVisible();
   await expect(page.locator('#modeSplit')).toHaveAttribute('aria-pressed', 'true');
   await expect(editor).toBeVisible();
   await page.setViewportSize({ width: 390, height: 844 });
-  // The sidebar left open became the full-screen drawer of the phone: close it to reach the toolbar.
-  await page.locator('#closeSidebar').click();
+  await expect(page.locator('#sidebar')).toBeHidden();
   await page.locator('#modeEdit').click();
   await expect(shell).toBeHidden();
   await page.setViewportSize({ width: 1400, height: 900 });

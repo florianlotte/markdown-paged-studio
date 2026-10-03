@@ -3,6 +3,7 @@
 // Stored apart from the document, they are not part of the config JSON. Zoom uses the CSS `zoom` property
 // so the scrollable area follows the scale.
 import { t } from './i18n.js';
+import { placeResizables } from './resize-controls.js';
 
 const VIEW_KEY = 'markdown-paged-studio:view';
 const ZOOM_MIN = 0.25;
@@ -124,7 +125,19 @@ export function applyView() {
   document.getElementById('layoutSpread').setAttribute('aria-pressed', String(!single));
   document.getElementById('zoomFit').classList.toggle('active', view.fit);
   document.getElementById('zoomFit').setAttribute('aria-pressed', String(view.fit));
+  schedulePlacement(preview);
   saveView();
+}
+
+// The tools of diagrams and images keep their screen size: once the zoom is applied, they are placed again
+// in their page. One pass per frame, however often the view changes (fit mode follows every resize).
+let placementFrame = null;
+function schedulePlacement(preview) {
+  if (placementFrame !== null) return;
+  placementFrame = requestAnimationFrame(() => {
+    placementFrame = null;
+    placeResizables(preview);
+  });
 }
 
 function setZoom(zoom) {
@@ -226,8 +239,20 @@ export function initView() {
   }
   bindSplitter();
   bindModeShortcuts();
-  // Crossing the phone breakpoint changes the effective mode without any resize of the preview.
-  NARROW.addEventListener('change', applyView);
+  // Crossing the phone breakpoint changes the effective mode without any resize of the preview. The sidebar
+  // becomes a full-screen drawer there: it closes when the window narrows, and comes back as it was (or
+  // stays open if it was opened meanwhile) when the window grows.
+  let wideSidebar = null;
+  NARROW.addEventListener('change', () => {
+    if (NARROW.matches) {
+      wideSidebar = view.sidebar;
+      view.sidebar = false;
+    } else if (wideSidebar !== null) {
+      view.sidebar = wideSidebar || view.sidebar;
+      wideSidebar = null;
+    }
+    applyView();
+  });
 
   // Ctrl + wheel over the preview zooms the pages instead of the whole studio.
   const shell = document.querySelector('.preview-shell');

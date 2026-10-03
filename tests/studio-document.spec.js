@@ -331,7 +331,7 @@ test('a logo saved in localStorage by an older version is moved to IndexedDB', a
   await expect.poll(() => logo.evaluate(el => el.naturalWidth)).toBe(200);
 });
 
-test('an exported HTML file carries the document and reopens with Load config', async ({ page }) => {
+test('an exported HTML file carries the document and reopens with Import', async ({ page }) => {
   await openFreshStudio(page);
   page.on('dialog', dialog => dialog.accept());
   await page.locator('#imageFiles').setInputFiles({ name: 'plan.png', mimeType: 'image/png', buffer: png(40, 30) });

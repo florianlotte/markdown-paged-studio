@@ -58,7 +58,7 @@ function removeAttachments(document, names) {
   root.set(PDFName.of('Names'), replacement);
 }
 
-// The PDF with the sources attached: `json` is the configuration (the content of a Save config file),
+// The PDF with the sources attached: `json` is the project (the content of a project file),
 // `markdown` the document alone. Attachments of the same names, from an earlier pass, are replaced.
 export async function attachSources(pdfBytes, { json, markdown }) {
   const document = await PDFDocument.load(bytesOf(pdfBytes), { ignoreEncryption: false });
@@ -66,7 +66,8 @@ export async function attachSources(pdfBytes, { json, markdown }) {
   const now = new Date();
   await document.attach(encoder.encode(json), SOURCE_NAME, {
     mimeType: 'application/json',
-    description: 'Markdown Paged Studio document: settings, Markdown, logo and images. Open it with Load config.',
+    description:
+      'Markdown Paged Studio project: settings, Markdown, logo and images. Import this PDF in the studio to edit it.',
     creationDate: now,
     modificationDate: now,
   });

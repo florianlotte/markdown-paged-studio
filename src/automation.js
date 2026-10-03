@@ -13,7 +13,7 @@ export function installAutomationApi() {
     schema: () => ({ kinds: { ...CONFIG_SCHEMA }, pageSizes: [...PAGE_SIZES], marginMaxMm: MARGIN_MAX_MM }),
     // Resolves to the standalone HTML for `config` (validated like a JSON import) in the given mode.
     // `images` is { fileName: dataUrl }: the document's images, matched by file name, kept in memory only.
-    // The configuration of the last render, as Save config writes it: what render_pdf attaches to the PDF.
+    // The configuration of the last render, as a project file holds it: what render_pdf attaches to the PDF.
     source: () => JSON.stringify({ ...state, images: exportImages() }),
     async render(config = {}, mode = 'pdf', { images } = {}) {
       Object.assign(state, DEFAULTS, sanitizeConfig(config));
