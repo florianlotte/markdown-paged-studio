@@ -32,7 +32,7 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           # The commit that was tested, not whatever main points to by now.
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
