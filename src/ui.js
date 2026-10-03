@@ -1,8 +1,16 @@
 // The studio's controls: form fields bound to the state, tabs, file imports, downloads, export and print.
 // The markup itself lives in index.html.
-import { clearStoredConfig, DEFAULTS, sanitizeConfig, state } from './config.js';
+import {
+  activeFile,
+  addEmptyFile,
+  addFiles,
+  initChapters,
+  insertIntoDocument,
+  replaceActiveText,
+  syncChapters,
+} from './chapters.js';
+import { clearStoredConfig, DEFAULTS, mergeConfig, sanitizeConfig, state } from './config.js';
 import { documentCss, documentHtml, sourcesOfHtml, standaloneHtml } from './document.js';
-import { insertBlock } from './editor.js';
 import {
   addImageFiles,
   clearImages,
@@ -20,10 +28,12 @@ import {
 import { currentLanguage, LANGUAGES, onLanguageChange, setLanguage, t } from './i18n.js';
 import { scheduleRender } from './render.js';
 import { APP_COMMIT, APP_VERSION, COMMIT_URL, RELEASE_URL, REPOSITORY_URL } from './version.js';
-import { applyView, revealEditor, setMode, toggleSidebar } from './view.js';
+import { alignPreview, editorScrolled, initSync } from './sync.js';
+import { applyView, revealEditor, setMode, toggleSidebar, toggleSync } from './view.js';
 
-// Every state key has a form control with the same id, except the logo (a file input).
-const ids = Object.keys(state).filter(k => k !== 'logoDataUrl');
+// Every state key has a form control with the same id, except the logo (a file input) and the text of the
+// document (the files and the editor, see chapters.js).
+const ids = Object.keys(state).filter(k => !['logoDataUrl', 'markdown', 'files'].includes(k));
 
 export function syncInputs() {
   for (const key of ids) {
@@ -34,10 +44,12 @@ export function syncInputs() {
   }
 }
 
-// Merge a (possibly untrusted) config object into the state, refresh the form, and re-render.
+// Merge a (possibly untrusted) config object into the state, refresh the form and the editor, and re-render.
 export function applyConfig(config) {
-  Object.assign(state, sanitizeConfig(config));
+  const text = 'markdown' in config || 'files' in config;
+  mergeConfig(state, config);
   syncInputs();
+  if (text) syncChapters();
   scheduleRender();
 }
 
@@ -128,16 +140,24 @@ function bindFiles() {
   document
     .getElementById('loadMarkdown')
     .addEventListener('click', () => document.getElementById('markdownFile').click());
-  document.getElementById('markdownFile').addEventListener('change', e =>
-    readTextFile(e.target, async text => {
-      // A Markdown exported with its project keeps its front matter out of the editor; the rest is kept.
-      const { sourcesOfMarkdown } = await import('./markdown-sources.js');
-      const { markdown } = JSON.parse(sourcesOfMarkdown(text).json);
-      state.markdown = markdown;
-      document.getElementById('markdown').value = markdown;
-      scheduleRender();
-    }),
-  );
+  // The current file takes the text of a Markdown file, as one edit that Ctrl+Z reverts. A Markdown
+  // exported with its project keeps its front matter out of the editor.
+  document
+    .getElementById('markdownFile')
+    .addEventListener('change', e =>
+      readTextFile(e.target, async text => replaceActiveText(await markdownOfText(text))),
+    );
+
+  // More files for the document: an empty one, or Markdown files, each becoming a file of its name.
+  document.getElementById('addFile').addEventListener('click', addEmptyFile);
+  document.getElementById('addFiles').addEventListener('click', () => document.getElementById('chapterFiles').click());
+  document.getElementById('chapterFiles').addEventListener('change', async e => {
+    const chosen = [...(e.target.files ?? [])];
+    e.target.value = '';
+    const entries = [];
+    for (const file of chosen) entries.push({ name: file.name, markdown: await markdownOfText(await file.text()) });
+    addFiles(entries);
+  });
 
   document.getElementById('loadCss').addEventListener('click', () => document.getElementById('cssFile').click());
   document.getElementById('cssFile').addEventListener('change', e =>
@@ -156,7 +176,7 @@ function bindFiles() {
 
   document
     .getElementById('downloadMarkdown')
-    .addEventListener('click', () => download('document.md', state.markdown, 'text/markdown;charset=utf-8'));
+    .addEventListener('click', () => download(activeFile().name, activeFile().markdown, 'text/markdown;charset=utf-8'));
 
   document.getElementById('import').addEventListener('click', () => document.getElementById('importFile').click());
   document.getElementById('importFile').addEventListener('change', async e => {
@@ -180,8 +200,8 @@ function bindFiles() {
   });
 }
 
-// The three exports that are plain downloads: the self-contained HTML page, the Markdown with its front
-// matter and the project file.
+// The exports that are plain downloads: the self-contained HTML page, the Markdown with its front matter,
+// the archive of files and the project file.
 async function exportHtml() {
   download('document.html', await standaloneHtml({ source: sourceJson() }), 'text/html;charset=utf-8');
 }
@@ -190,6 +210,12 @@ async function exportMarkdown() {
   const { markdownWithSources } = await import('./markdown-sources.js');
   const text = markdownWithSources({ json: sourceJson(), markdown: state.markdown });
   download(`${fileStem(state.title)}.md`, text, 'text/markdown;charset=utf-8');
+}
+
+// The project as ordinary files in a zip: the Markdown files, the stylesheet, the logo and the images.
+async function exportArchive() {
+  const { projectArchive } = await import('./archive.js');
+  download(`${fileStem(state.title)}.zip`, projectArchive(sourceJson()), 'application/zip');
 }
 
 function exportProject() {
@@ -212,6 +238,14 @@ async function sourcesOfFile(file) {
     const found = await readSources(await file.arrayBuffer());
     if (!found) throw new Error(t('this PDF holds no project: import a PDF exported with its project'));
     return found.json;
+  }
+  if (head.startsWith('PK\u0003\u0004')) {
+    const { sourcesOfArchive } = await import('./archive.js');
+    try {
+      return sourcesOfArchive(new Uint8Array(await file.arrayBuffer()));
+    } catch (error) {
+      throw new Error(t(error?.message || 'this archive could not be read'), { cause: error });
+    }
   }
   const text = (await file.text()).replace(/^\uFEFF/, '');
   if (/^\s*<(!doctype html|html)/i.test(text)) {
@@ -398,6 +432,7 @@ function bindExportMenu() {
     exportPdfOnly: () => exportPdf({ project: false }),
     exportHtml,
     exportMarkdown,
+    exportArchive,
     exportProject,
   };
   for (const [id, action] of Object.entries(actions)) {
@@ -421,6 +456,7 @@ function bindPdf() {
       else if (command === 'export-pdf-plain') exportPdfDirect({ project: false });
       else if (command === 'export-html') exportHtml();
       else if (command === 'export-markdown') exportMarkdown();
+      else if (command === 'export-archive') exportArchive();
       else if (command === 'export-project') exportProject();
       else if (command === 'import') document.getElementById('importFile').click();
       else if (command === 'print') openPrintWindow();
@@ -479,7 +515,27 @@ function imageReference(name) {
 // Inserts a block at the cursor of the editor, shown first when the preview was alone.
 function insertIntoEditor(text) {
   revealEditor();
-  insertBlock(document.getElementById('markdown'), text);
+  insertIntoDocument(text);
+}
+
+// The Markdown of a file chosen by the user, without the front matter of a studio export.
+async function markdownOfText(text) {
+  const { sourcesOfMarkdown } = await import('./markdown-sources.js');
+  return JSON.parse(sourcesOfMarkdown(text).json).markdown;
+}
+
+// Image files dropped on the editor or pasted into it are added to the library and referenced at the cursor.
+function addEditorImages(files, kind) {
+  if (kind === 'drop') {
+    addImages(files, { insert: true });
+    return;
+  }
+  // Clipboard images are all called "image.png": give each paste its own name.
+  const stamp = new Date().toISOString().slice(0, 19).replace(/[-:T]/g, '');
+  addImages(files, {
+    insert: true,
+    rename: file => `pasted-${stamp}.${file.type.split('/')[1]?.replace('jpeg', 'jpg') || 'png'}`,
+  });
 }
 
 function reportImages(results) {
@@ -575,29 +631,6 @@ function bindImages() {
     input.value = '';
   });
 
-  // Dropping or pasting image files into the editor adds them and writes their reference at the cursor.
-  const editor = document.getElementById('markdown');
-  editor.addEventListener('dragover', event => {
-    if (event.dataTransfer?.types.includes('Files')) event.preventDefault();
-  });
-  editor.addEventListener('drop', event => {
-    const files = [...(event.dataTransfer?.files ?? [])].filter(file => file.type.startsWith('image/'));
-    if (!files.length) return;
-    event.preventDefault();
-    addImages(files, { insert: true });
-  });
-  editor.addEventListener('paste', event => {
-    const files = [...(event.clipboardData?.files ?? [])].filter(file => file.type.startsWith('image/'));
-    if (!files.length) return;
-    event.preventDefault();
-    // Clipboard images are all called "image.png": give each paste its own name.
-    const stamp = new Date().toISOString().slice(0, 19).replace(/[-:T]/g, '');
-    addImages(files, {
-      insert: true,
-      rename: file => `pasted-${stamp}.${file.type.split('/')[1]?.replace('jpeg', 'jpg') || 'png'}`,
-    });
-  });
-
   onImagesChange(renderImageList);
   renderImageList();
 }
@@ -649,6 +682,15 @@ export function initUi() {
   showVersion();
   bindLanguage();
   bindPreviewLinks();
+  initChapters(document.getElementById('markdown'), {
+    onChange: scheduleRender,
+    onScroll: editorScrolled,
+    onImageFiles: addEditorImages,
+  });
+  initSync();
+  document.getElementById('syncScroll').addEventListener('click', () => {
+    if (toggleSync()) alignPreview();
+  });
   syncInputs();
   bindInputs();
   bindTabs();

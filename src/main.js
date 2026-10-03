@@ -2,7 +2,7 @@
 // See CLAUDE.md for the module map.
 import './ui.css';
 import { AUTOMATION, installAutomationApi } from './automation.js';
-import { flushPersist, loadStoredConfig, LOCAL_IMAGES, restoreLogo, state } from './config.js';
+import { flushPersist, loadStoredConfig, LOCAL_IMAGES, mergeConfig, restoreLogo, state } from './config.js';
 import { initLanguage } from './i18n.js';
 import { loadImages, onImagesChange, setBuiltinImages } from './images.js';
 import { render, scheduleRender } from './render.js';
@@ -10,7 +10,7 @@ import { initUi } from './ui.js';
 import { flushView, initView } from './view.js';
 
 initLanguage();
-Object.assign(state, loadStoredConfig());
+mergeConfig(state, loadStoredConfig());
 initUi();
 initView();
 

@@ -3,6 +3,7 @@
 // so any Markdown tool opens the file and the studio reopens the whole document. Plain ESM around `yaml`,
 // loaded on demand by the page and shared with the tests.
 import { parse, stringify } from 'yaml';
+import { lineCount, splitAssembled } from './files.js';
 
 // First key of the front matter; only its presence makes the studio read the block as its own project.
 export const MARKER_KEY = 'markdown-paged-studio';
@@ -33,6 +34,13 @@ export function markdownWithSources({ json, markdown }) {
   const front = { [MARKER_KEY]: FORMAT };
   for (const [key, value] of Object.entries(project)) {
     if (key === 'markdown' || LAST_KEYS.includes(key)) continue;
+    // The body holds the files one after the other: the front matter keeps their names and lengths, enough
+    // to cut the body back into files.
+    if (key === 'files') {
+      if (Array.isArray(value) && value.length)
+        front.files = value.map(file => ({ name: file.name, lines: lineCount(file.markdown) }));
+      continue;
+    }
     front[key] = value;
   }
   for (const key of LAST_KEYS) {
@@ -79,12 +87,26 @@ export function sourcesOfMarkdown(text) {
         delete found[MARKER_KEY];
         if (!(found.images && typeof found.images === 'object' && !Array.isArray(found.images))) delete found.images;
         found.markdown = lines.slice(end + 1).join('\n');
+        const files = filesOfBody(found.files, found.markdown);
+        if (files) found.files = files;
+        else delete found.files;
         return { json: JSON.stringify(found), project: true };
       }
     }
   }
   const title = firstHeading(source);
   return { json: JSON.stringify(title === null ? { markdown: source } : { markdown: source, title }), project: false };
+}
+
+// The files of the body, from the names and line counts of the front matter; null when the body no longer
+// has that shape (edited outside the studio): the document is then one file.
+function filesOfBody(listed, body) {
+  if (!Array.isArray(listed) || !listed.every(file => file && typeof file === 'object')) return null;
+  const parts = splitAssembled(
+    body,
+    listed.map(file => file.lines),
+  );
+  return parts && listed.map((file, index) => ({ name: String(file.name ?? ''), markdown: parts[index] }));
 }
 
 function parseBlock(block) {

@@ -6,6 +6,7 @@ import { existsSync, mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { png } from './helpers/png.mjs';
+import { expectMarkdown, expectNoMarkdown, focusEditor, setMarkdown } from './helpers/studio.mjs';
 import { readSources } from '../src/pdf-sources.js';
 
 test('the desktop app renders the document and exports a PDF directly', async () => {
@@ -61,7 +62,7 @@ test('the desktop app renders the document and exports a PDF directly', async ()
       globalThis.openedExternally = [];
       shell.openExternal = async url => void globalThis.openedExternally.push(url);
     });
-    await page.locator('#markdown').fill('# Links\n\n[External](https://example.com/page)\n');
+    await setMarkdown(page, '# Links\n\n[External](https://example.com/page)\n');
     const link = page.locator('#preview .document-content a', { hasText: 'External' });
     await expect(link).toHaveCount(1);
     await link.click();
@@ -70,7 +71,7 @@ test('the desktop app renders the document and exports a PDF directly', async ()
     expect(app.windows()).toHaveLength(1);
 
     // Images, logo and the document font go through the app:// scheme and IndexedDB, and reach the PDF.
-    await page.locator('#markdown').fill('# Pictures\n\n![Plan](plan.png){width=50%}\n');
+    await setMarkdown(page, '# Pictures\n\n![Plan](plan.png){width=50%}\n');
     await page.locator('#imageFiles').setInputFiles({ name: 'plan.png', mimeType: 'image/png', buffer: png(600, 400) });
     await page.locator('#logo').setInputFiles({ name: 'brand.png', mimeType: 'image/png', buffer: png(3000, 600) });
     const image = page.locator('#preview .document-image > img');
@@ -122,10 +123,19 @@ test('the desktop app renders the document and exports a PDF directly', async ()
     await expect
       .poll(() => app.evaluate(() => globalThis.downloads))
       .toEqual(['document.html', 'Architecture Report.md']);
+    await send('export-archive');
+    await expect
+      .poll(() => app.evaluate(() => globalThis.downloads))
+      .toEqual(['document.html', 'Architecture Report.md', 'Architecture Report.zip']);
     await send('export-project');
     await expect
       .poll(() => app.evaluate(() => globalThis.downloads))
-      .toEqual(['document.html', 'Architecture Report.md', 'markdown-paged-studio-project.json']);
+      .toEqual([
+        'document.html',
+        'Architecture Report.md',
+        'Architecture Report.zip',
+        'markdown-paged-studio-project.json',
+      ]);
     const [chooser] = await Promise.all([page.waitForEvent('filechooser'), send('import')]);
     expect(chooser.isMultiple()).toBe(false);
     // The View menu switches the workbench mode.
@@ -138,24 +148,23 @@ test('the desktop app renders the document and exports a PDF directly', async ()
     await page.locator('#resetDocument').click();
     await expect(page.locator('#imageList li')).toHaveCount(0);
     await page.locator('#importFile').setInputFiles(withImages);
-    await expect(page.locator('#markdown')).toHaveValue(/!\[Plan\]\(plan\.png\)\{width=50%\}/);
+    await expectMarkdown(page, /!\[Plan\]\(plan\.png\)\{width=50%\}/);
     await expect.poll(() => image.evaluate(el => el.naturalWidth)).toBe(600);
 
     // Undo from the preview: the Edit menu of the application must not swallow the shortcut.
-    const editor = page.locator('#markdown');
     const picture = page.locator('#preview .document-image');
     await picture.scrollIntoViewIfNeeded();
     await picture.click();
     await picture.getByRole('button', { name: 'Width 25 %' }).click();
-    await expect(editor).toHaveValue(/\{width=25%\}/);
+    await expectMarkdown(page, /\{width=25%\}/);
     await expect(page.locator('#preview')).not.toHaveClass(/is-stale/);
     await page.locator('.preview-shell').click({ position: { x: 5, y: 5 } });
     await page.keyboard.press('ControlOrMeta+z');
-    await expect(editor).toHaveValue(/\{width=50%\}/);
-    await editor.focus();
+    await expectMarkdown(page, /\{width=50%\}/);
+    await focusEditor(page);
     await page.keyboard.press('ControlOrMeta+z');
-    await expect(editor).not.toHaveValue(/\{width=50%\}\n$/);
-    await page.locator('#markdown').fill('# Pictures\n\n![Plan](plan.png){width=50%}\n');
+    await expectNoMarkdown(page, /\{width=50%\}\n$/);
+    await setMarkdown(page, '# Pictures\n\n![Plan](plan.png){width=50%}\n');
     await expect(page.locator('#preview')).not.toHaveClass(/is-stale/);
 
     // After a restart the image and the logo are still there.

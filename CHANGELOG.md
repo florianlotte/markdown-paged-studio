@@ -7,6 +7,34 @@ All notable changes to Markdown Paged Studio are listed here, newest first. The 
 
 ## [Unreleased]
 
+## [1.20.0] - 2026-10-03
+
+### Added
+
+- A document can be written as several Markdown files, one tab each above the editor: new file, existing
+  `.md` files added in one go, rename (double-click or F2), move (drag or Alt + arrows), remove. The files
+  are assembled into one paged document, with shared settings, table of contents and page numbers; each
+  file keeps its own undo history, and a change made from the preview goes to the file that holds the
+  source. The project file and the Markdown export carry the files.
+- The editor is a real code editor: Markdown colours, line numbers, search and replace (Ctrl+F), and undo
+  that covers everything the studio writes, also while the editor is hidden.
+- The editor and the preview scroll together: the pane you scroll takes the other one to the same part of
+  the document (a button of the editor bar switches it off). A double-click on a block of the preview puts
+  the cursor on its source line, in its file.
+- **Markdown files (zip)** in the Export menu (and **File → Export Markdown files (zip)…** on desktop): the
+  files of the document, `style.css`, the logo and the images side by side, with the settings in a YAML
+  file. **Import…** reopens it, and opens any zip of Markdown files as a document.
+
+### Changed
+
+- The text layer of the PDF drawn by the browser holds any script (Cyrillic, Greek, Chinese…), not only
+  Latin text, so the whole document can be searched and copied; its lines are no longer cut at the first
+  letter or where the font changes.
+- The bar of the editor is made of icons for the file actions and fits on one line in French. **Import .md**
+  replaces the current file as one edit that Ctrl+Z reverts; **Download .md** downloads the current file
+  under its name.
+- Dependencies updated (Electron 44.5, Mermaid 12.1, Vite 8.3.2, MCP SDK 1.32).
+
 ## [1.19.2] - 2026-10-03
 
 ### Fixed
@@ -326,7 +354,8 @@ All notable changes to Markdown Paged Studio are listed here, newest first. The 
 - Portable desktop app for Windows, Linux and macOS with direct PDF export.
 - Docker image, Playwright integration tests and CI.
 
-[Unreleased]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.19.2...HEAD
+[Unreleased]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.20.0...HEAD
+[1.20.0]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.19.2...v1.20.0
 [1.19.2]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.19.1...v1.19.2
 [1.19.1]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.19.0...v1.19.1
 [1.19.0]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.18.0...v1.19.0

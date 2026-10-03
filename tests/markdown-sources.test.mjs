@@ -83,6 +83,24 @@ test('the first level 1 heading of a plain document gives the title', () => {
   assert.equal(firstHeading(''), null);
 });
 
+test('the files of the document are named in the front matter and cut back from the body', () => {
+  const files = [
+    { name: 'intro.md', markdown: '# Intro\n\nFirst.\n' },
+    { name: 'body.md', markdown: '---\n\n# Body' },
+  ];
+  const markdown = files.map(file => file.markdown).join('\n\n');
+  const text = markdownWithSources({ json: JSON.stringify({ title: 'T', markdown, files }), markdown });
+  assert.ok(text.includes('files:\n  - name: intro.md\n    lines: 4\n  - name: body.md\n    lines: 3\n'));
+  assert.ok(text.endsWith(`---\n${markdown}`));
+  assert.deepEqual(JSON.parse(sourcesOfMarkdown(text).json), { title: 'T', files, images: {}, markdown });
+  // A body edited elsewhere no longer has the listed shape: it is one document, without files.
+  const edited = JSON.parse(sourcesOfMarkdown(`${text}\n\nAdded later.\n`).json);
+  assert.equal(edited.files, undefined);
+  assert.equal(edited.markdown, `${markdown}\n\nAdded later.\n`);
+  const broken = sourcesOfMarkdown(`---\n${MARKER_KEY}: 1\nfiles: nope\n---\nbody`);
+  assert.deepEqual(JSON.parse(broken.json), { markdown: 'body' });
+});
+
 test('the images key is only kept when it is a map', () => {
   const without = sourcesOfMarkdown(`---\n${MARKER_KEY}: 1\ntitle: T\n---\nbody`);
   assert.deepEqual(JSON.parse(without.json), { title: 'T', markdown: 'body' });

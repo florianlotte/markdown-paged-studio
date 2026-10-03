@@ -2,13 +2,16 @@
 import { test, expect } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import {
-  DIAGRAM,
   centre,
+  DIAGRAM,
   diagramGeometry,
+  expectMarkdown,
+  expectNoMarkdown,
+  exportVia,
+  markdownText,
   openDiagramDocument,
   openFreshStudio,
   setMarkdown,
-  exportVia,
 } from './helpers/studio.mjs';
 
 test('a diagram takes the width and alignment written on its fence line', async ({ page }) => {
@@ -30,7 +33,6 @@ test('diagrams are resized from the preview and the Markdown follows', async ({ 
   await openFreshStudio(page);
   await setMarkdown(page, '# Resize\n\nText before.\n\n' + DIAGRAM.replace('%ATTRS%', ''));
   const diagram = page.locator('#preview .mermaid-diagram');
-  const editor = page.locator('#markdown');
   // Wait for the pages of the new source: the tools of outdated pages are disabled meanwhile.
   await expect(page.locator('#preview .document-content h1')).toHaveText('Resize');
   await expect(page.locator('#preview')).not.toHaveClass(/is-stale/);
@@ -39,7 +41,7 @@ test('diagrams are resized from the preview and the Markdown follows', async ({ 
   // Presets
   await diagram.hover();
   await diagram.getByRole('button', { name: 'Width 75 %' }).click();
-  await expect(editor).toHaveValue(/```mermaid width=75%\n/);
+  await expectMarkdown(page, /```mermaid width=75%\n/);
   await expect.poll(async () => (await diagramGeometry(page))?.percent).toBe(75);
 
   // Drag the handle towards the centre: the diagram shrinks and the source is rewritten.
@@ -49,8 +51,8 @@ test('diagrams are resized from the preview and the Markdown follows', async ({ 
   await page.mouse.down();
   await page.mouse.move(handle.x + handle.width / 2 - 120, handle.y + handle.height / 2, { steps: 6 });
   await page.mouse.up();
-  await expect(editor).not.toHaveValue(/width=75%/);
-  const dragged = Number(/```mermaid width=(\d+)%/.exec(await editor.inputValue())?.[1]);
+  await expectNoMarkdown(page, /width=75%/);
+  const dragged = Number(/```mermaid width=(\d+)%/.exec(await markdownText(page))?.[1]);
   expect(dragged).toBeGreaterThanOrEqual(10);
   expect(dragged).toBeLessThan(75);
   await expect.poll(async () => (await diagramGeometry(page))?.percent).toBe(dragged);
@@ -58,20 +60,20 @@ test('diagrams are resized from the preview and the Markdown follows', async ({ 
   // Alignment, then back to the natural size
   await diagram.hover();
   await diagram.getByRole('button', { name: 'Align right' }).click();
-  await expect(editor).toHaveValue(new RegExp('```mermaid width=' + dragged + '% align=right\\n'));
+  await expectMarkdown(page, new RegExp('```mermaid width=' + dragged + '% align=right\\n'));
   await expect.poll(async () => (await diagramGeometry(page))?.right).toBe(0);
   await diagram.hover();
   await diagram.getByRole('button', { name: 'Natural size' }).click();
-  await expect(editor).toHaveValue(/```mermaid align=right\n/);
+  await expectMarkdown(page, /```mermaid align=right\n/);
 
   // Keyboard on the handle: 5 % steps
   await diagram.hover();
   await diagram.getByRole('button', { name: 'Width 50 %' }).click();
-  await expect(editor).toHaveValue(/width=50%/);
+  await expectMarkdown(page, /width=50%/);
   await expect.poll(async () => (await diagramGeometry(page))?.percent).toBe(50);
   await diagram.locator('.diagram-handle').focus();
   await page.keyboard.press('ArrowRight');
-  await expect(editor).toHaveValue(/width=55%/);
+  await expectMarkdown(page, /width=55%/);
 
   // The controls belong to the studio only: the export carries the size, not the tools.
   await expect.poll(async () => (await diagramGeometry(page))?.percent).toBe(55);
@@ -85,7 +87,6 @@ test('diagrams are resized from the preview and the Markdown follows', async ({ 
 test('the diagram toolbar stays reachable while the pointer travels to it', async ({ page }) => {
   await openDiagramDocument(page, 'Travel');
   const diagram = page.locator('#preview .mermaid-diagram');
-  const editor = page.locator('#markdown');
   const tools = diagram.locator('.diagram-tools');
 
   // Straight up from the drawing to a button, step by step through the gap between them.
@@ -99,13 +100,12 @@ test('the diagram toolbar stays reachable while the pointer travels to it', asyn
   await page.mouse.move(left.x, left.y, { steps: 10 });
   await page.mouse.down();
   await page.mouse.up();
-  await expect(editor).toHaveValue(/```mermaid align=left\n/);
+  await expectMarkdown(page, /```mermaid align=left\n/);
 });
 
 test('a clicked diagram keeps its tools until another click or Escape', async ({ page }) => {
   await openDiagramDocument(page, 'Select');
   const diagram = page.locator('#preview .mermaid-diagram');
-  const editor = page.locator('#markdown');
   const tools = diagram.locator('.diagram-tools');
   const away = { x: 700, y: 30 }; // the studio toolbar, far from the diagram
 
@@ -125,14 +125,14 @@ test('a clicked diagram keeps its tools until another click or Escape', async ({
 
   const half = centre(await diagram.getByRole('button', { name: 'Width 50 %' }).boundingBox());
   await page.mouse.click(half.x, half.y);
-  await expect(editor).toHaveValue(/```mermaid width=50%\n/);
+  await expectMarkdown(page, /```mermaid width=50%\n/);
   await expect(page.locator('#preview')).not.toHaveClass(/is-stale/);
   await page.mouse.move(away.x, away.y, { steps: 5 });
   await expect(diagram).toHaveClass(/is-selected/);
   await expect(tools).toBeVisible();
   const right = centre(await diagram.getByRole('button', { name: 'Align right' }).boundingBox());
   await page.mouse.click(right.x, right.y);
-  await expect(editor).toHaveValue(/```mermaid width=50% align=right\n/);
+  await expectMarkdown(page, /```mermaid width=50% align=right\n/);
   await expect(page.locator('#preview')).not.toHaveClass(/is-stale/);
   await page.mouse.move(away.x, away.y, { steps: 5 });
   await expect(tools).toBeVisible();

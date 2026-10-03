@@ -21,7 +21,15 @@ const IS_MAC = /Mac|iPhone|iPad/.test(navigator.platform);
 
 // On phones the settings are a drawer over the preview, closed until the user opens it.
 const NARROW = matchMedia('(max-width: 760px)');
-const view = { mode: 'split', editorWidth: 0.5, layout: 'single', zoom: 1, fit: true, sidebar: !NARROW.matches };
+const view = {
+  mode: 'split',
+  editorWidth: 0.5,
+  sync: true,
+  layout: 'single',
+  zoom: 1,
+  fit: true,
+  sidebar: !NARROW.matches,
+};
 
 const clampWidth = width => Math.min(EDITOR_WIDTH_MAX, Math.max(EDITOR_WIDTH_MIN, Math.round(width * 1000) / 1000));
 
@@ -31,6 +39,7 @@ function loadView() {
     if (MODES.includes(stored.mode)) view.mode = stored.mode;
     const editorWidth = Number(stored.editorWidth);
     if (Number.isFinite(editorWidth)) view.editorWidth = clampWidth(editorWidth);
+    if (typeof stored.sync === 'boolean') view.sync = stored.sync;
     if (stored.layout === 'single' || stored.layout === 'spread') view.layout = stored.layout;
     const zoom = Number(stored.zoom);
     if (Number.isFinite(zoom)) view.zoom = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, zoom));
@@ -108,6 +117,7 @@ export function applyView() {
     button.classList.toggle('active', name === mode);
     button.setAttribute('aria-pressed', String(name === mode));
   }
+  document.getElementById('syncScroll').setAttribute('aria-pressed', String(view.sync));
   const splitter = document.querySelector('.splitter');
   splitter.setAttribute('aria-valuenow', String(Math.round(view.editorWidth * 100)));
   splitter.setAttribute('aria-label', t('Editor width'));
@@ -149,6 +159,15 @@ function setZoom(zoom) {
 function setLayout(layout) {
   view.layout = layout;
   applyView();
+}
+
+// Whether the editor and the preview scroll together (see src/sync.js).
+export const syncOn = () => view.sync;
+
+export function toggleSync() {
+  view.sync = !view.sync;
+  applyView();
+  return view.sync;
 }
 
 export function setMode(mode) {

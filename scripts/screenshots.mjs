@@ -96,10 +96,7 @@ async function openStudio(browser, { locale = 'en-US', markdown } = {}) {
 }
 
 async function write(page, markdown) {
-  await page.locator('#markdown').evaluate((editor, value) => {
-    editor.value = value;
-    editor.dispatchEvent(new Event('input'));
-  }, markdown);
+  await page.evaluate(value => window.studio.editor.setText(value), markdown);
   await page.waitForTimeout(300);
   await rendered(page);
 }

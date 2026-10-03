@@ -38,11 +38,13 @@
 - **Images** uploaded, dropped or pasted, matched to the Markdown by file name, resizable like the diagrams.
 - **Custom CSS** editor with import, applied to the document only.
 - **Interface in English or French**, following the browser or your choice.
+- **A document in several files**: chapters as tabs above the editor, assembled into one paged document and one PDF, with shared settings, table of contents and page numbers.
+- **A real editor**: Markdown colours, line numbers, search and replace (Ctrl+F), and the preview scrolling along with the text; a double-click in the preview shows the source.
 - **Edit, Split or View**: the editor and the paged preview share the window with a draggable splitter, or one of them takes it all; plus one page or two pages side by side, zoom, fit to width, Ctrl + wheel, and a collapsible settings sidebar.
 - **Autosave** in the browser, plus export and import of the whole configuration as JSON.
 - **Personal defaults** (your name, company logo, stylesheet, template) from a gitignored `local/` folder.
-- **Export menu**: PDF with project, PDF only, HTML with project (a standalone page that paginates offline), Markdown with project (a `.md` whose YAML front matter holds the settings and images) or the project alone. The PDF comes from the print dialog in the browser, as a direct file in the desktop app.
-- **Editable exports**: the HTML export, the Markdown export and the PDF with project carry the document, its settings and its images, and **Import…** reopens them.
+- **Export menu**: PDF with project, PDF only, HTML with project (a standalone page that paginates offline), Markdown with project (a `.md` whose YAML front matter holds the settings and images), Markdown files (a zip of the files, the stylesheet and the images side by side) or the project alone. The PDF comes from the print dialog in the browser, as a direct file in the desktop app.
+- **Editable exports**: the HTML export, the Markdown export, the zip of files and the PDF with project carry the document, its settings and its images, and **Import…** reopens them.
 - **Desktop app** for Windows (x64 and ARM64), Linux and macOS (Apple Silicon and Intel), portable, no installation.
 - **MCP server** so a local AI assistant can generate reports through the same rendering pipeline.
 - **Static build** you can host anywhere: GitHub Pages, Netlify, Cloudflare Pages, nginx, or the provided Docker image.
@@ -67,9 +69,24 @@ Node.js 20.19 or newer (or 22.12+) is required by Vite 8.
 
 ### Writing
 
-The Markdown editor sits in the main area, beside the paged preview (**Split**) or alone (**Edit**); **View** shows the preview alone. The bar above the editor inserts a page break or a table of contents, imports an existing `.md` file or downloads the current one. The **Content** tab of the sidebar holds the cover fields and the images. The parser is [markdown-it](https://github.com/markdown-it/markdown-it): all of [CommonMark](https://commonmark.org) and of GitHub Flavored Markdown (tables, strikethrough, task lists, automatic links), plus footnotes and typographic replacements. Raw HTML inside Markdown is intentionally disabled. [Markdown support](docs/markdown-support.md) lists what is understood, the four deliberate differences with the specification, what is not supported (formulas, definition lists…), and the conformance measured on the official examples.
+The Markdown editor sits in the main area, beside the paged preview (**Split**) or alone (**Edit**); **View** shows the preview alone. It colours the Markdown, numbers the lines and searches or replaces with Ctrl+F. The bar above it inserts a page break or a table of contents, replaces the current file with an existing `.md` file or downloads it, and switches the scroll synchronisation: while it is on, the pane you scroll takes the other one to the same part of the document. A double-click on a block of the preview puts the cursor on its source line. The **Content** tab of the sidebar holds the cover fields and the images. The parser is [markdown-it](https://github.com/markdown-it/markdown-it): all of [CommonMark](https://commonmark.org) and of GitHub Flavored Markdown (tables, strikethrough, task lists, automatic links), plus footnotes and typographic replacements. Raw HTML inside Markdown is intentionally disabled. [Markdown support](docs/markdown-support.md) lists what is understood, the four deliberate differences with the specification, what is not supported (formulas, definition lists…), and the conformance measured on the official examples.
 
 Whatever the studio writes into the editor for you (the insert buttons, a pasted image, a size set from the preview) is an ordinary edit: Ctrl+Z undoes it like something you typed.
+
+### Several files
+
+A document can be written as several Markdown files, one tab each above the editor, in the order of the document. The preview, the table of contents, the page numbers and every export work on the files put one after the other, with one empty line between them; the settings, the stylesheet and the images are shared. Write `\newpage` at the top of a file to start it on a new page.
+
+| Action             | How                                                                                                |
+| ------------------ | -------------------------------------------------------------------------------------------------- |
+| New empty file     | **+** at the end of the tabs                                                                       |
+| Add existing files | The folder button next to it: pick one or several `.md` files, each becomes a file of its own name |
+| Rename             | Double-click the tab, or F2                                                                        |
+| Move               | Drag the tab, or Alt + Left / Right                                                                |
+| Remove             | The **×** of the tab, or Delete; a file that holds text asks for a confirmation                    |
+| Switch             | Click, or Left / Right, Home, End on the tabs; Enter goes to the editor                            |
+
+Each file keeps its own undo history and its place in the editor. A change made from the preview goes to the file that holds the source, shown or not. Footnote labels and link references are shared by the whole document: give them different names in different files.
 
 ### Diagrams
 
@@ -234,6 +251,7 @@ Use print units (`mm`, `pt`) and paged-media properties such as `break-before: p
 | Control                                  | Effect                                                                                                                                                                                      |
 | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Edit** / **Split** / **View**          | The editor alone, both side by side, or the preview alone: Ctrl+Shift+1/2/3 (Cmd+Alt+1/2/3 on macOS), in the desktop app also the **View** menu. On phones Split gives way to Edit and View |
+| **Scroll together** (bar of the editor)  | The pane you scroll takes the other one along; switch it off to read one part while writing another                                                                                         |
 | **Splitter** between editor and preview  | Drag to share the width (20 to 80 %); arrow keys move it by 2 %, Home and End to the ends, a double-click resets the half                                                                   |
 | **1 page** / **2 pages**                 | One continuous column, or two pages side by side                                                                                                                                            |
 | **−** / **+**                            | Zoom out or in by 10 %, between 25 % and 300 %                                                                                                                                              |
@@ -244,7 +262,7 @@ Use print units (`mm`, `pt`) and paged-media properties such as `break-before: p
 
 ![Two pages side by side in the preview: table of contents, highlighted code and a captioned diagram](docs/screenshots/spread.png)
 
-View mode, editor width, layout, zoom and the sidebar state are remembered in the browser, separately from the document.
+View mode, editor width, scroll synchronisation, layout, zoom and the sidebar state are remembered in the browser, separately from the document.
 
 The footer of the sidebar shows which build is running, for example `v1.13.1 · 2205ce9`: the version links to its release notes and the commit to the exact source. It tells apart two deployments of the online demo made between two releases. The GitHub mark in front of it leads to the repository, and the author's name next to it to his LinkedIn profile.
 
@@ -264,12 +282,13 @@ The document autosaves in the browser after every change (the logo and the image
 
 ### Export and print
 
-The **Export** button exports the PDF with the project; its arrow opens the five exports.
+The **Export** button exports the PDF with the project; its arrow opens the six exports.
 
-- **PDF with project** (the default): settings, Markdown and images attached, so the file reopens in the studio. The desktop app and the MCP server write it through the embedded Chromium print engine, so it is a vector PDF. The browser has no print engine a page can use, so there the studio draws the PDF itself from the preview: each page is stored as an image (2 pixels per CSS pixel, about 192 dpi) under an invisible text layer that keeps the text selectable and searchable, with the links of the document kept as links. It downloads in one step, behind a lock that reports the progress; count on a few hundred kilobytes per page.
+- **PDF with project** (the default): settings, Markdown and images attached, so the file reopens in the studio. The desktop app and the MCP server write it through the embedded Chromium print engine, so it is a vector PDF. The browser has no print engine a page can use, so there the studio draws the PDF itself from the preview: each page is stored as an image (2 pixels per CSS pixel, about 192 dpi) under an invisible text layer that keeps the text selectable and searchable in any script (Latin, Cyrillic, Greek, Chinese…), with the links of the document kept as links. It downloads in one step, behind a lock that reports the progress; count on a few hundred kilobytes per page.
 - **PDF only** is the document alone, as a vector PDF: in the browser it opens the print-ready document in a new tab and triggers the print dialog once pagination is complete; choose _Save as PDF_. Allow pop-ups for the site if nothing opens. Ctrl+P (Cmd+P on macOS) does the same. In the desktop app it writes the file directly.
 - **HTML with project** downloads a single self-contained file: content, styles, images, diagrams, the font, the Paged.js runtime and the project. It paginates on open, offline, in any modern browser.
 - **Markdown with project** downloads a `.md` file named after the title: the settings, CSS, logo and images sit in a YAML front matter (the `---` block Pandoc, Jekyll, Hugo or Obsidian use for metadata) above the Markdown, so any Markdown tool opens the document and the studio reopens the whole project. The images are embedded as data URLs, which makes the front matter long.
+- **Markdown files (zip)** downloads the project as ordinary files: the Markdown files of the document, `style.css`, the logo and the images next to each other, and the settings in `markdown-paged-studio.yaml`. Nothing is encoded: an image referenced by its name sits beside the Markdown, so the folder reads well in any Markdown tool or in a Git repository.
 - **Project only** downloads the JSON file described in [Saving your work](#saving-your-work).
 - **Printing on paper**: in the browser, the same print dialog; in the desktop app, **File → Print…** (Ctrl+P).
 
@@ -278,10 +297,11 @@ The **Export** button exports the PDF with the project; its arrow opens the five
 An exported file carries everything needed to edit it again: the Markdown, every setting, the logo and the images, in the same form as a project file.
 
 - The **HTML export** holds them in a data block.
-- The **Markdown export** holds them in its YAML front matter, recognised by its first key, `markdown-paged-studio: 1`.
+- The **Markdown export** holds them in its YAML front matter, recognised by its first key, `markdown-paged-studio: 1`. The files of the document are written one after the other, and the front matter lists their names and lengths to cut them apart again.
+- The **zip of Markdown files** holds them as files, with the settings in `markdown-paged-studio.yaml`.
 - A **PDF** holds them as file attachments (`markdown-paged-studio.json` and `document.md`), which PDF readers list in their attachments panel. The desktop app and the MCP server attach them when they write the PDF. In the browser the print dialog writes the PDF outside the studio, in the browser the studio draws the PDF itself and attaches them (see above).
 
-**Import…** opens all four: a project JSON, an HTML, a Markdown or a PDF exported by the studio. A Markdown file without that front matter (none, or another tool's) replaces the Markdown, takes its first level 1 heading (`# Title`) as the title of the cover, and keeps the other settings and the images; a foreign front matter stays in the text, where it is easy to remove. The desktop app has the same commands in its **File** menu (Ctrl+O imports).
+**Import…** opens all five: a project JSON, an HTML, a Markdown, a zip or a PDF exported by the studio. Any other zip that holds Markdown files opens as a document too: its `.md` files in the order of their names, its images, and the first heading as the title. A Markdown file without that front matter (none, or another tool's) replaces the Markdown, takes its first level 1 heading (`# Title`) as the title of the cover, and keeps the other settings and the images; a foreign front matter stays in the text, where it is easy to remove. The desktop app has the same commands in its **File** menu (Ctrl+O imports).
 
 Chromium-based browsers give the most faithful print output for paged media.
 
@@ -445,5 +465,7 @@ If the studio saves you time, you can support its development through [GitHub Sp
 ## License
 
 [MIT](LICENSE) © 2026 Florian Lotte
+
+The invisible text layer of the PDFs drawn by the browser uses the glyphless font of [Tesseract OCR](https://github.com/tesseract-ocr/tesseract) (`tessdata/pdf.ttf`, Apache License 2.0), embedded in `src/glyphless-font.js`.
 
 The specification examples used by the conformance tests ([CommonMark](https://spec.commonmark.org), [GFM](https://github.github.com/gfm/)) are under CC BY-SA 4.0 and are not part of the application. Code highlighting uses [highlight.js](https://highlightjs.org) (BSD 3-Clause) and PDF attachments [pdf-lib](https://pdf-lib.js.org) (MIT). The bundled font, [Inter](https://rsms.me/inter/), is licensed under the [SIL Open Font License 1.1](https://openfontlicense.org).

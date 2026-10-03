@@ -425,6 +425,16 @@ md.renderer.rules.fence = (tokens, idx, options, env, self) => {
   return defaultFence(tokens, idx, options, env, self);
 };
 
+// For the preview only (`env.sourceLines`): every block carries the line of the Markdown it comes from, so
+// the studio can scroll the editor and the preview together and jump from a block to its source.
+md.core.ruler.push('source_lines', state => {
+  if (!state.env?.sourceLines) return;
+  for (const token of state.tokens) {
+    if (token.map && token.nesting >= 0 && token.type !== 'inline')
+      token.attrSet('data-source-line', String(token.map[0]));
+  }
+});
+
 let mermaidPromise = null;
 // Mermaid weighs several MB, so it is only loaded the first time a document contains a diagram.
 function loadMermaid() {
@@ -510,7 +520,7 @@ function loadHighlighter() {
 // Colours the code blocks whose language is known (```js, ```python...). The theme is a class on the <pre>;
 // its colours come from documentCss(). Blocks without a language, or with an unknown one, stay plain.
 export async function highlightCode(html, theme = 'light') {
-  if (!['light', 'dark'].includes(theme) || !html.includes('<code class="language-')) return html;
+  if (!['light', 'dark'].includes(theme) || !/<code\b[^>]*\bclass="language-/.test(html)) return html;
   const highlighter = await loadHighlighter();
   const wrap = document.createElement('div');
   wrap.innerHTML = html;

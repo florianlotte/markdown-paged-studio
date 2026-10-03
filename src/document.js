@@ -185,7 +185,8 @@ ${codeCss()}
 `;
 }
 
-export async function documentHtml() {
+// `sourceLines` marks every block with its line of the Markdown: for the preview, never for an export.
+export async function documentHtml({ sourceLines = false } = {}) {
   const lang = documentLanguage();
   md.set({ quotes: QUOTES_BY_LANGUAGE[lang.split('-')[0].toLowerCase()] ?? QUOTES_BY_LANGUAGE.en });
   const cover = state.cover
@@ -200,7 +201,7 @@ export async function documentHtml() {
       </div>
     </section>`
     : '';
-  const body = await highlightCode(await renderDiagrams(md.render(state.markdown)), state.codeTheme);
+  const body = await highlightCode(await renderDiagrams(md.render(state.markdown, { sourceLines })), state.codeTheme);
   return `${cover}<article class="document-content" lang="${lang}">${body}</article>`;
 }
 

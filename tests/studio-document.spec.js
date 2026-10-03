@@ -5,14 +5,15 @@ import { decodePDFRawStream, PDFArray, PDFDocument, PDFName } from 'pdf-lib';
 import { png } from './helpers/png.mjs';
 import { readSources } from '../src/pdf-sources.js';
 import {
-  STATUS_DONE,
   appendMarkdown,
+  expectMarkdown,
+  exportVia,
   marginBoxContent,
   openFreshStudio,
   pages,
   setMarkdown,
   status,
-  exportVia,
+  STATUS_DONE,
 } from './helpers/studio.mjs';
 
 test('renders the sample document as pages with cover, header, footer and counter', async ({ page }) => {
@@ -350,7 +351,7 @@ test('an exported HTML file carries the document and reopens with Import', async
     .locator('#importFile')
     .setInputFiles({ name: 'document.html', mimeType: 'text/html', buffer: Buffer.from(html) });
   await expect(page.locator('#title')).toHaveValue('Round trip');
-  await expect(page.locator('#markdown')).toHaveValue(/!\[Plan\]\(plan\.png\)\{width=50%\}/);
+  await expectMarkdown(page, /!\[Plan\]\(plan\.png\)\{width=50%\}/);
   await expect(page.locator('#imageList li')).toHaveText([/plan\.png/]);
   await expect(page.locator('#preview .document-image > img')).toHaveCount(1);
 });
@@ -378,7 +379,7 @@ test('a Markdown export carries the project in its front matter, a plain Markdow
     .locator('#importFile')
     .setInputFiles({ name: 'Round trip.md', mimeType: 'text/markdown', buffer: Buffer.from(text) });
   await expect(page.locator('#title')).toHaveValue('Round trip');
-  await expect(page.locator('#markdown')).toHaveValue('# Round trip\n\n![Plan](plan.png){width=50%}\n\nText.\n');
+  await expectMarkdown(page, '# Round trip\n\n![Plan](plan.png){width=50%}\n\nText.\n');
   await expect(page.locator('#imageList li')).toHaveText([/plan\.png/]);
   await expect(page.locator('#preview .document-image > img')).toHaveCount(1);
 
@@ -387,7 +388,7 @@ test('a Markdown export carries the project in its front matter, a plain Markdow
   await page
     .locator('#importFile')
     .setInputFiles({ name: 'notes.md', mimeType: 'text/markdown', buffer: Buffer.from('# Notes\n\nPlain.\n') });
-  await expect(page.locator('#markdown')).toHaveValue('# Notes\n\nPlain.\n');
+  await expectMarkdown(page, '# Notes\n\nPlain.\n');
   await expect(page.locator('#title')).toHaveValue('Notes');
   await expect(page.locator('#preview .cover-title')).toHaveText('Notes');
   await expect(page.locator('#imageList li')).toHaveText([/plan\.png/]);
@@ -395,14 +396,14 @@ test('a Markdown export carries the project in its front matter, a plain Markdow
   await page
     .locator('#importFile')
     .setInputFiles({ name: 'more.md', mimeType: 'text/markdown', buffer: Buffer.from('## Part\n\nMore.\n') });
-  await expect(page.locator('#markdown')).toHaveValue('## Part\n\nMore.\n');
+  await expectMarkdown(page, '## Part\n\nMore.\n');
   await expect(page.locator('#title')).toHaveValue('Notes');
 
   // The sidebar's Import .md also drops the front matter of such a file, and touches nothing but the text.
   await page
     .locator('#markdownFile')
     .setInputFiles({ name: 'Round trip.md', mimeType: 'text/markdown', buffer: Buffer.from(text) });
-  await expect(page.locator('#markdown')).toHaveValue('# Round trip\n\n![Plan](plan.png){width=50%}\n\nText.\n');
+  await expectMarkdown(page, '# Round trip\n\n![Plan](plan.png){width=50%}\n\nText.\n');
   await expect(page.locator('#title')).toHaveValue('Notes');
 });
 
@@ -413,7 +414,7 @@ test('PDF with project is drawn by the browser in one step, and such a PDF reope
   await page.locator('#title').fill('From a PDF');
   await setMarkdown(
     page,
-    '# From a PDF\n\n[[toc]]\n\n## Part one\n\n![Plan](plan.png)\n\nSee [the site](https://example.com/page) and [part two](#part-two)[^n].\n\n\\newpage\n\n## Part two\n\nText.\n\n[^n]: A note.\n',
+    '# From a PDF\n\n[[toc]]\n\n## Part one\n\n![Plan](plan.png)\n\nSee [the site](https://example.com/page) and [part two](#part-two)[^n].\n\n\\newpage\n\n## Part two\n\nText.\n\nПривет, 世界.\n\n[^n]: A note.\n',
   );
   await expect(page.locator('#preview .document-image > img')).toHaveCount(1);
   await expect(page.locator('#preview')).not.toHaveClass(/is-stale/);
@@ -457,9 +458,15 @@ test('PDF with project is drawn by the browser in one step, and such a PDF reope
     return streams.map(stream => Buffer.from(decodePDFRawStream(stream).decode()).toString('latin1')).join('\n');
   });
   expect(content[1]).toContain('3 Tr');
-  // pdf-lib writes the text of standard fonts as hex strings.
-  expect(content[1].toUpperCase()).toContain(Buffer.from('Part one', 'latin1').toString('hex').toUpperCase());
+  // The text layer holds UTF-16 code units, drawn with a font without glyphs: any script can be searched.
+  const utf16 = value => [...value].map(character => character.charCodeAt(0).toString(16).padStart(4, '0')).join('');
+  expect(content[1].toLowerCase()).toContain(utf16('Part one'));
   expect(content[1]).toMatch(/Tj/);
+  // One run per line, even when the line mixes scripts drawn with different fonts.
+  expect(content[2].toLowerCase()).toContain(utf16('Part two'));
+  expect(content[2].toLowerCase()).toContain(utf16('Привет, 世界.'));
+  expect(text).toContain('/BaseFont /GlyphLessFont');
+  expect(text).toContain('/Encoding /Identity-H');
   expect(text).toContain('/URI (https://example.com/page)');
   expect((text.match(/\/Subtype \/Link/g) || []).length).toBeGreaterThanOrEqual(4);
   expect(pdf.getPages()[1].node.get(PDFName.of('Annots'))).toBeDefined();

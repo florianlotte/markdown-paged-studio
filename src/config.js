@@ -1,6 +1,7 @@
 // Document settings: defaults (built-in, then personal ones from local/), the mutable `state`, validation of
 // anything that enters it, and the autosave in localStorage.
 
+import { assembleFiles, DEFAULT_FILE_NAME, sanitizeFiles } from './files.js';
 import { IMAGE_DATA_URL, loadLogo, saveLogo } from './images.js';
 
 export const STORAGE_KEY = 'markdown-paged-studio:document';
@@ -107,6 +108,8 @@ const DEFAULT_STATE = {
   marginLeft: 18,
   cover: true,
   markdown: DEFAULT_MARKDOWN,
+  // The Markdown as files, in the order of the document; `markdown` is their assembly (see mergeConfig()).
+  files: [],
   customCss: DEFAULT_CSS,
   logoDataUrl: '',
   codeTheme: 'light',
@@ -133,6 +136,7 @@ export const CONFIG_SCHEMA = {
   marginLeft: 'margin',
   cover: 'boolean',
   markdown: 'string',
+  files: 'files',
   customCss: 'string',
   logoDataUrl: 'imageDataUrl',
   codeTheme: 'codeTheme',
@@ -179,9 +183,23 @@ export function sanitizeConfig(input) {
       case 'imageDataUrl':
         if (value === '' || (typeof value === 'string' && IMAGE_DATA_URL.test(value))) out[key] = value;
         break;
+      case 'files':
+        out[key] = sanitizeFiles(value);
+        break;
     }
   }
   return out;
+}
+
+// Merges a (possibly untrusted) configuration into `target` and keeps its two forms of the text consistent:
+// the files are the source and the Markdown is their assembly. A configuration that only brings a Markdown
+// text (an older project, the MCP server, a plain Markdown file) becomes a document of one file.
+export function mergeConfig(target, config) {
+  const clean = sanitizeConfig(config);
+  if (clean.files?.length) clean.markdown = assembleFiles(clean.files);
+  else if (typeof clean.markdown === 'string') clean.files = [{ name: DEFAULT_FILE_NAME, markdown: clean.markdown }];
+  else delete clean.files;
+  return Object.assign(target, clean);
 }
 
 // Personal defaults from the gitignored `local/` folder (see local/README.md), resolved at build time by Vite.
@@ -204,21 +222,27 @@ export const LOCAL_IMAGES = import.meta.glob('../local/images/*.{png,jpg,jpeg,we
   import: 'default',
 });
 
-export const DEFAULTS = {
-  ...DEFAULT_STATE,
-  ...sanitizeConfig(localConfig),
-  ...(localText['../local/custom.css'] ? { customCss: localText['../local/custom.css'] } : {}),
-  ...(localText['../local/template.md'] ? { markdown: localText['../local/template.md'] } : {}),
-  ...(localLogo ? { logoDataUrl: localLogo } : {}),
-};
+export const DEFAULTS = mergeConfig(
+  { ...DEFAULT_STATE },
+  {
+    ...DEFAULT_STATE,
+    ...sanitizeConfig(localConfig),
+    ...(localText['../local/custom.css'] ? { customCss: localText['../local/custom.css'] } : {}),
+    // The template is the whole default document: it replaces files a local configuration may list.
+    ...(localText['../local/template.md'] ? { markdown: localText['../local/template.md'], files: [] } : {}),
+    ...(localLogo ? { logoDataUrl: localLogo } : {}),
+  },
+);
 
-// The live document. Mutated in place (Object.assign) so every module sees the same object.
-export const state = { ...DEFAULTS };
+// The live document. Mutated in place (mergeConfig, Object.assign) so every module sees the same object;
+// its files are copies, never the objects of DEFAULTS.
+export const state = mergeConfig({}, DEFAULTS);
 
+// The saved document, to be merged into the state with mergeConfig().
 export function loadStoredConfig() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? sanitizeConfig(JSON.parse(raw)) : {};
+    return raw ? JSON.parse(raw) : {};
   } catch (error) {
     console.warn('Could not restore the saved document', error);
     return {};
@@ -264,7 +288,8 @@ function persistNow() {
   clearTimeout(persistTimer);
   persistTimer = null;
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...state, logoDataUrl: undefined }));
+    // The files are saved; the Markdown is their assembly and is built again on restore.
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...state, logoDataUrl: undefined, markdown: undefined }));
   } catch (error) {
     // Quota exceeded or storage disabled: the app keeps working without autosave.
     console.warn('Autosave failed', error);

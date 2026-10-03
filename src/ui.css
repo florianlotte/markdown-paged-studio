@@ -482,11 +482,6 @@ button:hover {
   border-bottom: 1px solid #e5e9ef;
   background: #f8f9fb;
 }
-.editor-title {
-  font-size: 12px;
-  color: #4f5660;
-  margin-right: 4px;
-}
 .editor-bar-spacer {
   flex: 1;
 }
@@ -495,21 +490,115 @@ button:hover {
   font-size: 12px;
   white-space: nowrap;
 }
+/* Small square buttons of the editor pane, an icon each. */
+.editor-pane .bar-button {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #d6dbe2;
+  border-radius: 7px;
+  background: #fff;
+  color: #3e4550;
+}
+.editor-pane .bar-button:hover {
+  background: #f1f3f5;
+}
+.editor-pane .bar-button[aria-pressed='true'] {
+  background: #111827;
+  border-color: #111827;
+  color: #fff;
+}
+/* The files of the document: one tab per file, in the order of the document; the strip scrolls sideways. */
+.editor-files {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px 0;
+  background: #eef0f4;
+  border-bottom: 1px solid #d8dde4;
+}
+.file-tabs {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+.file-tab {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 220px;
+  padding: 6px 8px 6px 11px;
+  border: 1px solid transparent;
+  border-bottom: 0;
+  border-radius: 8px 8px 0 0;
+  color: #4f5660;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  user-select: none;
+}
+.file-tab:hover {
+  background: #e2e6ec;
+}
+.file-tab.active {
+  background: #fff;
+  border-color: #d8dde4;
+  color: #111827;
+  /* Sits on the border of the strip, so the tab opens onto the editor. */
+  margin-bottom: -1px;
+  padding-bottom: 7px;
+}
+.file-tab:focus-visible {
+  outline: 2px solid #8096e8;
+  outline-offset: -2px;
+}
+.file-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.editor-pane .file-close {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: #7a838f;
+  font-size: 14px;
+  line-height: 1;
+}
+.editor-pane .file-close:hover {
+  background: #d4d9e0;
+  color: #111827;
+}
+.editor-pane .file-rename {
+  width: 140px;
+  margin: 0;
+  padding: 1px 5px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 5px;
+}
+.editor-files .bar-button {
+  margin-bottom: 5px;
+}
 .editor-pane .markdown-editor {
   flex: 1;
   min-height: 0;
-  height: auto;
-  resize: none;
-  margin: 0;
-  border: 0;
-  border-radius: 0;
-  padding: 12px 14px;
-  font-size: 13px;
-}
-.editor-pane .markdown-editor:focus {
-  outline: 2px solid #b8c7ff;
-  outline-offset: -2px;
-  box-shadow: none;
+  /* CodeMirror fills the pane and scrolls inside it. */
+  overflow: hidden;
 }
 .splitter {
   flex: 0 0 6px;
@@ -753,6 +842,10 @@ button:hover {
   input,
   select,
   textarea {
+    font-size: 16px;
+  }
+  /* The editor too: the theme of CodeMirror sets its own size. */
+  #markdown .cm-editor {
     font-size: 16px;
   }
 }

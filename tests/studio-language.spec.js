@@ -1,7 +1,7 @@
 // Integration tests of the interface language: French by choice or from the browser, English otherwise.
 import { test, expect } from '@playwright/test';
 import { png } from './helpers/png.mjs';
-import { STATUS_DONE, openDiagramDocument, openFreshStudio, status } from './helpers/studio.mjs';
+import { expectMarkdown, openDiagramDocument, openFreshStudio, status, STATUS_DONE } from './helpers/studio.mjs';
 
 test('the interface switches to French and back, and remembers the choice', async ({ page }) => {
   await openFreshStudio(page);
@@ -19,7 +19,7 @@ test('the interface switches to French and back, and remembers the choice', asyn
 
   await language.selectOption('fr');
   await expect(page.locator('html')).toHaveAttribute('lang', 'fr');
-  await expect(page.getByRole('tab')).toHaveText(['Contenu', 'Style', 'Page']);
+  await expect(page.locator('.tabs').getByRole('tab')).toHaveText(['Contenu', 'Style', 'Page']);
   await expect(page.locator('label', { hasText: 'Sous-titre' })).toBeVisible();
   await expect(page.locator('label.check').first()).toHaveText('Afficher la page de couverture');
   await expect(page.locator('#exportDefault')).toHaveText('Exporter');
@@ -28,6 +28,7 @@ test('the interface switches to French and back, and remembers the choice', asyn
     'PDF seul',
     'HTML avec projet',
     'Markdown avec projet',
+    'Fichiers Markdown (zip)',
     'Projet seul',
   ]);
   await expect(page.locator('#import')).toHaveText('Importer…');
@@ -41,9 +42,17 @@ test('the interface switches to French and back, and remembers the choice', asyn
   await expect(page.locator('.view-controls .segmented').first()).toHaveAttribute('aria-label', 'Mode d’affichage');
   await expect(page.locator('.mode-label')).toHaveText(['Édition', 'Côte à côte', 'Aperçu']);
   await expect(page.locator('#modeSplit')).toHaveAttribute('title', 'Éditeur et aperçu côte à côte');
-  await expect(page.locator('.editor-title')).toHaveText('Markdown');
   await expect(page.locator('#insertPageBreak')).toHaveText('Saut de page');
-  await expect(page.locator('#loadMarkdown')).toHaveText('Importer .md');
+  await expect(page.locator('#loadMarkdown')).toHaveAttribute('title', 'Remplacer ce fichier par un fichier Markdown');
+  await expect(page.locator('#addFile')).toHaveAttribute('aria-label', 'Nouveau fichier');
+  await expect(page.locator('#fileTabs')).toHaveAttribute('aria-label', 'Fichiers du document');
+  // The search panel of the editor (Ctrl+F) speaks the language too.
+  await page.locator('#markdown .cm-content').focus();
+  await page.keyboard.press('Control+f');
+  await expect(page.locator('#markdown .cm-search input[name="search"]')).toHaveAttribute('placeholder', 'Rechercher');
+  await expect(page.locator('#markdown .cm-search button[name="next"]')).toHaveText('suivant');
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#markdown .cm-search')).toHaveCount(0);
   await expect(page.locator('.splitter')).toHaveAttribute('aria-label', 'Largeur de l’éditeur');
   await expect(page.locator('.images-hint')).toHaveText(
     /Associées par nom de fichier[^]*photo\.png[^]*coller des images/,
@@ -69,7 +78,7 @@ test('the interface switches to French and back, and remembers the choice', asyn
   expect(await page.evaluate(() => localStorage.getItem('markdown-paged-studio:language'))).toBe('fr');
 
   await language.selectOption('en');
-  await expect(page.getByRole('tab')).toHaveText(['Content', 'Design', 'Page']);
+  await expect(page.locator('.tabs').getByRole('tab')).toHaveText(['Content', 'Design', 'Page']);
   await expect(page.locator('#exportDefault')).toHaveText('Export');
   await expect(page.locator('#toggleSidebar')).toHaveAttribute('aria-label', 'Hide sidebar');
   await expect(page.locator('.mode-label')).toHaveText(['Edit', 'Split', 'View']);
@@ -86,7 +95,7 @@ test('the tools of the preview and the messages follow the language', async ({ p
   await diagram.hover();
   await expect(diagram.getByRole('toolbar')).toHaveAttribute('aria-label', 'Taille et alignement du diagramme');
   await diagram.getByRole('button', { name: 'Largeur 50 %' }).click();
-  await expect(page.locator('#markdown')).toHaveValue(/```mermaid width=50%\n/);
+  await expectMarkdown(page, /```mermaid width=50%\n/);
   await expect(diagram.getByRole('button', { name: 'Aligner à gauche' })).toBeVisible();
 
   let message = '';
@@ -104,7 +113,7 @@ test.describe('with a French browser', () => {
   test('the interface starts in French', async ({ page }) => {
     await openFreshStudio(page);
     await expect(page.locator('#uiLanguage')).toHaveValue('fr');
-    await expect(page.getByRole('tab')).toHaveText(['Contenu', 'Style', 'Page']);
+    await expect(page.locator('.tabs').getByRole('tab')).toHaveText(['Contenu', 'Style', 'Page']);
     await expect(page.locator('.toolbar-title strong')).toHaveText('Aperçu paginé');
   });
 });
@@ -115,6 +124,6 @@ test.describe('with a browser in another language', () => {
   test('the interface starts in English', async ({ page }) => {
     await openFreshStudio(page);
     await expect(page.locator('#uiLanguage')).toHaveValue('en');
-    await expect(page.getByRole('tab')).toHaveText(['Content', 'Design', 'Page']);
+    await expect(page.locator('.tabs').getByRole('tab')).toHaveText(['Content', 'Design', 'Page']);
   });
 });

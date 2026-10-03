@@ -7,7 +7,7 @@ import { schedulePersist, state } from './config.js';
 import { setMissingImages } from './images.js';
 import { enhanceResizables } from './resize-controls.js';
 import { documentCss, documentHtml } from './document.js';
-import { editInPlace } from './editor.js';
+import { writeDocument } from './chapters.js';
 import { loadPreviewFonts } from './fonts.js';
 import { t } from './i18n.js';
 import { applyView } from './view.js';
@@ -60,7 +60,7 @@ export async function render() {
   let previewer = null;
   try {
     // Diagrams render first (async, possibly loading Mermaid); a stale token here means a newer edit arrived.
-    const html = await documentHtml();
+    const html = await documentHtml({ sourceLines: true });
     // The fonts must be there before pagination: text measured with a fallback font breaks elsewhere.
     await loadPreviewFonts(html, css);
     if (token !== renderToken) return;
@@ -104,13 +104,10 @@ const undone = [];
 const done = [];
 let historyBound = false;
 
+// Writes an edit of the assembled document back into the file it belongs to (an undoable edit of that
+// file); the change of the file schedules the render.
 function writeMarkdown(markdown) {
-  const editor = document.getElementById('markdown');
-  // A textarea holds line breaks as "\n" whatever the source used.
-  const next = markdown.replace(/\r\n?/g, '\n');
-  if (editor && editor.value !== next && !editInPlace(editor, next)) editor.value = next;
-  state.markdown = editor ? editor.value : markdown;
-  scheduleRender();
+  writeDocument(markdown);
 }
 
 // Undoes (or redoes) the last change made from the preview, unless the source was edited since.

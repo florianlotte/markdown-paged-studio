@@ -2,7 +2,16 @@
 // highlighting, running header, facing pages and cover templates.
 import { test, expect } from '@playwright/test';
 import { readFileSync } from 'node:fs';
-import { marginBoxContent, openDocument, pages, setMarkdown, status, exportVia } from './helpers/studio.mjs';
+import {
+  cursorToEnd,
+  expectMarkdown,
+  exportVia,
+  marginBoxContent,
+  openDocument,
+  pages,
+  setMarkdown,
+  status,
+} from './helpers/studio.mjs';
 
 const REPORT = [
   '# Report',
@@ -78,12 +87,11 @@ test('page breaks split the document and the table of contents shows the page nu
   expect(new URL(page.url()).hash).toBe('');
 
   // The buttons write the markers at the cursor.
-  const editor = page.locator('#markdown');
-  await editor.evaluate(el => el.setSelectionRange(el.value.length, el.value.length));
+  await cursorToEnd(page);
   await page.locator('#insertPageBreak').click();
-  await expect(editor).toHaveValue(/Text\.\n\n\\newpage\n$/);
+  await expectMarkdown(page, /Text\.\n\n\\newpage\n$/);
   await page.locator('#insertToc').click();
-  await expect(editor).toHaveValue(/\\newpage\n\n\[\[toc\]\]\n$/);
+  await expectMarkdown(page, /\\newpage\n\n\[\[toc\]\]\n$/);
 });
 
 test('the exported document carries the page numbers of the table of contents', async ({ page, context }) => {

@@ -17,12 +17,32 @@ export async function openFreshStudio(page) {
   await expect(status(page)).toHaveText(STATUS_DONE);
 }
 
-export async function appendMarkdown(page, text) {
-  await page.locator('#markdown').evaluate((el, value) => {
-    el.value += value;
-    el.dispatchEvent(new Event('input'));
-  }, text);
+// The editor is a CodeMirror view: the tests read and write its text through the page API, as one edit.
+export const markdownText = page => page.evaluate(() => window.studio.markdown());
+
+export async function setMarkdown(page, text) {
+  await page.evaluate(value => window.studio.editor.setText(value), text);
 }
+
+export async function appendMarkdown(page, text) {
+  await page.evaluate(value => window.studio.editor.setText(window.studio.editor.text() + value), text);
+}
+
+// Waits for the Markdown of the document to match a pattern, or to equal a text.
+export async function expectMarkdown(page, expected) {
+  const text = expect.poll(() => markdownText(page));
+  if (expected instanceof RegExp) await text.toMatch(expected);
+  else await text.toBe(expected);
+}
+
+export async function expectNoMarkdown(page, pattern) {
+  await expect.poll(() => markdownText(page)).not.toMatch(pattern);
+}
+
+export const focusEditor = page => page.evaluate(() => window.studio.editor.focus());
+
+// Puts the cursor of the editor at the end of the current file.
+export const cursorToEnd = page => page.evaluate(() => window.studio.editor.select(window.studio.editor.text().length));
 
 // Text of a Paged.js margin box: it is rendered as CSS `content` on a pseudo-element.
 export function marginBoxContent(page, pageIndex, box) {
@@ -33,13 +53,6 @@ export function marginBoxContent(page, pageIndex, box) {
 }
 
 export const DIAGRAM = '```mermaid%ATTRS%\nflowchart LR\n  A[Markdown] --> B[HTML]\n  B --> C[Pages]\n```\n';
-
-export async function setMarkdown(page, text) {
-  await page.locator('#markdown').evaluate((el, value) => {
-    el.value = value;
-    el.dispatchEvent(new Event('input'));
-  }, text);
-}
 
 // Width of the diagram as a share of its text column, and where it sits in it.
 export function diagramGeometry(page) {
