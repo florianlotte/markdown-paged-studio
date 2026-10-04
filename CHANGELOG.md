@@ -7,6 +7,15 @@ All notable changes to Markdown Paged Studio are listed here, newest first. The 
 
 ## [Unreleased]
 
+## [1.21.1] - 2026-10-04
+
+### Fixed
+
+- Version 1.21.0 was tagged but never published: a test of the interface language read the page count
+  before the preview had caught up, which only failed on the slower machines of the CI. The test now waits
+  for the render, and `SLOWMO=300 npm test` reproduces such timing locally. Nothing changes in the studio
+  itself: this release publishes what 1.21.0 contains.
+
 ## [1.21.0] - 2026-10-04
 
 ### Added
@@ -377,7 +386,8 @@ All notable changes to Markdown Paged Studio are listed here, newest first. The 
 - Portable desktop app for Windows, Linux and macOS with direct PDF export.
 - Docker image, Playwright integration tests and CI.
 
-[Unreleased]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.21.0...HEAD
+[Unreleased]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.21.1...HEAD
+[1.21.1]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.21.0...v1.21.1
 [1.21.0]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.20.0...v1.21.0
 [1.20.0]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.19.2...v1.20.0
 [1.19.2]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.19.1...v1.19.2

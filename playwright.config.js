@@ -14,6 +14,9 @@ export default defineConfig({
     baseURL: `http://localhost:${PORT}`,
     viewport: { width: 1400, height: 900 },
     trace: 'retain-on-failure',
+    // SLOWMO=300 npm test pauses before every action, as a slow machine would: an assertion that only passes
+    // because it reads the page before a render has finished then fails here, instead of in the CI.
+    launchOptions: { slowMo: Number(process.env.SLOWMO) || 0 },
   },
   // Chromium is the reference and what `npm test` runs; Firefox and WebKit run with `npm run test:firefox`,
   // `npm run test:webkit` or `npm run test:browsers`, and in the `browsers` job of the CI, where one retry

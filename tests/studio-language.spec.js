@@ -3,6 +3,7 @@ import { test, expect } from '@playwright/test';
 import { png } from './helpers/png.mjs';
 import {
   expectMarkdown,
+  markdownText,
   openDiagramDocument,
   openFreshStudio,
   setMarkdown,
@@ -24,15 +25,17 @@ test('the interface switches to French and back, and remembers the choice', asyn
   await page.locator('#imageFiles').setInputFiles({ name: 'plan.png', mimeType: 'image/png', buffer: png(30, 20) });
   await expect(page.locator('#imageList button').first()).toHaveText('Insert');
 
-  // Words of the document that are also words of the interface.
-  await setMarkdown(page, '# Words\n\nExport\n\nReset\n');
+  // Words of the document that are also words of the interface, put at the top of the sample document.
+  await setMarkdown(page, `Export\n\nReset\n\n${await markdownText(page)}`);
+  await expectMarkdown(page, /^Export\n\nReset\n\n# Introduction\n/);
 
   await language.selectOption('fr');
   await expect(page.locator('html')).toHaveAttribute('lang', 'fr');
   await expect(page.locator('.tabs').getByRole('tab')).toHaveText(['Contenu', 'Style', 'Page']);
   // The text of the editor is the user's: never translated.
-  await expect(page.locator('#markdown .cm-line')).toHaveText(['# Words', '', 'Export', '', 'Reset', '']);
-  await expectMarkdown(page, '# Words\n\nExport\n\nReset\n');
+  await expect(page.locator('#markdown .cm-line').nth(0)).toHaveText('Export');
+  await expect(page.locator('#markdown .cm-line').nth(2)).toHaveText('Reset');
+  await expectMarkdown(page, /^Export\n\nReset\n\n# Introduction\n/);
   await expect(page.locator('label', { hasText: 'Sous-titre' })).toBeVisible();
   await expect(page.locator('label.check').first()).toHaveText('Afficher la page de couverture');
   await expect(page.locator('#exportDefault')).toHaveText('Exporter');
@@ -82,6 +85,8 @@ test('the interface switches to French and back, and remembers the choice', asyn
     'Bandeau de couleur',
     'Minimal',
   ]);
+  // Read once the render has caught up with the changes above, not while the previous count still shows.
+  await expect(page.locator('#preview')).not.toHaveClass(/is-stale|is-rendering/);
   await expect(status(page)).toHaveText('3 pages');
   // What the user wrote and the document itself are left alone.
   await expect(page.locator('#title')).toHaveValue('Architecture Report');
