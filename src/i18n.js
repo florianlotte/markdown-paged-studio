@@ -151,6 +151,17 @@ const TRANSLATIONS = {
     'PDF with project, drawn from the preview (pages as images with a text layer)':
       "PDF avec projet, dessiné depuis l'aperçu (pages en images avec une couche de texte)",
     'The document alone, through the print dialog': "Le document seul, par la boîte de dialogue d'impression",
+    'PDF through the print dialog: this browser cannot draw the PDF that carries the project':
+      "PDF par la boîte de dialogue d'impression : ce navigateur ne peut pas dessiner le PDF qui contient le projet",
+    'Not available in this browser. To keep the project, export HTML, Markdown or the zip':
+      'Indisponible dans ce navigateur. Pour garder le projet, exportez en HTML, en Markdown ou en zip',
+    'Print dialog opened: this PDF does not carry the project':
+      "Boîte d'impression ouverte : ce PDF ne contient pas le projet",
+    'This browser cannot draw the PDF that carries the project, so Export opens the print dialog. A PDF saved there cannot be reopened in the studio: use HTML with project, Markdown with project or Markdown files (zip) to keep an editable copy.':
+      "Ce navigateur ne peut pas dessiner le PDF qui contient le projet : Exporter ouvre donc la boîte de dialogue d'impression. Un PDF enregistré ainsi ne peut pas être rouvert dans le studio : utilisez HTML avec projet, Markdown avec projet ou Fichiers Markdown (zip) pour garder une copie modifiable.",
+    'Got it': 'Compris',
+    'this browser could not draw the pages. Use PDF only (print dialog), or export HTML, Markdown or the zip to keep the project':
+      "ce navigateur n'a pas pu dessiner les pages. Utilisez PDF seul (boîte de dialogue d'impression), ou exportez en HTML, en Markdown ou en zip pour garder le projet",
     'Drawing page {done} of {total}…': 'Dessin de la page {done} sur {total}…',
     'Exporting the PDF…': 'Export du PDF…',
     'The studio is locked until the file is ready.': "Le studio est verrouillé jusqu'à ce que le fichier soit prêt.",
@@ -213,7 +224,8 @@ const TRANSLATIONS = {
 
 const ATTRIBUTES = ['title', 'aria-label', 'placeholder', 'alt'];
 // Never translated: the rendered document, what the user types, and anything marked data-no-i18n.
-const SKIPPED = '#preview, .render-stage, textarea, script, style, [data-no-i18n]';
+// The editor holds the user's text and translates its own panels (see setEditorPhrases).
+const SKIPPED = '#preview, .render-stage, .cm-editor, textarea, script, style, [data-no-i18n]';
 
 let language = 'en';
 const listeners = new Set();

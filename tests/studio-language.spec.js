@@ -1,7 +1,14 @@
 // Integration tests of the interface language: French by choice or from the browser, English otherwise.
 import { test, expect } from '@playwright/test';
 import { png } from './helpers/png.mjs';
-import { expectMarkdown, openDiagramDocument, openFreshStudio, status, STATUS_DONE } from './helpers/studio.mjs';
+import {
+  expectMarkdown,
+  openDiagramDocument,
+  openFreshStudio,
+  setMarkdown,
+  status,
+  STATUS_DONE,
+} from './helpers/studio.mjs';
 
 test('the interface switches to French and back, and remembers the choice', async ({ page }) => {
   await openFreshStudio(page);
@@ -17,9 +24,15 @@ test('the interface switches to French and back, and remembers the choice', asyn
   await page.locator('#imageFiles').setInputFiles({ name: 'plan.png', mimeType: 'image/png', buffer: png(30, 20) });
   await expect(page.locator('#imageList button').first()).toHaveText('Insert');
 
+  // Words of the document that are also words of the interface.
+  await setMarkdown(page, '# Words\n\nExport\n\nReset\n');
+
   await language.selectOption('fr');
   await expect(page.locator('html')).toHaveAttribute('lang', 'fr');
   await expect(page.locator('.tabs').getByRole('tab')).toHaveText(['Contenu', 'Style', 'Page']);
+  // The text of the editor is the user's: never translated.
+  await expect(page.locator('#markdown .cm-line')).toHaveText(['# Words', '', 'Export', '', 'Reset', '']);
+  await expectMarkdown(page, '# Words\n\nExport\n\nReset\n');
   await expect(page.locator('label', { hasText: 'Sous-titre' })).toBeVisible();
   await expect(page.locator('label.check').first()).toHaveText('Afficher la page de couverture');
   await expect(page.locator('#exportDefault')).toHaveText('Exporter');
@@ -46,6 +59,11 @@ test('the interface switches to French and back, and remembers the choice', asyn
   await expect(page.locator('#loadMarkdown')).toHaveAttribute('title', 'Remplacer ce fichier par un fichier Markdown');
   await expect(page.locator('#addFile')).toHaveAttribute('aria-label', 'Nouveau fichier');
   await expect(page.locator('#fileTabs')).toHaveAttribute('aria-label', 'Fichiers du document');
+  // The notice of the export fallback is part of the interface.
+  await expect(page.locator('#exportNotice')).toContainText('Ce navigateur ne peut pas dessiner le PDF', {
+    useInnerText: false,
+  });
+  await expect(page.locator('#dismissExportNotice')).toHaveText('Compris', { useInnerText: false });
   // The search panel of the editor (Ctrl+F) speaks the language too.
   await page.locator('#markdown .cm-content').focus();
   await page.keyboard.press('Control+f');

@@ -2,7 +2,11 @@
 // because Paged.js needs their final size to lay out pages; images are resolved by file name from the
 // image library and inlined as data URLs.
 import MarkdownIt from 'markdown-it';
+import definitionLists from 'markdown-it-deflist';
 import footnotes from 'markdown-it-footnote';
+import highlightedText from 'markdown-it-mark';
+import subscript from 'markdown-it-sub';
+import superscript from 'markdown-it-sup';
 import { escapeHtml } from './escape.js';
 import { findImage, imageName, isExternalSource } from './images.js';
 
@@ -34,6 +38,154 @@ md.linkify.add('www.', {
     match.url = `http://${match.url}`;
   },
 });
+
+// ---- Small additions to the text: ==highlighted==, H~2~O, x^2^, and definition lists (a term, then lines
+// starting with ": "). Official markdown-it plugins.
+
+md.use(subscript).use(superscript).use(highlightedText).use(definitionLists);
+
+// A caret right after "[" belongs to a footnote call. When the note does not exist the call stays as text,
+// and its caret must not open a superscript that would swallow what follows.
+md.inline.ruler.before('sup', 'caret_after_bracket', (state, silent) => {
+  if (state.src.charCodeAt(state.pos) !== 0x5e || state.src.charCodeAt(state.pos - 1) !== 0x5b) return false;
+  if (!silent) state.pending += '^';
+  state.pos++;
+  return true;
+});
+
+// ---- Alerts, as on GitHub: a quote whose first line is [!NOTE], [!TIP], [!IMPORTANT], [!WARNING] or
+// [!CAUTION] becomes a titled box. The title is written in the language of the document.
+
+const ALERT = /^\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\][ \t]*(?:\n|$)/i;
+const ALERT_TITLES = {
+  en: { note: 'Note', tip: 'Tip', important: 'Important', warning: 'Warning', caution: 'Caution' },
+  fr: { note: 'Note', tip: 'Astuce', important: 'Important', warning: 'Avertissement', caution: 'Attention' },
+  de: { note: 'Hinweis', tip: 'Tipp', important: 'Wichtig', warning: 'Warnung', caution: 'Vorsicht' },
+  es: { note: 'Nota', tip: 'Consejo', important: 'Importante', warning: 'Advertencia', caution: 'Precaución' },
+  it: { note: 'Nota', tip: 'Suggerimento', important: 'Importante', warning: 'Avviso', caution: 'Attenzione' },
+  pt: { note: 'Nota', tip: 'Dica', important: 'Importante', warning: 'Aviso', caution: 'Cuidado' },
+  nl: { note: 'Opmerking', tip: 'Tip', important: 'Belangrijk', warning: 'Waarschuwing', caution: 'Let op' },
+};
+
+md.core.ruler.after('block', 'alerts', state => {
+  const { tokens } = state;
+  const language = String(state.env?.language ?? 'en')
+    .split('-')[0]
+    .toLowerCase();
+  const titles = ALERT_TITLES[language] ?? ALERT_TITLES.en;
+  for (let index = 0; index < tokens.length; index++) {
+    const open = tokens[index];
+    const inline = tokens[index + 2];
+    if (open.type !== 'blockquote_open' || tokens[index + 1]?.type !== 'paragraph_open' || inline?.type !== 'inline')
+      continue;
+    const match = ALERT.exec(inline.content);
+    if (!match) continue;
+    let close = index + 1;
+    while (close < tokens.length && !(tokens[close].type === 'blockquote_close' && tokens[close].level === open.level))
+      close++;
+    const text = inline.content.slice(match[0].length);
+    // The marker alone, with nothing to say: an ordinary quote.
+    if (!text.trim() && close === index + 4) continue;
+
+    const type = match[1].toLowerCase();
+    open.type = 'alert_open';
+    open.tag = 'div';
+    open.attrJoin('class', `alert alert-${type}`);
+    tokens[close].type = 'alert_close';
+    tokens[close].tag = 'div';
+
+    const title = [
+      new state.Token('paragraph_open', 'p', 1),
+      new state.Token('inline', '', 0),
+      new state.Token('paragraph_close', 'p', -1),
+    ];
+    title[0].attrSet('class', 'alert-title');
+    title[0].block = true;
+    title[2].block = true;
+    title[1].content = titles[type];
+    title[1].children = [];
+    for (const token of title) token.level = open.level + 1;
+    title[1].level = open.level + 2;
+    // The first paragraph loses its marker line; it goes away when nothing else was in it.
+    if (text.trim()) {
+      inline.content = text;
+      if (inline.map) inline.map = [inline.map[0] + 1, inline.map[1]];
+      tokens.splice(index + 1, 0, ...title);
+    } else tokens.splice(index + 1, 3, ...title);
+  }
+});
+
+// ---- Formulas, written in TeX: $…$ inside a sentence, $$…$$ on lines of their own, or a ```math block.
+// The rules only keep the TeX apart from the Markdown; renderMath() (src/math.js) draws it with KaTeX.
+// An opening $ is followed by something that is not a space and does not follow a letter or a digit; a
+// closing $ follows something that is not a space and is not followed by a digit. "5 $ and 10 $", "$5-$10"
+// and "US$5" stay text, and \$ is always a plain dollar.
+
+const mathPlaceholder = (tag, kind, tex, attributes = '') =>
+  `<${tag} class="math math-${kind}"${attributes}>${escapeHtml(tex)}</${tag}>`;
+
+md.inline.ruler.after('escape', 'math_inline', (state, silent) => {
+  const { src, pos, posMax } = state;
+  if (src.charCodeAt(pos) !== 0x24 || src.charCodeAt(pos + 1) === 0x24) return false;
+  const next = src[pos + 1];
+  if (!next || /\s/.test(next) || (pos > 0 && /[\p{L}\p{N}$]/u.test(src[pos - 1]))) return false;
+  let end = pos + 1;
+  for (;;) {
+    end = src.indexOf('$', end);
+    if (end === -1 || end >= posMax) return false;
+    let backslashes = 0;
+    while (src[end - 1 - backslashes] === '\\') backslashes++;
+    if (backslashes % 2 === 0) break;
+    end++;
+  }
+  const tex = src.slice(pos + 1, end);
+  if (/\s$/.test(tex) || /[\d$]/.test(src[end + 1] ?? '')) return false;
+  if (!silent) {
+    const token = state.push('math_inline', 'span', 0);
+    token.content = tex;
+    token.markup = '$';
+  }
+  state.pos = end + 1;
+  return true;
+});
+
+md.renderer.rules.math_inline = (tokens, idx) => mathPlaceholder('span', 'inline', tokens[idx].content);
+
+md.block.ruler.after(
+  'fence',
+  'math_block',
+  (state, startLine, endLine, silent) => {
+    if (state.sCount[startLine] - state.blkIndent >= 4) return false;
+    const lineText = line => state.src.slice(state.bMarks[line] + state.tShift[line], state.eMarks[line]);
+    const first = lineText(startLine);
+    if (!first.startsWith('$$')) return false;
+    const rest = first.slice(2).trim();
+    let tex;
+    let next = startLine + 1;
+    if (rest.length > 2 && rest.endsWith('$$')) {
+      tex = rest.slice(0, -2).trim();
+    } else if (rest === '') {
+      // Up to a line holding only $$; without one, this is not a formula.
+      while (next < endLine && state.sCount[next] >= state.blkIndent && lineText(next).trim() !== '$$') next++;
+      if (next >= endLine || state.sCount[next] < state.blkIndent) return false;
+      tex = state.getLines(startLine + 1, next, state.blkIndent, false).trim();
+      next++;
+    } else return false;
+    if (!tex) return false;
+    if (silent) return true;
+    const token = state.push('math_block', 'div', 0);
+    token.block = true;
+    token.content = tex;
+    token.markup = '$$';
+    token.map = [startLine, next];
+    state.line = next;
+    return true;
+  },
+  { alt: ['paragraph', 'reference', 'blockquote', 'list'] },
+);
+
+md.renderer.rules.math_block = (tokens, idx, options, env, self) =>
+  `${mathPlaceholder('div', 'block', tokens[idx].content, self.renderAttrs(tokens[idx]))}\n`;
 
 // ---- Footnotes: Text[^1] with "[^1]: The note" anywhere in the document, or an inline note^[like this].
 // The text of a note is written where it is called: Paged.js moves it to the foot of the page holding the
@@ -324,9 +476,18 @@ md.core.ruler.push('heading_anchors', state => {
   const headings = [];
   state.tokens.forEach((token, index) => {
     if (token.type !== 'heading_open') return;
-    const text = (state.tokens[index + 1]?.children ?? [])
-      .filter(child => child.type === 'text' || child.type === 'code_inline')
+    const parts = (state.tokens[index + 1]?.children ?? []).filter(child =>
+      ['text', 'code_inline', 'math_inline'].includes(child.type),
+    );
+    const text = parts
       .map(child => child.content)
+      .join('')
+      .trim();
+    // For the table of contents: the same text, with the formulas kept as formulas.
+    const html = parts
+      .map(child =>
+        child.type === 'math_inline' ? mathPlaceholder('span', 'inline', child.content) : escapeHtml(child.content),
+      )
       .join('')
       .trim();
     const base = slugify(text);
@@ -338,6 +499,7 @@ md.core.ruler.push('heading_anchors', state => {
       level: Number(token.tag.slice(1)),
       id: `${ANCHOR_PREFIX}${slug}`,
       text,
+      html,
       line: token.map?.[0] ?? 0,
     });
   });
@@ -365,7 +527,7 @@ md.renderer.rules.toc = (tokens, idx, options, env) => {
     .filter(heading => heading.line >= (map?.[1] ?? 0) && heading.level <= meta.depth)
     .map(
       heading =>
-        `<li class="toc-item toc-level-${heading.level}"><a href="#${escapeHtml(heading.id)}"><span class="toc-text">${escapeHtml(heading.text)}</span><span class="toc-dots"></span></a></li>`,
+        `<li class="toc-item toc-level-${heading.level}"><a href="#${escapeHtml(heading.id)}"><span class="toc-text">${heading.html ?? escapeHtml(heading.text)}</span><span class="toc-dots"></span></a></li>`,
     );
   return `<nav class="toc"><ol class="toc-list">${items.join('')}</ol></nav>\n`;
 };
@@ -422,6 +584,8 @@ md.renderer.rules.fence = (tokens, idx, options, env, self) => {
     ];
     return `<div ${attributes.filter(Boolean).join(' ')}></div>\n`;
   }
+  if (language.toLowerCase() === 'math' && token.content.trim())
+    return `${mathPlaceholder('div', 'block', token.content.trim(), self.renderAttrs(token))}\n`;
   return defaultFence(tokens, idx, options, env, self);
 };
 

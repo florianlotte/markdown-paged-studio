@@ -235,10 +235,12 @@ test('the editor and the preview scroll together, and a double-click on a block 
   const part = /^## (Part \d+)$/.exec((await visibleLines()).find(line => /^## Part/.test(line)) ?? '')?.[1];
   expect(part).toBeTruthy();
   await expect.poll(visibleHeadings).toContain(part);
-  // To the end, and back to the start.
-  await page.mouse.wheel(0, 100000);
+  // To the end, and back to the start. The pane under the pointer is scrolled directly: engines do not
+  // agree on how far one turn of the wheel goes.
+  const scrollTo = (locator, value) => locator.evaluate((element, position) => (element.scrollTop = position), value);
+  await scrollTo(scroller, 1e7);
   await expect.poll(visibleHeadings).toContain('Part 14');
-  await page.mouse.wheel(0, -100000);
+  await scrollTo(scroller, 0);
   await expect.poll(visibleHeadings).toContain('Part 1');
 
   // The preview drives: the editor follows it to the same part.
@@ -246,8 +248,10 @@ test('the editor and the preview scroll together, and a double-click on a block 
   await page
     .locator('#preview .document-content h2', { hasText: /^Part 9$/ })
     .evaluate(heading => heading.scrollIntoView());
-  await expect.poll(async () => (await visibleLines()).join('\n')).toContain('## Part 9');
-  await page.mouse.wheel(0, -100000);
+  // The top of the editor is in part 9: on its heading or, an engine rounding further, just under it.
+  await expect.poll(async () => (await visibleLines()).join('\n')).toContain('Paragraph 9 of the long document.');
+  expect((await visibleLines()).join('\n')).not.toContain('Paragraph 8 of the long document.');
+  await scrollTo(shell, 0);
   await expect.poll(() => top(scroller)).toBe(0);
 
   // Switched off: each pane scrolls alone.

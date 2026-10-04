@@ -38,6 +38,7 @@
 - **Images** uploaded, dropped or pasted, matched to the Markdown by file name, resizable like the diagrams.
 - **Custom CSS** editor with import, applied to the document only.
 - **Interface in English or French**, following the browser or your choice.
+- **Formulas, alerts and more**: TeX formulas drawn by KaTeX (`$E = mc^2$`), GitHub alerts (`> [!NOTE]`), highlighted text, subscript, superscript and definition lists.
 - **A document in several files**: chapters as tabs above the editor, assembled into one paged document and one PDF, with shared settings, table of contents and page numbers.
 - **A real editor**: Markdown colours, line numbers, search and replace (Ctrl+F), and the preview scrolling along with the text; a double-click in the preview shows the source.
 - **Edit, Split or View**: the editor and the paged preview share the window with a draggable splitter, or one of them takes it all; plus one page or two pages side by side, zoom, fit to width, Ctrl + wheel, and a collapsible settings sidebar.
@@ -122,6 +123,20 @@ Every change is written back to that opening line, so the size travels with the 
 Every diagram type supported by [Mermaid](https://mermaid.js.org) works. Diagrams are rendered before pagination, so Paged.js knows their exact size, and the resulting SVG is part of the exported file. A diagram with a syntax error shows its error message and source in place, without breaking the rest of the document. Mermaid is loaded on demand the first time a document contains a diagram.
 
 ![A diagram selected in the preview, with its size and alignment tools and its caption](docs/screenshots/diagram.png)
+
+### Formulas, alerts and more
+
+| Write                                   | To get                                                                                |
+| --------------------------------------- | ------------------------------------------------------------------------------------- |
+| `$E = mc^2$`                            | A formula inside the sentence, written in TeX and drawn by [KaTeX](https://katex.org) |
+| `$$` … `$$` on their own lines          | A formula on a line of its own; a ` ```math ` block does the same                     |
+| `\begin{equation} … \end{equation}`     | A numbered formula                                                                    |
+| `> [!NOTE]` then the lines of the quote | A titled box; also `[!TIP]`, `[!IMPORTANT]`, `[!WARNING]`, `[!CAUTION]`               |
+| `==text==`                              | Highlighted text                                                                      |
+| `H~2~O`, `x^2^`                         | Subscript and superscript                                                             |
+| `Term` then a line starting with `: `   | A definition list                                                                     |
+
+KaTeX, its stylesheet and its fonts are only loaded when a document holds a formula, and the fonts a document uses travel inside its exports. Amounts of money are not formulas (`5 $ and 10 $`, `$5-$10`), and `\$` is always a plain dollar. The title of an alert follows the document language. Details and limits are in [Markdown support](docs/markdown-support.md#formulas-alerts-and-more).
 
 ### Structure: table of contents, page breaks, footnotes, code
 
@@ -226,6 +241,9 @@ Inside the content, these class names are stable and meant to be styled:
 | Page break        | `.page-break`                                                                                                                                                                                                         |
 | Footnote          | `.footnote` for the note, `.footnote::footnote-call` for its call in the text, `.footnote::footnote-marker` for its number, `.footnote-ref` for a repeated call; the area of the notes is `@page { @footnote { … } }` |
 | Task list         | `.contains-task-list` on the list, `.task-list-item` on the item, holding an `input`                                                                                                                                  |
+| Formula           | `.math` with `.math-inline` or `.math-block`, holding KaTeX's `.katex`; `.math-error` when the formula could not be read                                                                                              |
+| Alert             | `.alert` with `.alert-note`, `.alert-tip`, `.alert-important`, `.alert-warning` or `.alert-caution`, its title in `.alert-title`; the colour is `--alert-color`                                                       |
+| Highlighted text  | `mark`; subscript and superscript are `sub` and `sup`, definition lists `dl`, `dt`, `dd`                                                                                                                              |
 | Highlighted code  | `pre.code-block` with `.code-light` or `.code-dark`, and highlight.js `.hljs-*` spans                                                                                                                                 |
 | Heading           | an `id` made of `sec-` and the anchor name: `#sec-details`                                                                                                                                                            |
 
@@ -303,7 +321,7 @@ An exported file carries everything needed to edit it again: the Markdown, every
 
 **Import…** opens all five: a project JSON, an HTML, a Markdown, a zip or a PDF exported by the studio. Any other zip that holds Markdown files opens as a document too: its `.md` files in the order of their names, its images, and the first heading as the title. A Markdown file without that front matter (none, or another tool's) replaces the Markdown, takes its first level 1 heading (`# Title`) as the title of the cover, and keeps the other settings and the images; a foreign front matter stays in the text, where it is easy to remove. The desktop app has the same commands in its **File** menu (Ctrl+O imports).
 
-Chromium-based browsers give the most faithful print output for paged media.
+Chromium-based browsers give the most faithful print output for paged media. Where a browser cannot draw the PDF that carries the project (some older versions of Safari cannot read back the pages they drew), **Export** opens the print dialog instead and says so once: that PDF does not hold the project, the HTML, Markdown and zip exports do.
 
 ## How it works
 
@@ -393,6 +411,7 @@ GitHub Actions workflows in `.github/workflows/`: `ci.yml` runs on every push an
 | `npm run format`        | Prettier over the whole repository                                                        |
 | `npm run format:check`  | Prettier in check mode                                                                    |
 | `npm test`              | Playwright integration tests of the web app in a headless Chromium (starts Vite itself)   |
+| `npm run test:browsers` | The same tests under Chromium, Firefox and WebKit (`test:firefox`, `test:webkit` for one) |
 | `npm run test:unit`     | Unit tests of the helpers, of the Markdown conformance and of the changelog (Node runner) |
 | `npm run desktop`       | Build and open the Electron desktop app                                                   |
 | `npm run desktop:build` | Package the desktop app for the current OS into `release/`                                |
@@ -441,7 +460,7 @@ The rendered document is styled only by the CSS generated in `documentCss()`, ne
 
 ## Browser support
 
-Recent Chromium-based browsers (Chrome, Edge, Brave, Arc) are the reference for both the preview and printing. On phones and narrow windows the settings open as a full-screen drawer over the preview, and the toolbar actions scroll horizontally. Firefox 126+ and Safari 17+ have what the studio relies on (the CSS `zoom` property for the preview zoom, among others), but only Chromium is covered by the automated tests. Print output from non-Chromium browsers may differ in margin boxes and page breaks.
+Recent Chromium-based browsers (Chrome, Edge, Brave, Arc) are the reference for both the preview and printing. On phones and narrow windows the settings open as a full-screen drawer over the preview, and the toolbar actions scroll horizontally. Firefox 126+ and Safari 17+ have what the studio relies on (the CSS `zoom` property for the preview zoom, among others), and the automated tests run under Chromium, Firefox and WebKit, the PDF drawn by the studio included. Print output from non-Chromium browsers may differ in margin boxes and page breaks.
 
 ## Roadmap
 
@@ -465,6 +484,8 @@ If the studio saves you time, you can support its development through [GitHub Sp
 ## License
 
 [MIT](LICENSE) © 2026 Florian Lotte
+
+Formulas are drawn by [KaTeX](https://katex.org) (MIT License); its fonts, embedded in the exports that hold formulas, are under the SIL Open Font License 1.1.
 
 The invisible text layer of the PDFs drawn by the browser uses the glyphless font of [Tesseract OCR](https://github.com/tesseract-ocr/tesseract) (`tessdata/pdf.ttf`, Apache License 2.0), embedded in `src/glyphless-font.js`.
 

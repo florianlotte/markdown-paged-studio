@@ -4,6 +4,7 @@
 import normalCss from '@fontsource-variable/inter/wght.css?raw';
 import italicCss from '@fontsource-variable/inter/wght-italic.css?raw';
 import { neededFaces, parseFontFaces } from './font-faces.js';
+import { withoutMath } from './math-core.js';
 
 export const FONT_FAMILY = 'Inter';
 const WEIGHTS = '100 900';
@@ -24,9 +25,11 @@ const pathOf = face => FILES.replace(/inter-\*-wght-\*\.woff2$/, face.file);
 
 // Faces the document needs: the built-in rules always name the font (margin boxes, cover). Italic faces are
 // skipped when neither the content nor the stylesheet can produce italic text.
+// Formulas are drawn with the fonts of KaTeX (src/math.js): their characters ask nothing of this font.
 function facesFor(html, css) {
-  const italic = /<(em|i|cite|address|dfn|var)\b/i.test(html) || /italic|oblique/i.test(css);
-  return neededFaces(FACES, `${html}${css}`, { italic }).filter(face => pathOf(face) in urls);
+  const text = withoutMath(html);
+  const italic = /<(em|i|cite|address|dfn|var)\b/i.test(text) || /italic|oblique/i.test(css);
+  return neededFaces(FACES, `${text}${css}`, { italic }).filter(face => pathOf(face) in urls);
 }
 
 const loading = new Map(); // font file -> promise of its FontFace, registered in the studio page

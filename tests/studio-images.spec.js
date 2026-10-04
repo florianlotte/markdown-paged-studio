@@ -130,7 +130,10 @@ test('images are inserted from the list, by pasting, and exported inline', async
   await editor.locator('.cm-content').evaluate((el, data) => {
     const transfer = new DataTransfer();
     transfer.items.add(new File([new Uint8Array(data)], 'image.png', { type: 'image/png' }));
-    el.dispatchEvent(new ClipboardEvent('paste', { clipboardData: transfer, bubbles: true, cancelable: true }));
+    const event = new ClipboardEvent('paste', { clipboardData: transfer, bubbles: true, cancelable: true });
+    // Some engines ignore the clipboard data of a scripted event: give it to them as a property.
+    if (!event.clipboardData?.files.length) Object.defineProperty(event, 'clipboardData', { value: transfer });
+    el.dispatchEvent(event);
   }, bytes);
   await expectMarkdown(page, /!\[pasted-\d{14}\]\(pasted-\d{14}\.png\)\n$/);
   await expect(page.locator('#preview .document-image > img')).toHaveCount(2);

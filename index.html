@@ -390,6 +390,15 @@
               </div>
             </div>
           </header>
+          <!-- Shown once, when Export had to use the print dialog because the pages cannot be drawn here. -->
+          <div id="exportNotice" class="notice" role="status" hidden>
+            <p>
+              This browser cannot draw the PDF that carries the project, so Export opens the print dialog. A PDF saved
+              there cannot be reopened in the studio: use HTML with project, Markdown with project or Markdown files
+              (zip) to keep an editable copy.
+            </p>
+            <button id="dismissExportNotice" class="secondary" type="button">Got it</button>
+          </div>
           <div class="workbench" data-mode="split">
             <section class="editor-pane" id="editorPane" aria-label="Markdown editor">
               <div class="editor-files">

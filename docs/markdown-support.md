@@ -9,6 +9,8 @@ What the studio understands, how it differs from the specifications on purpose, 
 - **GitHub Flavored Markdown** (GFM) is supported too: tables, strikethrough, task lists, and automatic links
   for addresses written with their scheme (`https://…`), addresses starting with `www.` and e-mail addresses.
 - **Footnotes**, which belong to neither specification, are placed at the foot of the page that calls them.
+- **Formulas** in TeX, **alerts**, highlighted text, subscript, superscript and definition lists are supported
+  as well: see [Formulas, alerts and more](#formulas-alerts-and-more).
 - The studio adds its own syntax for paged documents: size, alignment and caption of images and diagrams,
   `[[toc]]`, `\newpage`, Mermaid diagrams. See the [README](../README.md#usage).
 - Four behaviours differ from CommonMark on purpose. They are listed below; nothing else differs.
@@ -74,16 +76,43 @@ How to read them:
 
 ## Not supported
 
-| Syntax                    | Example                 | What you see today                         |
-| ------------------------- | ----------------------- | ------------------------------------------ |
-| Definition lists          | `Term` / `: Definition` | A paragraph                                |
-| Subscript and superscript | `H~2~O`, `x^2^`         | The text as written                        |
-| Math formulas             | `$a^2 + b^2$`           | The text as written                        |
-| Highlighted text          | `==marked==`            | The text as written                        |
-| Alerts                    | `> [!NOTE]`             | A quote starting with `[!NOTE]`            |
-| Heading identifiers       | `# Title {#custom}`     | The braces in the title                    |
-| Abbreviations             | `*[HTML]: Hyper Text`   | The text as written                        |
-| Emoji shortcodes          | `:smile:`               | The text as written; type the emoji itself |
+| Syntax              | Example               | What you see today                         |
+| ------------------- | --------------------- | ------------------------------------------ |
+| Heading identifiers | `# Title {#custom}`   | The braces in the title                    |
+| Abbreviations       | `*[HTML]: Hyper Text` | The text as written                        |
+| Emoji shortcodes    | `:smile:`             | The text as written; type the emoji itself |
+
+## Formulas, alerts and more
+
+```markdown
+Energy is $E = mc^2$, written inside the sentence.
+
+$$
+\int_0^\infty e^{-x^2}\,dx = \frac{\sqrt{\pi}}{2}
+$$
+
+> [!WARNING]
+> Check the units before you publish.
+
+Water is H~2~O, an area is in m^2^, and this is ==highlighted==.
+
+Term
+: Its definition.
+```
+
+- **Formulas** are written in TeX and drawn by [KaTeX](https://katex.org/docs/supported): `$…$` inside a
+  sentence, `$$…$$` on lines of their own (or on one line), or a ` ```math ` block. A formula KaTeX cannot
+  read shows its source in red. `\begin{equation}` numbers the formula, in the order of the document.
+- A dollar is only the start of a formula when what follows is not a space and what precedes is not a letter
+  or a digit, and only its end when what precedes is not a space and what follows is not a digit: `5 $ and
+10 $`, `$5-$10` and `US$5` stay text. `\$` is always a plain dollar. `$$` in the middle of a line is text.
+- In a table cell a `|` ends the cell, also inside a formula: write `\vert` or `\mid`.
+- **Alerts** are quotes whose first line is `[!NOTE]`, `[!TIP]`, `[!IMPORTANT]`, `[!WARNING]` or
+  `[!CAUTION]`, as on GitHub. The title is written in the language of the document (English, French, German,
+  Spanish, Italian, Portuguese, Dutch; English otherwise). A marker with nothing after it stays a quote.
+- **Definition lists**: a line starting with `: ` (or `~ `) right after a paragraph makes that paragraph a
+  term and the line its definition. Start such a line with `\:` to keep an ordinary paragraph.
+- **Subscript and superscript** take a single word: `H~2~O`, `x^2^`. `~~struck~~` is still strikethrough.
 
 ## Footnotes and task lists
 

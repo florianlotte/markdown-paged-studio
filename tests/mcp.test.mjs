@@ -92,6 +92,22 @@ test('render_html returns a standalone document with the diagram and French quot
   assert.doesNotMatch(html, /unpkg\.com/);
 });
 
+test('formulas are drawn with KaTeX and its fonts travel in the document', async () => {
+  const result = await client.callTool({
+    name: 'render_html',
+    arguments: { markdown: '# Maths\n\nEnergy $E = mc^2$.\n\n> [!NOTE]\n> Checked.\n', config: { cover: false } },
+  });
+  assert.equal(result.isError, undefined);
+  const html = result.content[0].text;
+  // The chunks loaded on demand (KaTeX, its stylesheet, its fonts) are found in the build.
+  assert.match(html, /<span class="math math-inline" role="math"[^>]*><!--math--><span class="katex">/);
+  assert.match(html, /@font-face\{font-family:KaTeX_Math;[^}]*src:url\(data:font\/woff2;base64,/);
+  assert.match(
+    html,
+    /<div class="alert alert-note"><p class="alert-title">Note<\/p>|<div class="alert alert-note">\s*<p class="alert-title">Note<\/p>/,
+  );
+});
+
 test('diagrams honour the size and alignment of their fence line', async () => {
   const result = await client.callTool({
     name: 'render_html',

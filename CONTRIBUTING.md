@@ -40,14 +40,15 @@ A few rules that are easy to miss:
 npm run lint
 npm run format:check      # npm run format fixes it
 npm run test:unit
-npm test                  # web tests; PORT=5183 npm test if port 5173 is busy
+npm test                  # web tests under Chromium; PORT=5183 npm test if port 5173 is busy
+npm run test:browsers     # the same under Chromium, Firefox and WebKit (npx playwright install firefox webkit)
 npm run build
 npm run test:desktop      # after the build; needs a display (xvfb-run on a server)
 npm run test:mcp          # after the build
 ```
 
 - Add or update a test for what you change. Most of the application needs a real browser, so the tests drive
-  the studio in a headless Chromium (`tests/studio-*.spec.js`); pure helpers have unit tests (`tests/*.test.mjs`).
+  the studio in a headless browser (`tests/studio-*.spec.js`; Chromium by default, Firefox and WebKit in the CI); pure helpers have unit tests (`tests/*.test.mjs`).
 - Check the preview, the HTML export and the PDF export in a Chromium-based browser when you touch the document.
 - Describe the change under `## [Unreleased]` in [CHANGELOG.md](CHANGELOG.md).
 - Keep a pull request to one subject.

@@ -61,6 +61,49 @@ jobs:
       - name: Test the MCP server end to end
         run: npm run test:mcp
 
+  # The web suite again under the two other engines. Chromium, in `check`, stays the reference.
+  browsers:
+    name: Web tests (${{ matrix.browser }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [firefox, webkit]
+    env:
+      # This job never starts the desktop app.
+      ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Cache the Playwright download
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: browser-${{ matrix.browser }}-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      - run: npm ci --no-audit --no-fund
+
+      - name: Install Playwright ${{ matrix.browser }}
+        run: npx playwright install --with-deps ${{ matrix.browser }}
+
+      - run: npm run test:${{ matrix.browser }}
+        env:
+          CI: 'true'
+
+      - name: Upload Playwright traces on failure
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-traces-${{ matrix.browser }}
+          path: test-results/
+          if-no-files-found: ignore
+
   docker:
     name: Docker image
     runs-on: ubuntu-latest

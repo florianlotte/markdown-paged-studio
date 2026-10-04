@@ -1,9 +1,12 @@
 // The rendered document: its CSS (@page rules, cover, built-in rules, then the user's stylesheet), its HTML,
-// and the standalone file used for export, print and PDF. The class names here are public API (see README).
+// and the standalone file used for export, print and PDF. The class names here are public API (see README):
+// cover, content, diagrams, images, captions, table of contents, footnotes, task lists, formulas (.math),
+// alerts (.alert), code blocks.
 import { LANGUAGE_TAG, PAGE_HEIGHT_MM, state } from './config.js';
 import { escCssString, escapeHtml } from './escape.js';
 import { inlineFontCss } from './fonts.js';
 import { highlightCode, md, renderDiagrams } from './markdown.js';
+import { inlineMathCss, renderMath } from './math.js';
 
 // Typographic quotes used by markdown-it's typographer, per primary language.
 const QUOTES_BY_LANGUAGE = {
@@ -155,6 +158,23 @@ export function documentCss() {
 .contains-task-list { padding-left: 6mm; }
 .task-list-item { list-style: none; }
 .task-list-item input { margin: 0 1.5mm 0 -5.5mm; vertical-align: middle; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+.math { break-inside: avoid; }
+.math-block { margin: 4mm 0; text-align: center; }
+.math-block > .katex-display { margin: 0; }
+.math-error { color: #b3261e; }
+.alert { --alert-color: #1f5fbf; margin: 4mm 0; padding: 1mm 0 1mm 5mm; border-left: 1mm solid var(--alert-color); break-inside: avoid; }
+.alert-tip { --alert-color: #1a7f37; }
+.alert-important { --alert-color: #6f42c1; }
+.alert-warning { --alert-color: #9a6700; }
+.alert-caution { --alert-color: #b3261e; }
+.alert > :first-child { margin-top: 0; }
+.alert > :last-child { margin-bottom: 0; }
+.alert-title { margin-bottom: 1.5mm; font-weight: 700; color: var(--alert-color); break-after: avoid; }
+.alert-title + * { margin-top: 0; }
+:where(.pagedjs_page) mark { padding: 0 .6mm; background: #fff3a3; color: inherit; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+:where(.pagedjs_page) :is(sub, sup) { font-size: 75%; line-height: 0; }
+:where(.pagedjs_page) dt { margin-top: 3mm; font-weight: 600; break-after: avoid; }
+:where(.pagedjs_page) dd { margin: 1mm 0 0 6mm; }
 .image-caption, .diagram-caption { display: block; margin-top: 2mm; font-size: 9pt; line-height: 1.35; color: #5f6368; text-align: center; }
 .document-image.has-caption > .image-caption { box-sizing: border-box; width: 0; min-width: 100%; }
 .document-content h1, .document-content h2, .document-content h3 { break-after: avoid; }
@@ -201,7 +221,10 @@ export async function documentHtml({ sourceLines = false } = {}) {
       </div>
     </section>`
     : '';
-  const body = await highlightCode(await renderDiagrams(md.render(state.markdown, { sourceLines })), state.codeTheme);
+  // Formulas first (they are plain text until then), then diagrams and code colours; alerts are titled in
+  // the language of the document.
+  const rendered = md.render(state.markdown, { sourceLines, language: lang });
+  const body = await highlightCode(await renderDiagrams(await renderMath(rendered)), state.codeTheme);
   return `${cover}<article class="document-content" lang="${lang}">${body}</article>`;
 }
 
@@ -243,10 +266,16 @@ export async function standaloneHtml({ mode = 'export', source = '' } = {}) {
   const content = await documentHtml();
   const css = documentCss();
   // Kept away from Paged.js, which would parse the inlined font files for nothing.
-  const fonts = await inlineFontCss(content, css).catch(error => {
+  const textFont = await inlineFontCss(content, css).catch(error => {
     console.warn('The document font could not be embedded', error);
     return '';
   });
+  // The rules and fonts of the formulas, only when the document has some.
+  const math = await inlineMathCss(content).catch(error => {
+    console.warn('The fonts of the formulas could not be embedded', error);
+    return '';
+  });
+  const fonts = `${textFont}${math}`;
   // A literal "</script" inside the inlined library would end the script element early.
   const library = (await loadPagedPolyfill()).replace(/<\/script/gi, '<\\/script');
   const after = AFTER_PAGINATION[mode] ?? '';

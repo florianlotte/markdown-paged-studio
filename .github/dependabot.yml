@@ -7,6 +7,10 @@ updates:
     groups:
       minor-and-patch:
         update-types: [minor, patch]
+    ignore:
+      # Mermaid brings its own KaTeX: the same range keeps one copy of it in the build.
+      - dependency-name: katex
+        versions: ['>=0.17.0']
   - package-ecosystem: github-actions
     directory: /
     schedule:

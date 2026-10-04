@@ -7,6 +7,14 @@ export function escCssString(value) {
     .replace(/\n/g, ' ');
 }
 
+// The text of an escaped value, as escapeHtml() wrote it.
+export function unescapeHtml(value) {
+  return String(value ?? '').replace(
+    /&(amp|lt|gt|quot|#39);/g,
+    (_, name) => ({ amp: '&', lt: '<', gt: '>', quot: '"', '#39': "'" })[name],
+  );
+}
+
 export function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 }

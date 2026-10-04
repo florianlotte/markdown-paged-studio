@@ -63,9 +63,10 @@ export function diagramGeometry(page) {
     const column = diagram.parentElement.getBoundingClientRect();
     const box = drawing.getBoundingClientRect();
     return {
-      percent: Math.round((box.width / column.width) * 100),
-      left: Math.round(((box.left - column.left) / column.width) * 100),
-      right: Math.round(((column.right - box.right) / column.width) * 100),
+      // `|| 0`: an engine may round a tiny negative offset to -0, which is not 0 for `toBe`.
+      percent: Math.round((box.width / column.width) * 100) || 0,
+      left: Math.round(((box.left - column.left) / column.width) * 100) || 0,
+      right: Math.round(((column.right - box.right) / column.width) * 100) || 0,
     };
   });
 }
@@ -144,6 +145,10 @@ export const position = async (page, selector) => {
   const { percent, left, right } = await imageGeometry(page, selector);
   return { percent, left, right };
 };
+
+// The name a download is saved under. WebKit, as driven by Playwright, writes the spaces of a name as
+// underscores: both spellings are the same file for the tests.
+export const savedAs = download => download.suggestedFilename().replace(/_/g, ' ');
 
 // Triggers one entry of the Export menu (exportPdfProject, exportPdfOnly, exportHtml, exportMarkdown, exportProject).
 export async function exportVia(page, id) {

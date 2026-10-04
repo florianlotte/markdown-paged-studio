@@ -42,7 +42,15 @@ test('the GFM extensions and the other syntaxes are in the documented state', ()
   // Supporting one of these is good news: update docs/markdown-support.md with it.
   assert.deepEqual(
     result.probes.filter(probe => probe.supported).map(probe => probe.name),
-    ['Task lists', 'Footnotes'],
+    [
+      'Task lists',
+      'Footnotes',
+      'Definition lists',
+      'Subscript and superscript',
+      'Math formulas',
+      'Highlighted text',
+      'Alerts',
+    ],
   );
 });
 

@@ -9,6 +9,7 @@ import { enhanceResizables } from './resize-controls.js';
 import { documentCss, documentHtml } from './document.js';
 import { writeDocument } from './chapters.js';
 import { loadPreviewFonts } from './fonts.js';
+import { prepareMathPreview } from './math.js';
 import { t } from './i18n.js';
 import { applyView } from './view.js';
 
@@ -62,7 +63,7 @@ export async function render() {
     // Diagrams render first (async, possibly loading Mermaid); a stale token here means a newer edit arrived.
     const html = await documentHtml({ sourceLines: true });
     // The fonts must be there before pagination: text measured with a fallback font breaks elsewhere.
-    await loadPreviewFonts(html, css);
+    await Promise.all([loadPreviewFonts(html, css), prepareMathPreview(html)]);
     if (token !== renderToken) return;
     previewer = new Previewer();
     pendingPreviewer = previewer;

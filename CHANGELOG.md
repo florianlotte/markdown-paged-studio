@@ -7,6 +7,29 @@ All notable changes to Markdown Paged Studio are listed here, newest first. The 
 
 ## [Unreleased]
 
+## [1.21.0] - 2026-10-04
+
+### Added
+
+- Formulas written in TeX and drawn by KaTeX: `$…$` inside a sentence, `$$…$$` or a ` ```math ` block on
+  lines of their own, numbered with `\begin{equation}`. KaTeX and its fonts are loaded only for documents
+  that hold formulas, and those fonts travel in the exports. Amounts such as `5 $ and 10 $` stay text.
+- Alerts as on GitHub (`> [!NOTE]`, `[!TIP]`, `[!IMPORTANT]`, `[!WARNING]`, `[!CAUTION]`), titled in the
+  language of the document; highlighted text (`==text==`), subscript and superscript (`H~2~O`, `x^2^`),
+  definition lists.
+- The web tests also run under Firefox and WebKit (`npm run test:browsers`, and a job of the CI for each).
+
+### Changed
+
+- Where a browser cannot draw the PDF that carries the project, **Export** opens the print dialog inside
+  the click and explains once that this PDF does not hold the project; the menu entry says why it is not
+  available. A drawing that fails midway is explained in plain words instead of a raw error.
+
+### Fixed
+
+- Switching the interface language no longer translates words of the document that match a label of the
+  interface inside the editor.
+
 ## [1.20.0] - 2026-10-03
 
 ### Added
@@ -354,7 +377,8 @@ All notable changes to Markdown Paged Studio are listed here, newest first. The 
 - Portable desktop app for Windows, Linux and macOS with direct PDF export.
 - Docker image, Playwright integration tests and CI.
 
-[Unreleased]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.20.0...HEAD
+[Unreleased]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.21.0...HEAD
+[1.21.0]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.20.0...v1.21.0
 [1.20.0]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.19.2...v1.20.0
 [1.19.2]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.19.1...v1.19.2
 [1.19.1]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.19.0...v1.19.1

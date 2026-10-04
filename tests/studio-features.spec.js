@@ -1,5 +1,5 @@
 // Integration tests of the document features: page breaks, table of contents, captions, syntax
-// highlighting, running header, facing pages and cover templates.
+// highlighting, running header, facing pages, cover templates, formulas and alerts.
 import { test, expect } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import {
@@ -287,4 +287,95 @@ test('footnotes go to the foot of the page that calls them, task lists show chec
   await exported.setContent(readFileSync(await download.path(), 'utf8'));
   await expect(exported.locator('.pagedjs_page')).toHaveCount(expected.length);
   expect(await layout(exported.locator('body'))).toEqual(expected);
+});
+
+test('formulas are drawn by KaTeX with their fonts, alerts are titled in the language of the document', async ({
+  page,
+}) => {
+  const katexFonts = () =>
+    page.evaluate(() =>
+      [...document.fonts]
+        .filter(font => font.family.replace(/["']/g, '').startsWith('KaTeX_'))
+        .map(font => `${font.family.replace(/["']/g, '')} ${font.status}`)
+        .sort(),
+    );
+  await openDocument(page, '# Plain\n\nIt costs 5 $ or 10 $, H~2~O and ==marked==.\n', 'Plain');
+  // Nothing of KaTeX is loaded for a document without formula, and nothing is added to its export.
+  expect(await katexFonts()).toEqual([]);
+  await expect(page.locator('#mathStyle')).toHaveCount(0);
+  await expect(page.locator('#preview mark')).toHaveText('marked');
+  await expect(page.locator('#preview mark')).toHaveCSS('background-color', 'rgb(255, 243, 163)');
+  await expect(page.locator('#preview sub')).toHaveText('2');
+  const [plain] = await Promise.all([page.waitForEvent('download'), exportVia(page, 'exportHtml')]);
+  expect(readFileSync(await plain.path(), 'utf8')).not.toContain('KaTeX_');
+
+  await setMarkdown(
+    page,
+    [
+      '# Formulas',
+      'Energy is $E = mc^2$ with $\\alpha \\in \\mathbb{R}$, and this one is wrong: $\\frac{1}{$.',
+      '$$\n\\begin{equation} \\sum_{i=1}^{n} i = \\frac{n(n+1)}{2} \\end{equation}\n$$',
+      '> [!WARNING]\n> Check the units.',
+      '> An ordinary quote.',
+      'Term\n: Its definition.',
+    ].join('\n\n'),
+  );
+  await expect(page.locator('#preview .document-content h1')).toHaveText('Formulas');
+  await expect(page.locator('#preview')).not.toHaveClass(/is-stale/);
+  // Drawn by KaTeX, in the text and on a line of its own; the wrong one shows its source.
+  await expect(page.locator('#preview .math-inline .katex')).toHaveCount(2);
+  await expect(page.locator('#preview .math-block .katex-display')).toHaveCount(1);
+  await expect(page.locator('#preview .math-block .eqn-num')).toHaveText('(1)');
+  await expect(page.locator('#preview .math-error')).toHaveText('\\frac{1}{');
+  await expect(page.locator('#preview .math-error')).toHaveCSS('color', 'rgb(179, 38, 30)');
+  // The faces these formulas use were loaded before the pages were laid out, and only those.
+  expect(await katexFonts()).toEqual([
+    'KaTeX_AMS loaded',
+    'KaTeX_Main loaded',
+    'KaTeX_Math loaded',
+    'KaTeX_Size2 loaded',
+  ]);
+  expect(
+    await page
+      .locator('#preview .math-inline .mathnormal')
+      .first()
+      .evaluate(element => getComputedStyle(element).fontFamily),
+  ).toMatch(/KaTeX_Math/);
+  // A formula is never cut by a page break.
+  await expect(page.locator('#preview .math[data-split-from], #preview .math[data-split-to]')).toHaveCount(0);
+
+  // The alert: a titled box in its own colour, the quote untouched, the definition list.
+  const alert = page.locator('#preview .alert');
+  await expect(alert).toHaveClass(/alert-warning/);
+  await expect(alert.locator('.alert-title')).toHaveText('Warning');
+  await expect(alert.locator('.alert-title')).toHaveCSS('color', 'rgb(154, 103, 0)');
+  await expect(alert).toHaveCSS('border-left-color', 'rgb(154, 103, 0)');
+  await expect(page.locator('#preview blockquote')).toHaveText('An ordinary quote.');
+  await expect(page.locator('#preview dl dt')).toHaveText('Term');
+  await page.getByRole('tab', { name: 'Page' }).click();
+  await page.locator('#language').fill('fr');
+  await expect(alert.locator('.alert-title')).toHaveText('Avertissement');
+
+  // The export carries the rules of KaTeX and exactly these faces, and lays the formulas out by itself.
+  const [download] = await Promise.all([page.waitForEvent('download'), exportVia(page, 'exportHtml')]);
+  const html = readFileSync(await download.path(), 'utf8');
+  const inlined = [...html.matchAll(/@font-face\{font-family:(KaTeX_\w+);[^}]*src:url\(data:font\/woff2;base64,/g)].map(
+    match => match[1],
+  );
+  expect(inlined.sort()).toEqual(['KaTeX_AMS', 'KaTeX_Main', 'KaTeX_Math', 'KaTeX_Size2']);
+  expect(html).toContain('.katex{');
+  const exported = await page.context().newPage();
+  await exported.setContent(html);
+  await expect(exported.locator('.pagedjs_page')).toHaveCount(2);
+  await expect(exported.locator('.math-block .eqn-num')).toHaveText('(1)');
+  expect(
+    await exported
+      .locator('.math-inline .mathnormal')
+      .first()
+      .evaluate(element => {
+        const style = getComputedStyle(element);
+        return document.fonts.check(`${style.fontStyle} ${style.fontSize} KaTeX_Math`);
+      }),
+  ).toBe(true);
+  await exported.close();
 });

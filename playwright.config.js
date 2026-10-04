@@ -15,7 +15,14 @@ export default defineConfig({
     viewport: { width: 1400, height: 900 },
     trace: 'retain-on-failure',
   },
-  projects: [{ name: 'chromium', use: { browserName: 'chromium' } }],
+  // Chromium is the reference and what `npm test` runs; Firefox and WebKit run with `npm run test:firefox`,
+  // `npm run test:webkit` or `npm run test:browsers`, and in the `browsers` job of the CI, where one retry
+  // absorbs the occasional slow start of those engines.
+  projects: [
+    { name: 'chromium', use: { browserName: 'chromium' } },
+    { name: 'firefox', use: { browserName: 'firefox' }, retries: process.env.CI ? 1 : 0 },
+    { name: 'webkit', use: { browserName: 'webkit' }, retries: process.env.CI ? 1 : 0 },
+  ],
   webServer: {
     command: `npm run dev -- --strictPort --port ${PORT}`,
     url: `http://localhost:${PORT}`,

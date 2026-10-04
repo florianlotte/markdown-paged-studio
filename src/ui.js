@@ -1,5 +1,6 @@
 // The studio's controls: form fields bound to the state, tabs, file imports, downloads, export and print.
 // The markup itself lives in index.html.
+import { canDrawPages, markCannotDraw, probePageDrawing } from './pdf-capability.js';
 import {
   activeFile,
   addEmptyFile,
@@ -319,10 +320,68 @@ async function exportPdfRendered() {
   } catch (error) {
     console.error(error);
     status.textContent = t('Render error');
-    alert(t('PDF export failed: {error}', { error: error?.message || error }));
+    // The pages could not be drawn or read back: said in plain words, and the next exports use the print
+    // dialog (which has to open inside a click, so not from here).
+    const drawing = error?.code === 'draw' || error?.name === 'SecurityError';
+    if (drawing) {
+      markCannotDraw();
+      describeExport();
+    }
+    const reason = drawing
+      ? t(
+          'this browser could not draw the pages. Use PDF only (print dialog), or export HTML, Markdown or the zip to keep the project',
+        )
+      : error?.message || error;
+    alert(t('PDF export failed: {error}', { error: reason }));
   } finally {
     unlock();
   }
+}
+
+// Browser only, when the pages cannot be drawn here (see pdf-capability.js): the main Export opens the
+// print dialog, at once and inside the click, and says once what that PDF lacks.
+const NOTICE_KEY = 'markdown-paged-studio:export-notice';
+
+function printInsteadOfDrawing() {
+  openPrintWindow();
+  document.getElementById('status').textContent = t('Print dialog opened: this PDF does not carry the project');
+  let seen = false;
+  try {
+    seen = localStorage.getItem(NOTICE_KEY) === 'seen';
+  } catch {
+    // Storage unavailable: the notice shows again next time.
+  }
+  document.getElementById('exportNotice').hidden = seen;
+}
+
+function dismissExportNotice() {
+  document.getElementById('exportNotice').hidden = true;
+  try {
+    localStorage.setItem(NOTICE_KEY, 'seen');
+  } catch {
+    // Storage unavailable: nothing to remember.
+  }
+}
+
+// Says, where the choice is made, how the PDF is produced in this browser: drawn by the studio with its
+// project, or through the print dialog when the pages cannot be drawn.
+function describeExport() {
+  if (window.desktop) return;
+  const drawn = canDrawPages() !== false;
+  document.getElementById('exportDefault').title = t(
+    drawn
+      ? 'PDF with project, drawn from the preview (pages as images with a text layer)'
+      : 'PDF through the print dialog: this browser cannot draw the PDF that carries the project',
+  );
+  const entry = document.getElementById('exportPdfProject');
+  // Not `disabled`: the entry stays reachable, so its explanation can be read.
+  entry.setAttribute('aria-disabled', String(!drawn));
+  entry.querySelector('span').textContent = t(
+    drawn
+      ? 'Settings, Markdown and images attached: the file reopens in the studio'
+      : 'Not available in this browser. To keep the project, export HTML, Markdown or the zip',
+  );
+  document.querySelector('#exportPdfOnly span').textContent = t('The document alone, through the print dialog');
 }
 
 // A file name made of the title: letters, digits and a few signs, "document" when nothing is left.
@@ -390,7 +449,8 @@ async function exportPdfDirect({ project }) {
 // dialog (which must open inside the user gesture) for the plain PDF, the drawing of the pages for the one with the project.
 function exportPdf({ project }) {
   if (window.desktop) return exportPdfDirect({ project });
-  return project ? exportPdfRendered() : openPrintWindow();
+  if (!project) return openPrintWindow();
+  return canDrawPages() === false ? printInsteadOfDrawing() : exportPdfRendered();
 }
 
 // The arrow next to Export opens the five exports as a menu: Escape, a click elsewhere or leaving it closes
@@ -436,7 +496,9 @@ function bindExportMenu() {
     exportProject,
   };
   for (const [id, action] of Object.entries(actions)) {
-    document.getElementById(id).addEventListener('click', () => {
+    document.getElementById(id).addEventListener('click', event => {
+      // An entry that is not available here keeps the menu open on its explanation.
+      if (event.currentTarget.getAttribute('aria-disabled') === 'true') return;
       close();
       action();
     });
@@ -466,13 +528,12 @@ function bindPdf() {
       else if (command === 'mode-view') setMode('view');
     });
   } else {
-    // In the browser the PDF with project is drawn by the studio, page by page: say so where the choice is made.
-    const describe = () => {
-      button.title = t('PDF with project, drawn from the preview (pages as images with a text layer)');
-      document.querySelector('#exportPdfOnly span').textContent = t('The document alone, through the print dialog');
-    };
-    describe();
-    onLanguageChange(describe);
+    // In the browser the PDF with project is drawn by the studio, page by page, where the engine allows it:
+    // say so where the choice is made, and again once the probe has answered.
+    describeExport();
+    onLanguageChange(describeExport);
+    probePageDrawing().then(describeExport);
+    document.getElementById('dismissExportNotice').addEventListener('click', dismissExportNotice);
     // Ctrl/Cmd+P prints the document rather than the studio page. On desktop the menu accelerator does this.
     document.addEventListener('keydown', event => {
       if ((event.ctrlKey || event.metaKey) && !event.altKey && event.key.toLowerCase() === 'p') {

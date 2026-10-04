@@ -11,6 +11,7 @@ import {
   marginBoxContent,
   openFreshStudio,
   pages,
+  savedAs,
   setMarkdown,
   status,
   STATUS_DONE,
@@ -172,7 +173,7 @@ test('PDF only opens the print window inside the gesture, the Export menu works 
   const [htmlDownload] = await Promise.all([page.waitForEvent('download'), exportVia(page, 'exportHtml')]);
   expect(htmlDownload.suggestedFilename()).toBe('document.html');
   const [markdown] = await Promise.all([page.waitForEvent('download'), exportVia(page, 'exportMarkdown')]);
-  expect(markdown.suggestedFilename()).toBe('Architecture Report.md');
+  expect(savedAs(markdown)).toBe('Architecture Report.md');
   expect(readFileSync(await markdown.path(), 'utf8')).toMatch(
     /^---\nmarkdown-paged-studio: 1\ntitle: Architecture Report\n/,
   );
@@ -263,7 +264,8 @@ test('the document font is bundled: loaded for the preview, inlined in the expor
     page.evaluate(() =>
       [...document.fonts]
         .filter(font => font.family === 'Inter' && font.status === 'loaded')
-        .map(font => `${font.style} ${font.unicodeRange.split(',')[0]}`)
+        // Engines write the range in upper or lower case.
+        .map(font => `${font.style} ${font.unicodeRange.split(',')[0].toUpperCase()}`)
         .sort(),
     );
   // The sample is plain Latin text with bold but no italic: one file is enough.
@@ -366,7 +368,7 @@ test('a Markdown export carries the project in its front matter, a plain Markdow
   await setMarkdown(page, '# Round trip\n\n![Plan](plan.png){width=50%}\n\nText.\n');
   await expect(page.locator('#preview .document-image > img')).toHaveCount(1);
   const [download] = await Promise.all([page.waitForEvent('download'), exportVia(page, 'exportMarkdown')]);
-  expect(download.suggestedFilename()).toBe('Round trip.md');
+  expect(savedAs(download)).toBe('Round trip.md');
   const text = readFileSync(await download.path(), 'utf8');
   expect(text).toMatch(/^---\nmarkdown-paged-studio: 1\ntitle: Round trip\n/);
   expect(text).toContain('\nimages:\n  plan.png: data:image/png;base64,');
@@ -414,7 +416,7 @@ test('PDF with project is drawn by the browser in one step, and such a PDF reope
   await page.locator('#title').fill('From a PDF');
   await setMarkdown(
     page,
-    '# From a PDF\n\n[[toc]]\n\n## Part one\n\n![Plan](plan.png)\n\nSee [the site](https://example.com/page) and [part two](#part-two)[^n].\n\n\\newpage\n\n## Part two\n\nText.\n\nПривет, 世界.\n\n[^n]: A note.\n',
+    '# From a PDF\n\n[[toc]]\n\n## Part one\n\n![Plan](plan.png)\n\nSee [the site](https://example.com/page) and [part two](#part-two)[^n].\n\n\\newpage\n\n## Part two\n\nText.\n\nПривет, 世界.\n\nMass and energy: $E = mc^2$.\n\n[^n]: A note.\n',
   );
   await expect(page.locator('#preview .document-image > img')).toHaveCount(1);
   await expect(page.locator('#preview')).not.toHaveClass(/is-stale/);
@@ -437,7 +439,7 @@ test('PDF with project is drawn by the browser in one step, and such a PDF reope
     }).observe(busy, { attributes: true, childList: true, subtree: true, characterData: true });
   });
   const [download] = await Promise.all([page.waitForEvent('download'), page.locator('#exportDefault').click()]);
-  expect(download.suggestedFilename()).toBe('From a PDF.pdf');
+  expect(savedAs(download)).toBe('From a PDF.pdf');
   await expect(status(page)).toHaveText('PDF saved with its project');
   await expect(page.locator('#busy')).toBeHidden();
   expect(await page.evaluate(() => document.getElementById('app').inert)).toBe(false);
@@ -465,6 +467,8 @@ test('PDF with project is drawn by the browser in one step, and such a PDF reope
   // One run per line, even when the line mixes scripts drawn with different fonts.
   expect(content[2].toLowerCase()).toContain(utf16('Part two'));
   expect(content[2].toLowerCase()).toContain(utf16('Привет, 世界.'));
+  // The characters of a formula are in the layer too, sign by sign.
+  expect(content[2].toLowerCase()).toContain(`<${utf16('=')}> tj`);
   expect(text).toContain('/BaseFont /GlyphLessFont');
   expect(text).toContain('/Encoding /Identity-H');
   expect(text).toContain('/URI (https://example.com/page)');
@@ -497,4 +501,98 @@ test('PDF with project is drawn by the browser in one step, and such a PDF reope
     .poll(() => messages)
     .toEqual(['This file could not be opened: this PDF holds no project: import a PDF exported with its project']);
   await expect(page.locator('#title')).toHaveValue('From a PDF');
+});
+
+// What a click on a print window does: recorded instead of opening one.
+const stubPrintWindow = page =>
+  page.evaluate(() => {
+    window.__print = { opened: 0, url: null };
+    window.open = () => {
+      window.__print.opened++;
+      return {
+        set location(value) {
+          window.__print.url = value;
+        },
+      };
+    };
+  });
+
+test('every engine tested draws the pages of the PDF with project', async ({ page }) => {
+  await openFreshStudio(page);
+  // The probe has answered: the entry is available. An engine that stops drawing fails here first.
+  await expect(page.locator('#exportPdfProject')).toHaveAttribute('aria-disabled', 'false');
+  await expect(page.locator('#exportDefault')).toHaveAttribute('title', /drawn from the preview/);
+  await expect(page.locator('#exportNotice')).toBeHidden();
+});
+
+test('where the pages cannot be drawn, Export opens the print dialog inside the click and says why, once', async ({
+  page,
+}) => {
+  // An engine that refuses to read back a canvas that drew the page: the real probe meets the refusal.
+  await page.addInitScript(() => {
+    CanvasRenderingContext2D.prototype.getImageData = () => {
+      throw new DOMException('The operation is insecure.', 'SecurityError');
+    };
+  });
+  await openFreshStudio(page);
+  const entry = page.locator('#exportPdfProject');
+  await expect(entry).toHaveAttribute('aria-disabled', 'true');
+  await expect(entry.locator('span')).toHaveText(/^Not available in this browser\./);
+  await expect(page.locator('#exportDefault')).toHaveAttribute('title', /^PDF through the print dialog/);
+  const notice = page.locator('#exportNotice');
+  await expect(notice).toBeHidden();
+
+  await stubPrintWindow(page);
+  await page.locator('#exportDefault').click();
+  // The window opened in the click itself, before anything was awaited, then received the document.
+  expect(await page.evaluate(() => window.__print.opened)).toBe(1);
+  await expect.poll(() => page.evaluate(() => window.__print.url)).toMatch(/^blob:/);
+  await expect(status(page)).toHaveText('Print dialog opened: this PDF does not carry the project');
+  await expect(notice).toBeVisible();
+  await expect(notice).toContainText('use HTML with project, Markdown with project or Markdown files (zip)');
+  await expect(page.locator('#busy')).toBeHidden();
+
+  // Put away, the notice does not come back; the entry of the menu explains itself and does nothing.
+  await page.locator('#dismissExportNotice').click();
+  await expect(notice).toBeHidden();
+  await page.locator('#exportDefault').click();
+  expect(await page.evaluate(() => window.__print.opened)).toBe(2);
+  await expect(notice).toBeHidden();
+  await page.locator('#exportMenu').click();
+  // Playwright waits for an entry marked unavailable to become available: the click is forced.
+  await entry.click({ force: true });
+  await expect(page.locator('#exportOptions')).toBeVisible();
+  expect(await page.evaluate(() => window.__print.opened)).toBe(2);
+  await page.keyboard.press('Escape');
+  // The other exports still carry the project.
+  const [download] = await Promise.all([page.waitForEvent('download'), exportVia(page, 'exportHtml')]);
+  expect(readFileSync(await download.path(), 'utf8')).toContain('id="markdown-paged-studio-source"');
+});
+
+test('a drawing that fails midway is explained, and the next Export uses the print dialog', async ({ page }) => {
+  await openFreshStudio(page);
+  await expect(page.locator('#exportPdfProject')).toHaveAttribute('aria-disabled', 'false');
+  const messages = [];
+  page.on('dialog', dialog => {
+    messages.push(dialog.message());
+    dialog.accept();
+  });
+  // The canvas gives nothing back (too large for the memory at hand, or read protected).
+  await page.evaluate(() => {
+    HTMLCanvasElement.prototype.toBlob = callback => callback(null);
+  });
+  await stubPrintWindow(page);
+  await page.locator('#exportDefault').click();
+  await expect
+    .poll(() => messages)
+    .toEqual([
+      'PDF export failed: this browser could not draw the pages. Use PDF only (print dialog), or export HTML, Markdown or the zip to keep the project',
+    ]);
+  await expect(page.locator('#busy')).toBeHidden();
+  expect(await page.evaluate(() => document.getElementById('app').inert)).toBe(false);
+  expect(await page.evaluate(() => window.__print.opened)).toBe(0);
+  await expect(page.locator('#exportPdfProject')).toHaveAttribute('aria-disabled', 'true');
+  await page.locator('#exportDefault').click();
+  expect(await page.evaluate(() => window.__print.opened)).toBe(1);
+  await expect(page.locator('#exportNotice')).toBeVisible();
 });

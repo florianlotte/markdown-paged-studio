@@ -20,6 +20,7 @@ import {
 } from 'pdf-lib';
 import { inlineFontCss } from './fonts.js';
 import { GLYPH_WIDTH, GLYPHLESS_FONT, TO_UNICODE } from './glyphless-font.js';
+import { inlineMathCss } from './math.js';
 import { previewCss } from './render.js';
 
 // Pixels per CSS pixel of the page images: 2 gives 192 dpi, enough for screens and ordinary printing.
@@ -57,28 +58,48 @@ async function pageImage(pages, index, fonts) {
     `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">` +
     `<style>${fonts}\n${previewCss()}\n.pagedjs_page{margin:0 !important;box-shadow:none !important}</style>` +
     `<foreignObject width="${width}" height="${height}"><div xmlns="http://www.w3.org/1999/xhtml">${html}</div></foreignObject></svg>`;
+  // A page that cannot be drawn (an engine that refuses to read such a canvas back, a canvas too large for
+  // the memory at hand) is reported with a code: the studio words the message and falls back.
+  const failed = cause =>
+    Object.assign(new Error(`Page ${index + 1} could not be drawn`), { code: 'draw', page: index + 1, cause });
   const image = new Image();
   image.decoding = 'sync';
   // A data URL, not a blob URL: an SVG image from a blob URL taints the canvas, which then cannot be read.
   const url = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
-  {
-    await new Promise((resolve, reject) => {
-      image.onload = resolve;
-      image.onerror = () => reject(new Error(`Page ${index + 1} could not be drawn`));
-      image.src = url;
-    });
-    const canvas = document.createElement('canvas');
+  await new Promise((resolve, reject) => {
+    image.onload = resolve;
+    image.onerror = () => reject(failed());
+    image.src = url;
+  });
+  // Loaded is not always decoded: wait for the picture itself, fonts included, where the engine can tell.
+  await image.decode?.().catch(() => {});
+  const canvas = document.createElement('canvas');
+  try {
     canvas.width = Math.round(width * RENDER_SCALE);
     canvas.height = Math.round(height * RENDER_SCALE);
     const context = canvas.getContext('2d');
+    if (!context) throw failed();
     context.fillStyle = '#fff';
     context.fillRect(0, 0, canvas.width, canvas.height);
     context.drawImage(image, 0, 0, canvas.width, canvas.height);
     // Photographs compress far better as JPEG; text and drawings stay sharp as PNG.
     const photo = Boolean(page.querySelector('.document-image > img:not([src^="data:image/svg"])'));
     const type = photo ? 'image/jpeg' : 'image/png';
-    const blob = await new Promise(resolve => canvas.toBlob(resolve, type, 0.92));
+    const blob = await new Promise((resolve, reject) => {
+      try {
+        canvas.toBlob(resolve, type, 0.92);
+      } catch (error) {
+        reject(error);
+      }
+    });
+    if (!blob) throw failed();
     return { bytes: new Uint8Array(await blob.arrayBuffer()), type, width, height };
+  } catch (error) {
+    throw error?.code === 'draw' ? error : failed(error);
+  } finally {
+    // Gives the pixels back at once: some engines keep few canvases alive.
+    canvas.width = 0;
+    canvas.height = 0;
   }
 }
 
@@ -99,7 +120,8 @@ function textLines(page) {
   const range = document.createRange();
   for (let node = walker.nextNode(); node; node = walker.nextNode()) {
     const text = node.nodeValue;
-    if (!text.trim()) continue;
+    // Nothing to select in blanks, nor in the zero-width spaces KaTeX puts between the parts of a formula.
+    if (!text.replace(/\u200b/g, '').trim()) continue;
     const style = getComputedStyle(node.parentElement);
     if (style.visibility === 'hidden' || style.display === 'none') continue;
     let start = 0;
@@ -238,7 +260,9 @@ function codeUnits(text) {
 export async function renderPreviewToPdf({ preview, title, html, css, onProgress = () => {} }) {
   const pages = [...preview.querySelectorAll('.pagedjs_page')];
   if (!pages.length) throw new Error('Nothing to export: the preview is empty');
-  const fonts = await inlineFontCss(html, css).catch(() => '');
+  // The fonts of the text and, when the document has formulas, the rules and fonts of KaTeX: an image has
+  // no access to what the page loaded.
+  const fonts = `${await inlineFontCss(html, css).catch(() => '')}${await inlineMathCss(html).catch(() => '')}`;
   const document_ = await PDFDocument.create();
   document_.setTitle(title);
   document_.setCreator('Markdown Paged Studio');

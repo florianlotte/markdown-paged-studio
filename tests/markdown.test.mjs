@@ -168,3 +168,119 @@ test('addresses starting with www. become links, other bare names do not', () =>
   assert.equal([...html.matchAll(/<a /g)].length, 3);
   assert.doesNotMatch(md.render('`www.example.com` and [text](www.example.com)\n'), /http:\/\/www/);
 });
+
+test('formulas are kept apart as TeX: $…$ in a sentence, $$…$$ and ```math as blocks', () => {
+  assert.equal(
+    md.render('Energy $E = mc^2$ here.'),
+    '<p>Energy <span class="math math-inline">E = mc^2</span> here.</p>\n',
+  );
+  // Nothing of the Markdown or of the typography touches the TeX; it is escaped as text.
+  assert.equal(
+    md.render('$a_1 * b_1 * c < "d" -- e$'),
+    '<p><span class="math math-inline">a_1 * b_1 * c &lt; &quot;d&quot; -- e</span></p>\n',
+  );
+  assert.equal(md.render('$$\na^2 + b^2\n= c^2\n$$\n'), '<div class="math math-block">a^2 + b^2\n= c^2</div>\n');
+  assert.equal(md.render('$$ x \\le y $$\n'), '<div class="math math-block">x \\le y</div>\n');
+  assert.equal(md.render('```math\n\\frac{1}{2}\n```\n'), '<div class="math math-block">\\frac{1}{2}</div>\n');
+  // A block interrupts a paragraph and works inside a list or a quote; a line of dashes stays TeX.
+  assert.match(
+    md.render('Text\n$$\nx\n---\ny\n$$\nmore'),
+    /<p>Text<\/p>\n<div class="math math-block">x\n---\ny<\/div>\n<p>more<\/p>/,
+  );
+  assert.match(
+    md.render('- item\n\n  $$\n  x\n  $$\n'),
+    /<li>\n<p>item<\/p>\n<div class="math math-block">x<\/div>\n<\/li>/,
+  );
+  assert.match(md.render('> $$\n> x\n> $$\n'), /<blockquote>\n<div class="math math-block">x<\/div>\n<\/blockquote>/);
+  // In a table cell, a link and a heading; the heading keeps its formula in the table of contents.
+  assert.match(md.render('| a |\n|---|\n| $x^2$ |\n'), /<td><span class="math math-inline">x\^2<\/span><\/td>/);
+  assert.match(
+    md.render('[see $x$](https://example.com)'),
+    /<a href="https:\/\/example.com"[^>]*>see <span class="math math-inline">x<\/span><\/a>/,
+  );
+  const titled = md.render('[[toc]]\n\n# Energy $E$\n');
+  assert.match(titled, /<h1 id="sec-energy-e">Energy <span class="math math-inline">E<\/span><\/h1>/);
+  assert.match(titled, /<span class="toc-text">Energy <span class="math math-inline">E<\/span><\/span>/);
+  // The preview marks the block with its source line.
+  assert.match(
+    md.render('Text\n\n$$\nx\n$$\n', { sourceLines: true }),
+    /<div class="math math-block" data-source-line="2">x<\/div>/,
+  );
+});
+
+test('dollars that are not formulas stay text', () => {
+  const plain = text => assert.equal(md.render(text), `<p>${text}</p>\n`, text);
+  plain('5 $ and 10 $');
+  plain('$5-$10');
+  plain('US$5 and A$10');
+  plain('$HOME and $PATH');
+  plain('a $ b $ c');
+  plain('cost: $5, then $ 6');
+  assert.equal(md.render('Price \\$5 and \\$10'), '<p>Price $5 and $10</p>\n');
+  assert.equal(md.render('$a \\$ b$'), '<p><span class="math math-inline">a \\$ b</span></p>\n');
+  // Inside code nothing is a formula; an unclosed block is a paragraph; $$ inside a line is text.
+  assert.equal(md.render('`$x$`'), '<p><code>$x$</code></p>\n');
+  assert.equal(md.render('$$\nno end\n'), '<p>$$\nno end</p>\n');
+  assert.equal(md.render('a $$x$$ b'), '<p>a $$x$$ b</p>\n');
+  assert.equal(md.render('$$\n$$\n'), '<p>$$\n$$</p>\n');
+});
+
+test('highlighted text, subscript, superscript and definition lists', () => {
+  assert.equal(
+    md.render('H~2~O, x^2^, ==marked==, ~~gone~~'),
+    '<p>H<sub>2</sub>O, x<sup>2</sup>, <mark>marked</mark>, <s>gone</s></p>\n',
+  );
+  assert.equal(md.render('a == b and c ~ d and e ^ f'), '<p>a == b and c ~ d and e ^ f</p>\n');
+  // A caret after "[" is a footnote call, defined or not: it never opens a superscript.
+  assert.equal(md.render('a[^1],b[^2]'), '<p>a[^1],b[^2]</p>\n');
+  assert.match(md.render('a[^1] x^2^\n\n[^1]: Note\n'), /<span class="footnote">Note<\/span> x<sup>2<\/sup>/);
+  // Fenced code with tildes and setext headings are untouched.
+  assert.equal(md.render('~~~\ncode\n~~~\n'), '<pre><code>code\n</code></pre>\n');
+  assert.equal(md.render('Title\n===\n'), '<h1 id="sec-title">Title</h1>\n');
+  assert.equal(
+    md.render('Term\n: Definition\n: Second\n'),
+    '<dl>\n<dt>Term</dt>\n<dd>Definition</dd>\n<dd>Second</dd>\n</dl>\n',
+  );
+  assert.equal(md.render('Not a term\n\n:not a definition\n'), '<p>Not a term</p>\n<p>:not a definition</p>\n');
+});
+
+test('a quote that opens with [!NOTE] and its kin is an alert, titled in the language of the document', () => {
+  assert.equal(
+    md.render('> [!NOTE]\n> Useful **text**.\n>\n> More.\n'),
+    '<div class="alert alert-note">\n<p class="alert-title">Note</p>\n<p>Useful <strong>text</strong>.</p>\n<p>More.</p>\n</div>\n',
+  );
+  for (const [marker, type, english, french] of [
+    ['[!TIP]', 'tip', 'Tip', 'Astuce'],
+    ['[!important]', 'important', 'Important', 'Important'],
+    ['[!Warning]', 'warning', 'Warning', 'Avertissement'],
+    ['[!CAUTION]', 'caution', 'Caution', 'Attention'],
+  ]) {
+    const source = `> ${marker}\n> Text.\n`;
+    assert.match(
+      md.render(source),
+      new RegExp(`<div class="alert alert-${type}">\\n<p class="alert-title">${english}</p>`),
+    );
+    assert.match(md.render(source, { language: 'fr-CA' }), new RegExp(`<p class="alert-title">${french}</p>`));
+    // A language without titles of its own gets the English ones.
+    assert.match(md.render(source, { language: 'ja' }), new RegExp(`<p class="alert-title">${english}</p>`));
+  }
+  // The marker followed by a list, with no text of its own.
+  assert.equal(
+    md.render('> [!TIP]\n>\n> - one\n'),
+    '<div class="alert alert-tip">\n<p class="alert-title">Tip</p>\n<ul>\n<li>one</li>\n</ul>\n</div>\n',
+  );
+  // Ordinary quotes, a marker alone, a marker with text on its line, an unknown marker: still quotes.
+  for (const source of [
+    '> Plain.\n',
+    '> [!NOTE]\n',
+    '> [!NOTE] text\n',
+    '> [!OTHER]\n> Text.\n',
+    '> Text\n> [!NOTE]\n',
+  ])
+    assert.match(md.render(source), /^<blockquote>/, source);
+  // The preview marks the alert with its source line.
+  assert.match(
+    md.render('> [!NOTE]\n> Text.\n', { sourceLines: true }),
+    /<div class="alert alert-note" data-source-line="0">/,
+  );
+});

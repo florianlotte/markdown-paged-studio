@@ -96,7 +96,7 @@ const PROBES = [
   ['Footnotes', 'Text[^1]\n\n[^1]: Note\n', /<span class="footnote">Note<\/span>/],
   ['Definition lists', 'Term\n: Definition\n', /<dl>/],
   ['Subscript and superscript', 'H~2~O and x^2^\n', /<sub>|<sup>/],
-  ['Math formulas', '$a^2 + b^2$\n', /katex|<math/],
+  ['Math formulas', '$a^2 + b^2$\n', /class="math /],
   ['Highlighted text', '==marked==\n', /<mark>/],
   ['Alerts', '> [!NOTE]\n> text\n', /class="[^"]*(alert|note)/i],
   ['Heading identifiers', '# Title {#custom}\n', /id="custom"/],
