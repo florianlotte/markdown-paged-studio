@@ -175,7 +175,12 @@ export function documentCss() {
 :where(.pagedjs_page) :is(sub, sup) { font-size: 75%; line-height: 0; }
 :where(.pagedjs_page) dt { margin-top: 3mm; font-weight: 600; break-after: avoid; }
 :where(.pagedjs_page) dd { margin: 1mm 0 0 6mm; }
-.image-caption, .diagram-caption { display: block; margin-top: 2mm; font-size: 9pt; line-height: 1.35; color: #5f6368; text-align: center; }
+.image-caption, .diagram-caption, .table-caption { margin-top: 2mm; font-size: 9pt; line-height: 1.35; color: #5f6368; text-align: center; }
+.image-caption, .diagram-caption { display: block; }
+.table-caption { margin: 0 0 2mm; caption-side: top; }
+.caption-label { font-weight: 600; }
+a.ref { color: inherit; text-decoration: none; }
+.ref-missing { color: #b3261e; }
 .document-image.has-caption > .image-caption { box-sizing: border-box; width: 0; min-width: 100%; }
 .document-content h1, .document-content h2, .document-content h3 { break-after: avoid; }
 .document-content img, .document-content table, .document-content pre, .document-content blockquote, .mermaid-diagram { break-inside: avoid; max-width: 100%; }
@@ -223,7 +228,12 @@ export async function documentHtml({ sourceLines = false } = {}) {
     : '';
   // Formulas first (they are plain text until then), then diagrams and code colours; alerts are titled in
   // the language of the document.
-  const rendered = md.render(state.markdown, { sourceLines, language: lang });
+  const rendered = md.render(state.markdown, {
+    sourceLines,
+    language: lang,
+    numberHeadings: state.numberHeadings,
+    numberFigures: state.numberFigures,
+  });
   const body = await highlightCode(await renderDiagrams(await renderMath(rendered)), state.codeTheme);
   return `${cover}<article class="document-content" lang="${lang}">${body}</article>`;
 }

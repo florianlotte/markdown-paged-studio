@@ -7,6 +7,22 @@ All notable changes to Markdown Paged Studio are listed here, newest first. The 
 
 ## [Unreleased]
 
+### Added
+
+- Automatic numbering and cross-references, in the style of pandoc-crossref. A label numbers its element:
+  `{#fig:plan}` on an image, `#fig:flow` on a diagram, `{#tab:costs}` in a table caption, `{#eq:energy}`
+  after a formula, `{#sec:intro}` on a heading. `@fig:plan` in the text becomes "figure 3" with a link, also
+  before the figure; `@Fig:plan` opens a sentence, `-@fig:plan` gives the number alone. The words follow
+  the language of the document.
+- Table captions: a paragraph `Table: caption` (or `: caption`) right after or right before a table.
+- Two settings of the Design tab: **Heading numbering** (from level 1, or from level 2 when level 1 is the
+  title) and **Number figures and tables** for those that carry no label. Headings ending with `{-}` keep
+  no number; `{#custom}` at the end of a heading sets its anchor.
+
+### Changed
+
+- The sample document labels its diagram instead of writing "Figure 1" by hand.
+
 ## [1.21.1] - 2026-10-04
 
 ### Fixed

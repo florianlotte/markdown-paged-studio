@@ -108,6 +108,25 @@ test('formulas are drawn with KaTeX and its fonts travel in the document', async
   );
 });
 
+test('headings and figures are numbered on demand, references are resolved', async () => {
+  const result = await client.callTool({
+    name: 'render_html',
+    arguments: {
+      markdown:
+        '# Report\n\n## Part\n\nSee @fig:flow.\n\n```mermaid #fig:flow caption="The flow"\nflowchart LR\n  A --> B\n```\n',
+      config: { cover: false, numberHeadings: 'h1', numberFigures: true, language: 'fr' },
+    },
+  });
+  assert.equal(result.isError, undefined);
+  const html = result.content[0].text;
+  assert.match(html, /<h2 id="sec-part"><span class="heading-number">1\.1<\/span> Part<\/h2>/);
+  assert.match(html, /<a class="ref ref-fig" href="#fig-flow">figure(?:\u00a0|&nbsp;)1<\/a>/);
+  assert.match(
+    html,
+    /<div class="diagram-caption"><span class="caption-label">Figure 1(?:\u00a0|&nbsp;)– <\/span>The flow<\/div>/,
+  );
+});
+
 test('diagrams honour the size and alignment of their fence line', async () => {
   const result = await client.callTool({
     name: 'render_html',

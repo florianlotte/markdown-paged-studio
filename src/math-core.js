@@ -45,19 +45,41 @@ function formula(katex, tex, displayMode) {
 
 // Replaces every placeholder of `html` with the formula drawn by `katex`. A formula that KaTeX cannot read
 // shows its source, marked `.math-error`, with the reason as a tooltip. Numbered equations get their number
-// as text, in the order of the document.
+// as text, in the order of the document; this is the one place where equations are counted, so labelled
+// formulas and the references to them (written by the Markdown rules) are completed here.
 export function renderFormulas(html, katex) {
   let equation = 0;
-  return html.replace(PLACEHOLDER, (_, tag, kind, attributes, escaped) => {
+  const numbers = new Map(); // id of a labelled formula -> the number it shows, "(3)"
+  const drawn = html.replace(PLACEHOLDER, (_, tag, kind, attributes, escaped) => {
     const tex = unescapeHtml(escaped);
-    const { html: drawn, failed } = formula(katex, tex, kind === 'block');
-    const numbered = drawn.replaceAll(
-      '<span class="eqn-num"></span>',
-      () => `<span class="eqn-num">(${++equation})</span>`,
-    );
-    const classes = `math math-${kind}${failed ? ' math-error' : ''}`;
+    const id = /\sid="(eq-[^"]*)"/.exec(attributes)?.[1];
+    let result = formula(katex, tex, kind === 'block');
+    // A labelled formula ({#eq:name}) must show a number to be referred to: when the author neither used a
+    // numbering environment nor gave a \tag, it is drawn as an equation. The line breaks keep a comment at
+    // the end of the TeX from swallowing \end.
+    const numberedByKatex = result.html.includes('class="eqn-num"') || result.html.includes('class="tag"');
+    if (id && kind === 'block' && !result.failed && !numberedByKatex) {
+      const wrapped = formula(katex, `\\begin{equation}\n${tex}\n\\end{equation}`, true);
+      if (!wrapped.failed) result = wrapped;
+    }
+    let first = null;
+    const numbered = result.html.replaceAll('<span class="eqn-num"></span>', () => {
+      const number = `(${++equation})`;
+      first ??= number;
+      return `<span class="eqn-num">${number}</span>`;
+    });
+    // The number a reference shows: the first one of the formula, or the tag the author wrote.
+    const tagged = /\\tag(\*?)\{([^{}]*)\}/.exec(tex);
+    if (id) numbers.set(id, first ?? (tagged ? (tagged[1] ? tagged[2] : `(${tagged[2]})`) : null));
+    const classes = `math math-${kind}${result.failed ? ' math-error' : ''}`;
     return `<${tag} class="${classes}" role="math" aria-label="${escapeHtml(tex)}"${attributes}>${OPEN}${numbered}${CLOSE}</${tag}>`;
   });
+  // The references to equations were written with "(?)": the numbers are known now.
+  return drawn.replace(
+    /(<(a|span) class="ref ref-eq"[^>]*data-eq="([^"]+)"[^>]*>)([^<]*)(<\/\2>)/g,
+    (whole, open, _tag, id, text, close) =>
+      numbers.get(id) ? `${open}${text.replace('(?)', escapeHtml(numbers.get(id)))}${close}` : whole,
+  );
 }
 
 const declaration = (block, name) => new RegExp(`(?:^|;)\\s*${name}\\s*:\\s*([^;]+)`, 'i').exec(block)?.[1].trim();

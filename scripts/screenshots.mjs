@@ -34,7 +34,7 @@ def average(values):
 print(average([3.9, 4.2, 4.5]))
 \`\`\`
 
-\`\`\`mermaid width=70% caption="Figure 1: how a request travels"
+\`\`\`mermaid width=70% #fig:route caption="How a request travels"
 flowchart LR
   Client --> Gateway --> Service --> Database
 \`\`\`
@@ -52,7 +52,7 @@ Review the access rules.
 
 const IMAGES = `# Site survey
 
-![Plan](plan.png "Figure 1: the ground floor"){width=45% align=right}
+![Plan](plan.png "The ground floor"){#fig:plan width=45% align=right}
 
 The survey covers the ground floor of the building. ${'The rooms were measured and compared with the plans. '.repeat(6)}
 

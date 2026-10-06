@@ -47,6 +47,10 @@ const TRANSLATIONS = {
     'Header title': "Titre d'en-tête",
     'Use the current chapter (first-level heading) as header title':
       "Utiliser le chapitre en cours (titre de niveau 1) comme titre d'en-tête",
+    'Heading numbering': 'Numérotation des titres',
+    'From level 1 (1, 1.1, 1.1.1)': 'À partir du niveau 1 (1, 1.1, 1.1.1)',
+    'From level 2 (level 1 is the title)': 'À partir du niveau 2 (le niveau 1 est le titre)',
+    'Number figures and tables (Figure 1, Table 1)': 'Numéroter les figures et les tableaux (Figure 1, Tableau 1)',
     'Header name': "Nom d'en-tête",
     'Footer text': 'Texte de pied de page',
     'Code highlighting': 'Coloration du code',

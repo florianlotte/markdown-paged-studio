@@ -20,7 +20,7 @@
     "test:desktop": "playwright test --config playwright.desktop.config.js",
     "mcp": "node mcp/server.mjs",
     "test:mcp": "node --test tests/mcp.test.mjs",
-    "test:unit": "node --test tests/markdown.test.mjs tests/images.test.mjs tests/fonts.test.mjs tests/repo.test.mjs tests/conformance.test.mjs tests/pdf-sources.test.mjs tests/markdown-sources.test.mjs tests/files.test.mjs tests/archive.test.mjs tests/math-core.test.mjs",
+    "test:unit": "node --test tests/markdown.test.mjs tests/images.test.mjs tests/fonts.test.mjs tests/repo.test.mjs tests/conformance.test.mjs tests/pdf-sources.test.mjs tests/markdown-sources.test.mjs tests/files.test.mjs tests/archive.test.mjs tests/math-core.test.mjs tests/crossref.test.mjs",
     "screenshots": "node scripts/screenshots.mjs",
     "conformance": "node scripts/conformance.mjs"
   },

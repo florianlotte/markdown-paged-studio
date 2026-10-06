@@ -56,8 +56,8 @@ test('switches between one and two page layouts, zooms, and remembers the view',
 
 test('sidebar tabs follow the ARIA tabs pattern with keyboard navigation', async ({ page }) => {
   await openFreshStudio(page);
-  const contentTab = page.locator('#tab-content');
-  const designTab = page.locator('#tab-design');
+  const contentTab = page.locator('#tabContent');
+  const designTab = page.locator('#tabDesign');
   await expect(contentTab).toHaveAttribute('aria-selected', 'true');
   await expect(page.locator('#panel-content')).toBeVisible();
   await expect(page.locator('#panel-design')).toBeHidden();
@@ -69,30 +69,30 @@ test('sidebar tabs follow the ARIA tabs pattern with keyboard navigation', async
   await expect(page.locator('#customCss')).toBeVisible();
 
   await designTab.press('ArrowRight');
-  await expect(page.locator('#tab-page')).toBeFocused();
+  await expect(page.locator('#tabPage')).toBeFocused();
   await expect(page.locator('#panel-page')).toBeVisible();
-  await page.locator('#tab-page').press('ArrowRight');
+  await page.locator('#tabPage').press('ArrowRight');
   await expect(contentTab).toBeFocused();
   await expect(page.locator('#panel-content')).toBeVisible();
   await contentTab.press('End');
-  await expect(page.locator('#tab-page')).toBeFocused();
+  await expect(page.locator('#tabPage')).toBeFocused();
 });
 
 test('the sidebar header stays fixed while the settings scroll in a short window', async ({ page }) => {
   await page.setViewportSize({ width: 1200, height: 520 });
   await openFreshStudio(page);
   // The Design tab holds the tall CSS editor: its panel overflows the short window.
-  await page.locator('#tab-design').click();
+  await page.locator('#tabDesign').click();
   const body = page.locator('.sidebar-body');
   expect(await body.evaluate(el => el.scrollHeight > el.clientHeight)).toBe(true);
   const before = await page.locator('.sidebar-header').boundingBox();
-  const tabsBefore = await page.locator('#tab-design').boundingBox();
+  const tabsBefore = await page.locator('#tabDesign').boundingBox();
   await body.evaluate(el => {
     el.scrollTop = 300;
   });
   expect(await body.evaluate(el => el.scrollTop)).toBe(300);
   expect(await page.locator('.sidebar-header').boundingBox()).toEqual(before);
-  expect(await page.locator('#tab-design').boundingBox()).toEqual(tabsBefore);
+  expect(await page.locator('#tabDesign').boundingBox()).toEqual(tabsBefore);
   await expect(page.locator('.brand-mark')).toBeInViewport();
   // The page itself must not scroll: only the panels moved.
   expect(await page.evaluate(() => document.querySelector('.shell').scrollTop)).toBe(0);
@@ -266,7 +266,7 @@ test('the sidebar footer shows the running version and stays at the bottom', asy
   const { version } = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
   await page.setViewportSize({ width: 1200, height: 520 });
   await openFreshStudio(page);
-  await page.locator('#tab-design').click();
+  await page.locator('#tabDesign').click();
   const footer = page.locator('.sidebar-footer');
   await expect(footer).toBeVisible();
   // The GitHub mark in front of the version leads to the repository.

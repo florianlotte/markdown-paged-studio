@@ -11,6 +11,9 @@ What the studio understands, how it differs from the specifications on purpose, 
 - **Footnotes**, which belong to neither specification, are placed at the foot of the page that calls them.
 - **Formulas** in TeX, **alerts**, highlighted text, subscript, superscript and definition lists are supported
   as well: see [Formulas, alerts and more](#formulas-alerts-and-more).
+- **Labels and references** in the style of pandoc-crossref number figures, tables, equations and headings:
+  `{#fig:plan}` and `@fig:plan`, table captions (`Table: …`), heading identifiers (`# Title {#custom}`). See
+  the [README](../README.md#numbering-and-cross-references).
 - The studio adds its own syntax for paged documents: size, alignment and caption of images and diagrams,
   `[[toc]]`, `\newpage`, Mermaid diagrams. See the [README](../README.md#usage).
 - Four behaviours differ from CommonMark on purpose. They are listed below; nothing else differs.
@@ -76,11 +79,10 @@ How to read them:
 
 ## Not supported
 
-| Syntax              | Example               | What you see today                         |
-| ------------------- | --------------------- | ------------------------------------------ |
-| Heading identifiers | `# Title {#custom}`   | The braces in the title                    |
-| Abbreviations       | `*[HTML]: Hyper Text` | The text as written                        |
-| Emoji shortcodes    | `:smile:`             | The text as written; type the emoji itself |
+| Syntax           | Example               | What you see today                         |
+| ---------------- | --------------------- | ------------------------------------------ |
+| Abbreviations    | `*[HTML]: Hyper Text` | The text as written                        |
+| Emoji shortcodes | `:smile:`             | The text as written; type the emoji itself |
 
 ## Formulas, alerts and more
 

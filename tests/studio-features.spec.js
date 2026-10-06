@@ -1,5 +1,5 @@
 // Integration tests of the document features: page breaks, table of contents, captions, syntax
-// highlighting, running header, facing pages, cover templates, formulas and alerts.
+// highlighting, running header, facing pages, cover templates, formulas, alerts, numbering and references.
 import { test, expect } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import {
@@ -377,5 +377,73 @@ test('formulas are drawn by KaTeX with their fonts, alerts are titled in the lan
         return document.fonts.check(`${style.fontStyle} ${style.fontSize} KaTeX_Math`);
       }),
   ).toBe(true);
+  await exported.close();
+});
+
+test('figures, tables, equations and headings are numbered, and references lead to them', async ({ page }) => {
+  await openDocument(
+    page,
+    [
+      '# Report {#sec:report}',
+      'See @fig:flow, @tab:costs, @eq:energy, @sec:details and @fig:nowhere.',
+      '## Details {#sec:details}',
+      '```mermaid #fig:flow caption="The flow"\nflowchart LR\n  A --> B\n```',
+      '| Item | Cost |\n|---|---|\n| A | 1 |',
+      'Table: Costs per item {#tab:costs}',
+      '$$ E = mc^2 $$ {#eq:energy}',
+      '\\newpage',
+      '## Later',
+      'Back to @fig:flow.',
+    ].join('\n\n'),
+    'Report',
+  );
+  const preview = page.locator('#preview');
+  // Labelled elements are numbered without any setting, and the references say so.
+  await expect(preview.locator('.diagram-caption')).toHaveText('Figure 1: The flow');
+  await expect(preview.locator('.diagram-caption .caption-label')).toHaveText('Figure 1:');
+  await expect(preview.locator('table.has-caption caption')).toHaveText('Table 1: Costs per item');
+  await expect(preview.locator('#eq-energy .eqn-num')).toHaveText('(1)');
+  const references = preview.locator('.document-content p').first().locator('.ref');
+  await expect(references).toHaveText([
+    'figure\u00a01',
+    'table\u00a01',
+    'equation\u00a0(1)',
+    'Details',
+    '@fig:nowhere',
+  ]);
+  await expect(references.nth(4)).toHaveClass(/ref-missing/);
+  await expect(references.nth(0)).toHaveAttribute('href', '#fig-flow');
+  // Headings are not numbered until asked.
+  await expect(preview.locator('.heading-number')).toHaveCount(0);
+
+  // A reference of the second page brings the figure of the first one into view.
+  const back = preview.locator('a.ref-fig').last();
+  await back.scrollIntoViewIfNeeded();
+  await expect(preview.locator('#fig-flow')).not.toBeInViewport();
+  await back.click();
+  await expect(preview.locator('#fig-flow')).toBeInViewport();
+
+  // Heading numbers: in the titles, in the references, and in the running header.
+  await page.getByRole('tab', { name: 'Design' }).click();
+  await page.locator('#numberHeadings').selectOption('h1');
+  await expect(preview.locator('.document-content :is(h1, h2)')).toHaveText(['1 Report', '1.1 Details', '1.2 Later']);
+  await expect(references.nth(3)).toHaveText('section\u00a01.1');
+  await page.locator('#runningHeader').check();
+  await expect.poll(() => marginBoxContent(page, 1, 'top-left')).toBe('"1 Report"');
+  await page.locator('#numberHeadings').selectOption('h2');
+  await expect(preview.locator('.document-content :is(h1, h2)')).toHaveText(['Report', '1 Details', '2 Later']);
+  await expect.poll(() => marginBoxContent(page, 1, 'top-left')).toBe('"Report"');
+
+  // The settings travel with the project, and the exported document resolves the same references.
+  const [project] = await Promise.all([page.waitForEvent('download'), exportVia(page, 'exportProject')]);
+  const saved = JSON.parse(readFileSync(await project.path(), 'utf8'));
+  expect([saved.numberHeadings, saved.numberFigures]).toEqual(['h2', false]);
+  const [download] = await Promise.all([page.waitForEvent('download'), exportVia(page, 'exportHtml')]);
+  const exported = await page.context().newPage();
+  await exported.setContent(readFileSync(await download.path(), 'utf8'));
+  await expect(exported.locator('.pagedjs_page')).toHaveCount(3);
+  await expect(exported.locator('#eq-energy .eqn-num')).toHaveText('(1)');
+  await expect(exported.locator('a.ref-eq')).toHaveText('equation\u00a0(1)');
+  await expect(exported.locator('#tab-costs caption')).toHaveText('Table 1: Costs per item');
   await exported.close();
 });

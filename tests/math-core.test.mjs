@@ -108,3 +108,29 @@ test('a document asks for the faces its formulas use, no more', () => {
     tall.join(' '),
   );
 });
+
+test('a labelled formula shows a number, and the references to it are completed', () => {
+  const html = draw(
+    'See @eq:energy, @eq:rows, -@eq:tagged and @eq:second.\n\n' +
+      '$$ E = mc^2 $$ {#eq:energy}\n\n$$ a = b $$\n\n' +
+      '$$\n\\begin{align} a &= b \\\\ c &= d \\end{align}\n$$ {#eq:rows}\n\n' +
+      '$$ x = y \\tag{A} $$ {#eq:tagged}\n\n```math #eq:second\nu = v % a comment\n```\n',
+  );
+  // One sequence for the whole document: the plain labelled formula, the two rows, the fenced one.
+  assert.deepEqual(
+    [...html.matchAll(/<span class="eqn-num">([^<]*)<\/span>/g)].map(match => match[1]),
+    ['(1)', '(2)', '(3)', '(4)'],
+  );
+  assert.match(html, /<a class="ref ref-eq" href="#eq-energy" data-eq="eq-energy">equation\u00a0\(1\)<\/a>/);
+  // A formula of several rows is referred to by its first number, a tagged one by its tag.
+  assert.match(html, /data-eq="eq-rows">equation\u00a0\(2\)<\/a>/);
+  assert.match(html, /data-eq="eq-tagged">\(A\)<\/a>/);
+  assert.match(html, /data-eq="eq-second">equation\u00a0\(4\)<\/a>/);
+  assert.doesNotMatch(html, /\(\?\)/);
+  // The formula without a label is drawn as written, without a number; the ids stay on the wrappers.
+  assert.match(
+    html,
+    /<div class="math math-block" role="math" aria-label="a = b"><!--math--><span class="katex-display">/,
+  );
+  assert.match(html, /<div class="math math-block" role="math" aria-label="E = mc\^2" id="eq-energy">/);
+});

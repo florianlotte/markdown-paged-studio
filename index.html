@@ -54,7 +54,7 @@
               <button
                 class="tab active"
                 role="tab"
-                id="tab-content"
+                id="tabContent"
                 data-tab="content"
                 aria-selected="true"
                 aria-controls="panel-content"
@@ -64,7 +64,7 @@
               <button
                 class="tab"
                 role="tab"
-                id="tab-design"
+                id="tabDesign"
                 data-tab="design"
                 aria-selected="false"
                 aria-controls="panel-design"
@@ -75,7 +75,7 @@
               <button
                 class="tab"
                 role="tab"
-                id="tab-page"
+                id="tabPage"
                 data-tab="page"
                 aria-selected="false"
                 aria-controls="panel-page"
@@ -91,7 +91,7 @@
               class="panel active"
               role="tabpanel"
               id="panel-content"
-              aria-labelledby="tab-content"
+              aria-labelledby="tabContent"
               data-panel="content"
             >
               <label>Title<input id="title" /></label>
@@ -129,11 +129,22 @@
               </section>
             </div>
 
-            <div class="panel" role="tabpanel" id="panel-design" aria-labelledby="tab-design" data-panel="design">
+            <div class="panel" role="tabpanel" id="panel-design" aria-labelledby="tabDesign" data-panel="design">
               <label>Header title<input id="headerTitle" /></label>
               <label class="check"
                 ><input id="runningHeader" type="checkbox" /> Use the current chapter (first-level heading) as header
                 title</label
+              >
+              <label
+                >Heading numbering
+                <select id="numberHeadings">
+                  <option value="none">None</option>
+                  <option value="h1">From level 1 (1, 1.1, 1.1.1)</option>
+                  <option value="h2">From level 2 (level 1 is the title)</option>
+                </select>
+              </label>
+              <label class="check"
+                ><input id="numberFigures" type="checkbox" /> Number figures and tables (Figure 1, Table 1)</label
               >
               <label>Header name<input id="headerName" /></label>
               <label>Footer text<input id="footerText" /></label>
@@ -153,7 +164,7 @@
               </div>
             </div>
 
-            <div class="panel" role="tabpanel" id="panel-page" aria-labelledby="tab-page" data-panel="page">
+            <div class="panel" role="tabpanel" id="panel-page" aria-labelledby="tabPage" data-panel="page">
               <label
                 >Page size
                 <select id="pageSize">

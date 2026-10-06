@@ -11,6 +11,9 @@ export const PAGE_HEIGHT_MM = { A4: 297, A5: 210, Letter: 279.4 };
 export const MARGIN_MAX_MM = 80;
 export const CODE_THEMES = ['light', 'dark', 'none'];
 export const COVER_TEMPLATES = ['classic', 'centered', 'band', 'minimal'];
+// Where the numbering of headings starts: nowhere, at the first level, or at the second one (the first
+// level is then the title of the document).
+export const HEADING_NUMBERING = ['none', 'h1', 'h2'];
 const COLOR = /^#[0-9a-f]{6}$/i;
 // BCP 47 language tag such as "en", "fr", "pt-BR" or "zh-Hant".
 export const LANGUAGE_TAG = /^[a-z]{2,3}(?:-[a-z0-9]{2,8})*$/i;
@@ -46,9 +49,10 @@ This app turns your Markdown into a paginated document that is ready to print[^e
 
 ## Diagram
 
-This part starts on a new page: the line above its title holds only \`\\newpage\`.
+This part starts on a new page: the line above its title holds only \`\\newpage\`. @Fig:pipeline shows
+the steps; its number and this reference are written for you.
 
-\`\`\`mermaid caption="Figure 1: from Markdown to pages"
+\`\`\`mermaid #fig:pipeline caption="From Markdown to pages"
 flowchart LR
   A[Markdown] --> B[HTML]
   B --> C[Pages]
@@ -114,6 +118,8 @@ const DEFAULT_STATE = {
   logoDataUrl: '',
   codeTheme: 'light',
   runningHeader: false,
+  numberHeadings: 'none',
+  numberFigures: false,
   mirrorMargins: false,
   coverTemplate: 'classic',
   accentColor: '#2c2f73',
@@ -141,6 +147,8 @@ export const CONFIG_SCHEMA = {
   logoDataUrl: 'imageDataUrl',
   codeTheme: 'codeTheme',
   runningHeader: 'boolean',
+  numberHeadings: 'headingNumbering',
+  numberFigures: 'boolean',
   mirrorMargins: 'boolean',
   coverTemplate: 'coverTemplate',
   accentColor: 'color',
@@ -173,6 +181,9 @@ export function sanitizeConfig(input) {
         break;
       case 'coverTemplate':
         if (COVER_TEMPLATES.includes(value)) out[key] = value;
+        break;
+      case 'headingNumbering':
+        if (HEADING_NUMBERING.includes(value)) out[key] = value;
         break;
       case 'color':
         if (typeof value === 'string' && COLOR.test(value.trim())) out[key] = value.trim().toLowerCase();

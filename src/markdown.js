@@ -7,6 +7,16 @@ import footnotes from 'markdown-it-footnote';
 import highlightedText from 'markdown-it-mark';
 import subscript from 'markdown-it-sub';
 import superscript from 'markdown-it-sup';
+import {
+  anchorId,
+  captionLabel,
+  headingAttributes,
+  headingCounter,
+  parseLabel,
+  parseReference,
+  referenceText,
+  trailingLabel,
+} from './crossref.js';
 import { escapeHtml } from './escape.js';
 import { findImage, imageName, isExternalSource } from './images.js';
 
@@ -160,14 +170,24 @@ md.block.ruler.after(
     const first = lineText(startLine);
     if (!first.startsWith('$$')) return false;
     const rest = first.slice(2).trim();
+    // The closing $$ may be followed by the label of the formula: $$ {#eq:energy}.
+    const closing = text => /^([^]*?)\$\$[ \t]*(?:\{(#eq:[^{}\s]+)\})?[ \t]*$/.exec(text);
     let tex;
+    let label;
     let next = startLine + 1;
-    if (rest.length > 2 && rest.endsWith('$$')) {
-      tex = rest.slice(0, -2).trim();
+    const oneLine = rest ? closing(rest) : null;
+    if (oneLine && oneLine[1].trim() && (!oneLine[2] || parseLabel(oneLine[2]))) {
+      tex = oneLine[1].trim();
+      label = parseLabel(oneLine[2]);
     } else if (rest === '') {
-      // Up to a line holding only $$; without one, this is not a formula.
-      while (next < endLine && state.sCount[next] >= state.blkIndent && lineText(next).trim() !== '$$') next++;
+      // Up to a line holding only $$ (and a label); without one, this is not a formula.
+      const end = line => {
+        const match = closing(lineText(line).trim());
+        return match && !match[1] && (!match[2] || parseLabel(match[2])) ? match : null;
+      };
+      while (next < endLine && state.sCount[next] >= state.blkIndent && !end(next)) next++;
       if (next >= endLine || state.sCount[next] < state.blkIndent) return false;
+      label = parseLabel(end(next)[2]);
       tex = state.getLines(startLine + 1, next, state.blkIndent, false).trim();
       next++;
     } else return false;
@@ -177,6 +197,7 @@ md.block.ruler.after(
     token.block = true;
     token.content = tex;
     token.markup = '$$';
+    if (label) token.attrSet('id', anchorId('eq', label.name));
     token.map = [startLine, next];
     state.line = next;
     return true;
@@ -186,6 +207,100 @@ md.block.ruler.after(
 
 md.renderer.rules.math_block = (tokens, idx, options, env, self) =>
   `${mathPlaceholder('div', 'block', tokens[idx].content, self.renderAttrs(tokens[idx]))}\n`;
+
+// ---- Numbering and cross-references (see src/crossref.js). Labels: {#fig:plan} in the braces of an image,
+// #fig:flow on a Mermaid fence, {#eq:energy} after the closing $$ of a formula, {#sec:intro} or {#intro}
+// at the end of a heading, {#tab:costs} at the end of a table caption. A table caption is a paragraph
+// "Table: text" (or ": text") right after the table, or right before it. A reference is @fig:plan.
+
+const TABLE_CAPTION = /^(?:Table)?:[ \t]+(\S[^]*)$/;
+const captionLabelSpan = text => `<span class="caption-label">${escapeHtml(text)}</span>`;
+const headingNumber = number => `<span class="heading-number">${escapeHtml(number)}</span>`;
+
+md.core.ruler.after('block', 'structure_attributes', state => {
+  const { tokens } = state;
+  const paragraphAt = index =>
+    tokens[index]?.type === 'paragraph_open' &&
+    tokens[index + 1]?.type === 'inline' &&
+    tokens[index + 2]?.type === 'paragraph_close'
+      ? tokens[index + 1]
+      : null;
+  for (let index = 0; index < tokens.length; index++) {
+    const token = tokens[index];
+    if (token.type === 'heading_open' && tokens[index + 1]?.type === 'inline') {
+      const found = headingAttributes(tokens[index + 1].content);
+      if (!found) continue;
+      tokens[index + 1].content = found.text;
+      token.meta = { name: found.name?.toLowerCase() ?? null, unnumbered: found.unnumbered };
+    } else if (token.type === 'table_open') {
+      let close = index + 1;
+      while (close < tokens.length && !(tokens[close].type === 'table_close' && tokens[close].level === token.level))
+        close++;
+      // The paragraph right after the table, else the one right before it, at the same level.
+      const captionOf = at => {
+        const inline = paragraphAt(at);
+        const match = inline && tokens[at].level === token.level ? TABLE_CAPTION.exec(inline.content) : null;
+        return match ? match[1].trim() : null;
+      };
+      let text = captionOf(close + 1);
+      if (text !== null) tokens.splice(close + 1, 3);
+      else {
+        text = captionOf(index - 3);
+        if (text === null) continue;
+        tokens.splice(index - 3, 3);
+        index -= 3;
+      }
+      const labelled = trailingLabel(text, 'tab');
+      const caption = [
+        new state.Token('caption_open', 'caption', 1),
+        new state.Token('inline', '', 0),
+        new state.Token('caption_close', 'caption', -1),
+      ];
+      caption[0].attrSet('class', 'table-caption');
+      caption[0].block = true;
+      caption[2].block = true;
+      caption[1].content = (labelled ? labelled.text : text).slice(0, CAPTION_MAX_LENGTH);
+      caption[1].children = [];
+      for (const part of caption) part.level = token.level + 1;
+      caption[1].level = token.level + 2;
+      token.meta = { caption: true, label: labelled?.name ?? null };
+      token.attrJoin('class', 'has-caption');
+      if (labelled) token.attrSet('id', anchorId('tab', labelled.name));
+      tokens.splice(index + 1, 0, ...caption);
+    }
+  }
+});
+
+// A reference: @fig:plan, @Tab:costs to open a sentence, -@eq:energy for the number alone. The "@" must not
+// follow a letter, a digit or an underscore, so e-mail addresses are left alone.
+md.inline.ruler.after('escape', 'cross_ref', (state, silent) => {
+  const { src, pos } = state;
+  const code = src.charCodeAt(pos);
+  if (code !== 0x40 && !(code === 0x2d && src.charCodeAt(pos + 1) === 0x40)) return false;
+  if (pos > 0 && /[\p{L}\p{N}_@-]/u.test(src[pos - 1])) return false;
+  const reference = parseReference(src.slice(pos, state.posMax));
+  if (!reference) return false;
+  if (!silent) {
+    const token = state.push('cross_ref', '', 0);
+    token.content = src.slice(pos, pos + reference.length);
+    token.meta = { ...reference, linked: state.linkLevel > 0, target: null };
+  }
+  state.pos += reference.length;
+  return true;
+});
+
+md.renderer.rules.cross_ref = (tokens, idx) => {
+  const { kind, target, linked } = tokens[idx].meta;
+  if (!target) return `<span class="ref ref-missing">${escapeHtml(tokens[idx].content)}</span>`;
+  // The number of an equation is only known once KaTeX has drawn it: renderFormulas() fills it in.
+  const pending = kind === 'eq' ? ` data-eq="${escapeHtml(target.id)}"` : '';
+  const text = escapeHtml(target.text);
+  // Inside a link the reference is only its text: links do not nest.
+  if (linked) return pending ? `<span class="ref ref-eq"${pending}>${text}</span>` : text;
+  return `<a class="ref ref-${kind}" href="#${escapeHtml(target.id)}"${pending}>${text}</a>`;
+};
+
+md.renderer.rules.heading_number = (tokens, idx) => `${headingNumber(tokens[idx].content)} `;
 
 // ---- Footnotes: Text[^1] with "[^1]: The note" anywhere in the document, or an inline note^[like this].
 // The text of a note is written where it is called: Paged.js moves it to the foot of the page holding the
@@ -258,11 +373,17 @@ export const DIAGRAM_WIDTH_MAX = 100;
 
 // Attributes after the language on the fence line: "width=60% align=left" -> { width: '60%', align: 'left' }.
 // `width` is a share of the text column (10 to 100 %) or an absolute size in mm, `caption` a text shown
-// under the drawing (in double quotes when it holds spaces); anything else is ignored.
+// under the drawing (in double quotes when it holds spaces), `#fig:name` its label for cross-references;
+// anything else is ignored.
 export function parseDiagramAttributes(text) {
   const out = {};
-  for (const [, key, value] of String(text ?? '').matchAll(ATTRIBUTE)) {
-    if (!key) continue;
+  for (const [word, key, value] of String(text ?? '').matchAll(ATTRIBUTE)) {
+    if (!key) {
+      // A bare word: the label of the figure, #fig:name.
+      const label = parseLabel(word);
+      if (label?.kind === 'fig') out.label = label.name;
+      continue;
+    }
     if (key === 'caption') {
       const caption = value.replace(/^"|"$/g, '').trim().slice(0, CAPTION_MAX_LENGTH);
       if (caption) out.caption = caption;
@@ -472,7 +593,10 @@ export function slugify(text) {
 // Gives every heading an id, lists the headings for the table of contents, and points the links written
 // as [text](#my-heading) to the prefixed id.
 md.core.ruler.push('heading_anchors', state => {
-  const used = new Set();
+  // Ids written by the author ({#intro}) are taken first, so no automatic anchor gets in their way.
+  const used = new Set(
+    state.tokens.filter(token => token.type === 'heading_open' && token.meta?.name).map(token => token.meta.name),
+  );
   const headings = [];
   state.tokens.forEach((token, index) => {
     if (token.type !== 'heading_open') return;
@@ -491,8 +615,8 @@ md.core.ruler.push('heading_anchors', state => {
       .join('')
       .trim();
     const base = slugify(text);
-    let slug = base;
-    for (let n = 2; used.has(slug); n++) slug = `${base}-${n}`;
+    let slug = token.meta?.name ?? base;
+    if (!token.meta?.name) for (let n = 2; used.has(slug); n++) slug = `${base}-${n}`;
     used.add(slug);
     token.attrSet('id', `${ANCHOR_PREFIX}${slug}`);
     headings.push({
@@ -519,6 +643,82 @@ md.core.ruler.push('heading_anchors', state => {
   }
 });
 
+// Numbers the headings, the figures and the tables in the order of the document, then resolves the
+// references (so a reference may come before its target). Written as text: CSS counters restart on every
+// page. `env.numberHeadings` is 'h1' or 'h2' (the level numbering starts at), `env.numberFigures` numbers
+// every captioned figure and table; an element that carries a label is always numbered.
+md.core.ruler.after('heading_anchors', 'numbering', state => {
+  const { tokens, env } = state;
+  const count = headingCounter(env.numberHeadings);
+  const targets = new Map(); // id -> { kind, number, text }
+  let heading = 0;
+  let figures = 0;
+  let tables = 0;
+  const figure = (meta, caption) => {
+    if (!meta.label && !(env.numberFigures && caption)) return;
+    meta.number = ++figures;
+    if (meta.label) targets.set(anchorId('fig', meta.label), { kind: 'fig', number: meta.number });
+  };
+  tokens.forEach((token, index) => {
+    if (token.type === 'heading_open') {
+      const entry = env.headings[heading++];
+      const number = token.meta?.unnumbered ? null : count(entry.level);
+      if (number) {
+        entry.number = number;
+        const mark = new state.Token('heading_number', '', 0);
+        mark.content = number;
+        tokens[index + 1]?.children?.unshift(mark);
+      }
+      targets.set(entry.id, { kind: 'sec', number, text: entry.text });
+    } else if (token.type === 'inline') {
+      for (const child of token.children ?? []) {
+        if (child.type === 'image' && child.meta)
+          figure(child.meta, child.meta.caption ?? child.attrGet('title')?.trim());
+      }
+    } else if (token.type === 'fence') {
+      const [language = '', ...rest] = token.info.trim().split(/\s+/);
+      if (language.toLowerCase() === 'mermaid') {
+        const attributes = parseDiagramAttributes(rest.join(' '));
+        figure(attributes, attributes.caption);
+        token.meta = { number: attributes.number };
+      } else if (language.toLowerCase() === 'math') {
+        const label = rest.map(parseLabel).find(found => found?.kind === 'eq');
+        if (label) token.attrSet('id', anchorId('eq', label.name));
+      }
+    } else if (token.type === 'table_open' && token.meta?.caption) {
+      if (!token.meta.label && !env.numberFigures) return;
+      const number = ++tables;
+      if (token.meta.label) targets.set(anchorId('tab', token.meta.label), { kind: 'tab', number });
+      const mark = new state.Token('html_inline', '', 0);
+      mark.content = captionLabelSpan(
+        captionLabel('tab', number, env.language, { alone: !tokens[index + 2]?.content }),
+      );
+      tokens[index + 2]?.children?.unshift(mark);
+    }
+    // A labelled formula: its number comes later, from KaTeX; the reference only needs to know it exists.
+    const id = token.type === 'math_block' || token.type === 'fence' ? token.attrGet('id') : null;
+    if (id?.startsWith('eq-')) targets.set(id, { kind: 'eq', number: '(?)' });
+  });
+
+  const resolve = children => {
+    for (const child of children ?? []) {
+      if (child.type !== 'cross_ref') continue;
+      const { kind, name, capital, bare } = child.meta;
+      const id = anchorId(kind, name);
+      const target = targets.get(id);
+      if (!target || target.kind !== kind) continue;
+      // A heading without a number is named by its title.
+      const text =
+        target.number === null || target.number === undefined
+          ? target.text
+          : referenceText(kind, target.number, env.language, { capital, bare });
+      child.meta.target = { id, text };
+    }
+  };
+  for (const token of tokens) resolve(token.children);
+  for (const paragraphs of env.footnoteNotes?.values() ?? []) paragraphs.forEach(resolve);
+});
+
 // The table lists the headings that follow it, down to its depth. Page numbers are added by the stylesheet
 // (target-counter), which Paged.js resolves once the pages exist.
 md.renderer.rules.toc = (tokens, idx, options, env) => {
@@ -527,7 +727,7 @@ md.renderer.rules.toc = (tokens, idx, options, env) => {
     .filter(heading => heading.line >= (map?.[1] ?? 0) && heading.level <= meta.depth)
     .map(
       heading =>
-        `<li class="toc-item toc-level-${heading.level}"><a href="#${escapeHtml(heading.id)}"><span class="toc-text">${heading.html ?? escapeHtml(heading.text)}</span><span class="toc-dots"></span></a></li>`,
+        `<li class="toc-item toc-level-${heading.level}"><a href="#${escapeHtml(heading.id)}"><span class="toc-text">${heading.number ? `${headingNumber(heading.number)} ` : ''}${heading.html ?? escapeHtml(heading.text)}</span><span class="toc-dots"></span></a></li>`,
     );
   return `<nav class="toc"><ol class="toc-list">${items.join('')}</ol></nav>\n`;
 };
@@ -541,20 +741,24 @@ md.renderer.rules.image = (tokens, idx, options, env, self) => {
     const image = findImage(source);
     if (!image) {
       const name = escapeHtml(imageName(source) || source);
-      return `<span class="image-missing" data-image="${name}">Missing image: ${name}</span>`;
+      const id = meta.label ? ` id="${escapeHtml(anchorId('fig', meta.label))}"` : '';
+      return `<span class="image-missing"${id} data-image="${name}">Missing image: ${name}</span>`;
     }
     resolved = image.dataUrl;
   }
   // The caption is the title of the image, ![Alt](photo.png "Caption"), or the caption attribute.
   const caption = meta.caption ?? token.attrGet('title')?.trim().slice(0, CAPTION_MAX_LENGTH);
+  // A numbered figure opens its caption with "Figure 1: "; without a caption text the number stands alone.
+  const numbered = meta.number ? captionLabel('fig', meta.number, env.language, { alone: !caption }) : '';
   const classes = [
     'document-image',
     meta.width ? 'is-sized' : '',
     meta.alone ? 'is-block' : '',
-    caption ? 'has-caption' : '',
+    caption || numbered ? 'has-caption' : '',
   ];
   const attributes = [
     `class="${classes.filter(Boolean).join(' ')}"`,
+    meta.label ? `id="${escapeHtml(anchorId('fig', meta.label))}"` : '',
     Number.isInteger(meta.line) ? `data-line="${meta.line}" data-line-end="${meta.lineEnd}"` : '',
     Number.isInteger(meta.line) ? `data-index="${meta.index}"` : '',
     meta.width ? `style="--image-width: ${meta.width}"` : '',
@@ -562,7 +766,10 @@ md.renderer.rules.image = (tokens, idx, options, env, self) => {
   ];
   const alt = self.renderInlineAsText(token.children ?? [], options, env);
   const image = `<img src="${escapeHtml(resolved)}" alt="${escapeHtml(alt)}">`;
-  const legend = caption ? `<span class="image-caption">${escapeHtml(caption)}</span>` : '';
+  const legend =
+    caption || numbered
+      ? `<span class="image-caption">${numbered ? captionLabelSpan(numbered) : ''}${escapeHtml(caption ?? '')}</span>`
+      : '';
   return `<span ${attributes.filter(Boolean).join(' ')}>${image}${legend}</span>`;
 };
 
@@ -573,14 +780,19 @@ md.renderer.rules.fence = (tokens, idx, options, env, self) => {
   const token = tokens[idx];
   const [language = '', ...rest] = token.info.trim().split(/\s+/);
   if (language.toLowerCase() === 'mermaid') {
-    const { width, align, caption } = parseDiagramAttributes(rest.join(' '));
+    const { width, align, caption, label } = parseDiagramAttributes(rest.join(' '));
+    const number = token.meta?.number;
     const attributes = [
       `class="mermaid-diagram${width ? ' is-sized' : ''}"`,
+      label ? `id="${escapeHtml(anchorId('fig', label))}"` : '',
       `data-source="${escapeHtml(token.content)}"`,
       token.map ? `data-line="${token.map[0]}"` : '',
       width ? `style="--diagram-width: ${width}"` : '',
       align ? `data-align="${align}"` : '',
       caption ? `data-caption="${escapeHtml(caption)}"` : '',
+      number
+        ? `data-caption-label="${escapeHtml(captionLabel('fig', number, env.language, { alone: !caption }))}"`
+        : '',
     ];
     return `<div ${attributes.filter(Boolean).join(' ')}></div>\n`;
   }
@@ -656,11 +868,18 @@ export async function renderDiagrams(html) {
     const source = node.dataset.source ?? '';
     delete node.dataset.source;
     node.innerHTML = await diagramSvg(mermaid, source);
-    if (node.dataset.caption) {
+    if (node.dataset.caption || node.dataset.captionLabel) {
       const caption = document.createElement('div');
       caption.className = 'diagram-caption';
-      caption.textContent = node.dataset.caption;
+      if (node.dataset.captionLabel) {
+        const label = document.createElement('span');
+        label.className = 'caption-label';
+        label.textContent = node.dataset.captionLabel;
+        caption.append(label);
+      }
+      caption.append(node.dataset.caption ?? '');
       delete node.dataset.caption;
+      delete node.dataset.captionLabel;
       node.append(caption);
     }
   }

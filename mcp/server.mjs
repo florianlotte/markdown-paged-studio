@@ -196,6 +196,14 @@ const configShape = {
     .boolean()
     .optional()
     .describe('Show the current first-level heading top left instead of headerTitle'),
+  numberHeadings: z
+    .enum(['none', 'h1', 'h2'])
+    .optional()
+    .describe('Number the headings (1, 1.1, 1.1.1) from level 1, or from level 2 when level 1 is the title'),
+  numberFigures: z
+    .boolean()
+    .optional()
+    .describe('Number every captioned figure and table; a labelled one ({#fig:name}) is always numbered'),
   mirrorMargins: z
     .boolean()
     .optional()
@@ -371,6 +379,7 @@ A caption is \`.image-caption\` inside the image wrapper (\`.has-caption\`) or \
 Headings carry an id (\`sec-\` plus the slug of their text). The table of contents is \`<nav class="toc">\` with an \`<ol class="toc-list">\` of \`<li class="toc-item toc-level-N">\`, each holding a link with \`.toc-text\` and \`.toc-dots\`; the page number is the \`::after\` of the link. A forced page break is \`<div class="page-break">\`.
 A footnote is \`<span class="footnote">\` written where it is called and moved to the foot of the page (style its call with \`.footnote::footnote-call\`, its number with \`.footnote::footnote-marker\`, the area with \`@page { @footnote { … } }\`); a repeated call is \`<sup class="footnote-ref">\`. Task lists are \`.contains-task-list\` holding \`.task-list-item\` with an \`input\`.
 A formula (\`$…$\`, \`$$…$$\` or a \`math\` fence, in TeX) is \`.math\` with \`.math-inline\` or \`.math-block\`, holding KaTeX's \`.katex\`; \`.math-error\` marks one that could not be read. An alert (\`> [!NOTE]\`, \`[!TIP]\`, \`[!IMPORTANT]\`, \`[!WARNING]\`, \`[!CAUTION]\`) is \`.alert\` with \`.alert-<type>\`, its title in \`.alert-title\`, coloured by \`--alert-color\`. Highlighted text is \`mark\`; subscript, superscript and definition lists are \`sub\`, \`sup\`, \`dl\`, \`dt\`, \`dd\`.
+Numbering and references: a label (\`{#fig:name}\` in the braces of an image, \`#fig:name\` on a mermaid fence, \`Table: caption {#tab:name}\` after a table, \`$$ … $$ {#eq:name}\`, \`# Title {#sec:name}\`) numbers its element and \`@fig:name\` in the text becomes a link \`a.ref.ref-fig\` (\`.ref-missing\` when unknown). A numbered heading starts with \`.heading-number\`, a numbered caption with \`.caption-label\`; a table caption is \`caption.table-caption\` in a \`table.has-caption\`; ids start with \`sec-\`, \`fig-\`, \`tab-\`, \`eq-\`. \`numberHeadings\` and \`numberFigures\` number what carries no label.
 Highlighted code blocks are \`<pre class="code-block code-light">\` (or \`code-dark\`) with highlight.js \`.hljs-*\` spans.
 Header, footer and the page counter are \`@page\` margin boxes driven by the config, not by CSS classes.
 Use print units (\`mm\`, \`pt\`) and paged-media properties such as \`break-before: page\` or \`break-inside: avoid\`.

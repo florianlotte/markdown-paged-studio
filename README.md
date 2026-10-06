@@ -38,6 +38,7 @@
 - **Images** uploaded, dropped or pasted, matched to the Markdown by file name, resizable like the diagrams.
 - **Custom CSS** editor with import, applied to the document only.
 - **Interface in English or French**, following the browser or your choice.
+- **Automatic numbering and cross-references**: headings, figures, tables and equations are numbered for you, and `@fig:plan` in the text becomes "figure 3", with a link, wherever the figure ends up.
 - **Formulas, alerts and more**: TeX formulas drawn by KaTeX (`$E = mc^2$`), GitHub alerts (`> [!NOTE]`), highlighted text, subscript, superscript and definition lists.
 - **A document in several files**: chapters as tabs above the editor, assembled into one paged document and one PDF, with shared settings, table of contents and page numbers.
 - **A real editor**: Markdown colours, line numbers, search and replace (Ctrl+F), and the preview scrolling along with the text; a double-click in the preview shows the source.
@@ -114,7 +115,8 @@ flowchart LR
 | --------- | ---------------------------------- | -------------------------------------------------------------------- |
 | `width`   | `10%` to `100%`, or a size in `mm` | Width as a share of the text column, or absolute; the height follows |
 | `align`   | `left`, `center`, `right`          | Horizontal position, centered by default                             |
-| `caption` | text, in double quotes             | Caption shown under the diagram: `caption="Figure 2: the flow"`      |
+| `caption` | text, in double quotes             | Caption shown under the diagram: `caption="The flow"`                |
+| `#fig:…`  | a name, as in `#fig:flow`          | Label of the figure: numbers it and lets `@fig:flow` refer to it     |
 
 You rarely need to type the size and the alignment: hover or click a diagram in the preview to get size presets (25, 50, 75, 100 %, natural size), alignment buttons and a handle to drag, which also answers to the arrow keys in 5 % steps. A clicked diagram keeps its tools open, also on touch screens, until you click elsewhere or press Escape, so several adjustments can follow one another.
 
@@ -137,6 +139,25 @@ Every diagram type supported by [Mermaid](https://mermaid.js.org) works. Diagram
 | `Term` then a line starting with `: `   | A definition list                                                                     |
 
 KaTeX, its stylesheet and its fonts are only loaded when a document holds a formula, and the fonts a document uses travel inside its exports. Amounts of money are not formulas (`5 $ and 10 $`, `$5-$10`), and `\$` is always a plain dollar. The title of an alert follows the document language. Details and limits are in [Markdown support](docs/markdown-support.md#formulas-alerts-and-more).
+
+### Numbering and cross-references
+
+Give an element a label and refer to it by that label: the studio writes the numbers, and keeps them right when the document changes.
+
+| Element | Label                                                            | Reference      | Shown as     |
+| ------- | ---------------------------------------------------------------- | -------------- | ------------ |
+| Image   | `![Plan](plan.png 'The ground floor'){#fig:plan}`                | `@fig:plan`    | figure 1     |
+| Diagram | ` ```mermaid #fig:flow caption="The flow" `                      | `@fig:flow`    | figure 2     |
+| Table   | a paragraph `Table: Costs per year {#tab:costs}` after the table | `@tab:costs`   | table 1      |
+| Formula | `$$ E = mc^2 $$ {#eq:energy}`                                    | `@eq:energy`   | equation (1) |
+| Heading | `## Details {#sec:details}`                                      | `@sec:details` | section 1.2  |
+
+- A reference is a link to its target. `@Fig:plan` starts a sentence with a capital, `-@fig:plan` gives the number alone ("figures 1 and -@fig:flow"). A label that does not exist shows in red, as written.
+- A labelled element is always numbered. The **Design** tab can also number every captioned figure and table (**Number figures and tables**) and the headings (**Heading numbering**: from level 1, or from level 2 when level 1 is the title of the document). A heading ending with `{-}` keeps no number.
+- The caption of a table is a paragraph starting with `Table:` (or just `:`) right after the table, or right before it; it works without a label too. Write `Table\:` to keep such a paragraph as text.
+- A formula on several lines takes its label after the closing dollars (`$$ {#eq:energy}`), a `math` block on its opening line (` ```math #eq:energy `). `align` numbers each row; a `\tag{A}` you wrote is kept.
+- `{#details}` at the end of a heading sets its anchor: `[see](#details)` and `@sec:details` both lead to it. Without numbering, a reference to a heading shows its title.
+- The words follow the document language ("Figure 1 – " and "tableau 2" in French). A number you typed by hand in a caption is left as it is: remove it when you label the figure.
 
 ### Structure: table of contents, page breaks, footnotes, code
 
@@ -185,11 +206,12 @@ An image is inside text as soon as its paragraph holds something else: a sentenc
 A caption goes in the title of the image, or in a `caption` attribute like the one of the diagrams:
 
 ```markdown
-![Plan](plan.png 'Figure 1: the ground floor')
-![Plan](plan.png){width=60% caption="Figure 1: the ground floor"}
+![Plan](plan.png 'The ground floor')
+![Plan](plan.png){width=60% caption="The ground floor"}
+![Plan](plan.png 'The ground floor'){#fig:plan width=60%}
 ```
 
-Captions are not numbered automatically: write the number yourself. Every image has the preview tools, wherever it is: in a paragraph, a list, a quote, a table cell or a link.
+The last form labels the figure: it is numbered ("Figure 1: The ground floor") and `@fig:plan` refers to it, see [Numbering and cross-references](#numbering-and-cross-references). Every image has the preview tools, wherever it is: in a paragraph, a list, a quote, a table cell or a link.
 
 ![An image sized from the preview, the Images section and a missing image](docs/screenshots/images.png)
 
@@ -232,20 +254,22 @@ The **Design** tab has a CSS editor. Its content is appended after the built-in 
 
 Inside the content, these class names are stable and meant to be styled:
 
-| Element           | Selector                                                                                                                                                                                                              |
-| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Diagram           | `.mermaid-diagram`, its drawing `.mermaid-diagram > svg`; `.is-sized` with `--diagram-width`, `data-align`; a failed one is `.mermaid-error`                                                                          |
-| Image             | `.document-image` around the `img`; `.is-block` alone in a paragraph, `.is-sized` with `--image-width`, `data-align`; `.image-missing` if not uploaded                                                                |
-| Caption           | `.image-caption`, `.diagram-caption`                                                                                                                                                                                  |
-| Table of contents | `nav.toc`, `.toc-item` with `.toc-level-1`…, holding a link with `.toc-text` and `.toc-dots`; the page number is the `::after` of the link                                                                            |
-| Page break        | `.page-break`                                                                                                                                                                                                         |
-| Footnote          | `.footnote` for the note, `.footnote::footnote-call` for its call in the text, `.footnote::footnote-marker` for its number, `.footnote-ref` for a repeated call; the area of the notes is `@page { @footnote { … } }` |
-| Task list         | `.contains-task-list` on the list, `.task-list-item` on the item, holding an `input`                                                                                                                                  |
-| Formula           | `.math` with `.math-inline` or `.math-block`, holding KaTeX's `.katex`; `.math-error` when the formula could not be read                                                                                              |
-| Alert             | `.alert` with `.alert-note`, `.alert-tip`, `.alert-important`, `.alert-warning` or `.alert-caution`, its title in `.alert-title`; the colour is `--alert-color`                                                       |
-| Highlighted text  | `mark`; subscript and superscript are `sub` and `sup`, definition lists `dl`, `dt`, `dd`                                                                                                                              |
-| Highlighted code  | `pre.code-block` with `.code-light` or `.code-dark`, and highlight.js `.hljs-*` spans                                                                                                                                 |
-| Heading           | an `id` made of `sec-` and the anchor name: `#sec-details`                                                                                                                                                            |
+| Element           | Selector                                                                                                                                                                                                                                     |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Diagram           | `.mermaid-diagram`, its drawing `.mermaid-diagram > svg`; `.is-sized` with `--diagram-width`, `data-align`; a failed one is `.mermaid-error`                                                                                                 |
+| Image             | `.document-image` around the `img`; `.is-block` alone in a paragraph, `.is-sized` with `--image-width`, `data-align`; `.image-missing` if not uploaded                                                                                       |
+| Number, reference | `.heading-number` in a numbered heading, `.caption-label` opening a numbered caption ("Figure 1: "), `a.ref` with `.ref-fig`, `.ref-tab`, `.ref-eq` or `.ref-sec`, `.ref-missing` for an unknown label; ids start with `fig-`, `tab-`, `eq-` |
+| Table caption     | `caption.table-caption` inside a `table.has-caption`                                                                                                                                                                                         |
+| Caption           | `.image-caption`, `.diagram-caption`                                                                                                                                                                                                         |
+| Table of contents | `nav.toc`, `.toc-item` with `.toc-level-1`…, holding a link with `.toc-text` and `.toc-dots`; the page number is the `::after` of the link                                                                                                   |
+| Page break        | `.page-break`                                                                                                                                                                                                                                |
+| Footnote          | `.footnote` for the note, `.footnote::footnote-call` for its call in the text, `.footnote::footnote-marker` for its number, `.footnote-ref` for a repeated call; the area of the notes is `@page { @footnote { … } }`                        |
+| Task list         | `.contains-task-list` on the list, `.task-list-item` on the item, holding an `input`                                                                                                                                                         |
+| Formula           | `.math` with `.math-inline` or `.math-block`, holding KaTeX's `.katex`; `.math-error` when the formula could not be read                                                                                                                     |
+| Alert             | `.alert` with `.alert-note`, `.alert-tip`, `.alert-important`, `.alert-warning` or `.alert-caution`, its title in `.alert-title`; the colour is `--alert-color`                                                                              |
+| Highlighted text  | `mark`; subscript and superscript are `sub` and `sup`, definition lists `dl`, `dt`, `dd`                                                                                                                                                     |
+| Highlighted code  | `pre.code-block` with `.code-light` or `.code-dark`, and highlight.js `.hljs-*` spans                                                                                                                                                        |
+| Heading           | an `id` made of `sec-` and the anchor name: `#sec-details`                                                                                                                                                                                   |
 
 Use print units (`mm`, `pt`) and paged-media properties such as `break-before: page` or `break-inside: avoid`. A minimal example:
 
@@ -464,7 +488,6 @@ Recent Chromium-based browsers (Chrome, Edge, Brave, Arc) are the reference for 
 
 ## Roadmap
 
-- Automatic numbering of figures and headings
 - Dark theme for the studio
 - More interface languages
 - Code signing of the desktop binaries (Windows and macOS)

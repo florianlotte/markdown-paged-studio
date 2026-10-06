@@ -99,7 +99,7 @@ const PROBES = [
   ['Math formulas', '$a^2 + b^2$\n', /class="math /],
   ['Highlighted text', '==marked==\n', /<mark>/],
   ['Alerts', '> [!NOTE]\n> text\n', /class="[^"]*(alert|note)/i],
-  ['Heading identifiers', '# Title {#custom}\n', /id="custom"/],
+  ['Heading identifiers', '# Title {#custom}\n', /id="sec-custom"/],
   ['Abbreviations', '*[HTML]: Hyper Text\n\nHTML\n', /<abbr/],
   ['Emoji shortcodes', ':smile:\n', /😄/u],
 ];

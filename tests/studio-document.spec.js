@@ -212,7 +212,7 @@ test('the document language drives lang attributes and typographic quotes', asyn
   await openFreshStudio(page);
   await expect(page.locator('#preview .document-content').first()).toHaveAttribute('lang', 'en');
 
-  await page.locator('#tab-page').click();
+  await page.locator('#tabPage').click();
   await page.locator('#language').fill('fr');
   await appendMarkdown(page, '\n\nIl a dit "bonjour".\n');
   await expect(page.locator('#preview .document-content').first()).toHaveAttribute('lang', 'fr');
@@ -232,7 +232,7 @@ test('the document language drives lang attributes and typographic quotes', asyn
 
 test('the cover page matches the selected paper height', async ({ page }) => {
   await openFreshStudio(page);
-  await page.locator('#tab-page').click();
+  await page.locator('#tabPage').click();
   const pageHeightMm = () =>
     page.evaluate(() => {
       const box = document.querySelector('#preview .pagedjs_page');

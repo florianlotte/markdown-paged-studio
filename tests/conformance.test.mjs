@@ -50,6 +50,7 @@ test('the GFM extensions and the other syntaxes are in the documented state', ()
       'Math formulas',
       'Highlighted text',
       'Alerts',
+      'Heading identifiers',
     ],
   );
 });
