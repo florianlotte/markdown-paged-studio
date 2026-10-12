@@ -47,7 +47,11 @@ const theme = EditorView.theme({
   '.cm-lineNumbers .cm-gutterElement': { padding: '0 8px 0 10px', minWidth: '28px' },
   '.cm-activeLine': { backgroundColor: 'var(--code-active-line)' },
   '.cm-activeLineGutter': { backgroundColor: 'var(--code-active-gutter)', color: 'var(--text-soft)' },
-  '.cm-selectionBackground, &.cm-focused .cm-selectionBackground': { backgroundColor: 'var(--code-selection)' },
+  // As specific as the rule of the base theme for the focused editor, which would otherwise win. The
+  // selection is drawn in a layer behind the lines: the background of the active line stays translucent.
+  '.cm-selectionBackground, &.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground': {
+    backgroundColor: 'var(--code-selection)',
+  },
   '.cm-panels': { backgroundColor: 'var(--surface-2)', color: 'var(--text)', borderColor: 'var(--border-faint)' },
   '.cm-panel.cm-search': { padding: '6px 8px', fontSize: '12px' },
   '.cm-panel.cm-search input, .cm-panel.cm-search button': { fontSize: '12px', margin: '2px 4px 2px 0' },

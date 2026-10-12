@@ -97,6 +97,43 @@ test('the studio follows the system theme, remembers a choice and keeps the page
   expect(await background('#preview .pagedjs_page')).toBe('rgb(255, 255, 255)');
 });
 
+test('the selection of the editor stays visible on the active line, in both themes', async ({ page }) => {
+  await openFreshStudio(page);
+  const colour = selector =>
+    page
+      .locator(selector)
+      .first()
+      .evaluate(el => getComputedStyle(el).backgroundColor);
+  const token = name =>
+    page.evaluate(name => getComputedStyle(document.documentElement).getPropertyValue(name).trim(), name);
+  for (const scheme of ['light', 'dark']) {
+    await page.emulateMedia({ colorScheme: scheme });
+    await expect(page.locator('html')).toHaveAttribute('data-theme', scheme);
+    // A selection inside the line of the cursor, the editor focused.
+    await page.evaluate(() => {
+      window.studio.editor.select(2, 10);
+      window.studio.editor.focus();
+    });
+    const selection = page.locator('.cm-selectionLayer .cm-selectionBackground');
+    await expect(selection).toHaveCount(1);
+    // The colour of the theme, not the one of CodeMirror's base theme for a focused editor (#d7d4f0).
+    const expected = await page.evaluate(
+      hex => {
+        const probe = document.createElement('div');
+        probe.style.backgroundColor = hex;
+        document.body.append(probe);
+        const rgb = getComputedStyle(probe).backgroundColor;
+        probe.remove();
+        return rgb;
+      },
+      await token('--code-selection'),
+    );
+    expect(await colour('.cm-selectionLayer .cm-selectionBackground')).toBe(expected);
+    // The selection is painted behind the lines: the active line must let it through.
+    expect(await colour('.cm-activeLine')).toMatch(/^rgba\(\d+, \d+, \d+, 0\.\d+\)$/);
+  }
+});
+
 test('sidebar tabs follow the ARIA tabs pattern with keyboard navigation', async ({ page }) => {
   await openFreshStudio(page);
   const contentTab = page.locator('#tabContent');

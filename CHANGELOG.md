@@ -7,6 +7,14 @@ All notable changes to Markdown Paged Studio are listed here, newest first. The 
 
 ## [Unreleased]
 
+## [1.22.1] - 2026-10-12
+
+### Fixed
+
+- The selection of the editor is visible on the line of the cursor (the background of the active line hid
+  it), and takes the colour of the theme while the editor is focused: in the dark theme it was a light block
+  under light text.
+
 ## [1.22.0] - 2026-10-12
 
 ### Added
@@ -414,7 +422,8 @@ All notable changes to Markdown Paged Studio are listed here, newest first. The 
 - Portable desktop app for Windows, Linux and macOS with direct PDF export.
 - Docker image, Playwright integration tests and CI.
 
-[Unreleased]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.22.0...HEAD
+[Unreleased]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.22.1...HEAD
+[1.22.1]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.22.0...v1.22.1
 [1.22.0]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.21.1...v1.22.0
 [1.21.1]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.21.0...v1.21.1
 [1.21.0]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.20.0...v1.21.0

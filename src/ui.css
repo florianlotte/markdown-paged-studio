@@ -35,7 +35,8 @@
   --shadow-card: rgba(0, 0, 0, 0.25);
   /* The Markdown editor (CodeMirror reads them from its theme in src/editor.js). */
   --code-gutter-text: #9aa3ae;
-  --code-active-line: #f4f6fb;
+  /* Translucent: the selection of CodeMirror is painted behind the line. */
+  --code-active-line: rgba(36, 72, 180, 0.05);
   --code-active-gutter: #eef1f8;
   --code-selection: #cfd9ff;
   --code-heading: #1d2b6b;
@@ -79,7 +80,7 @@
   --shadow-menu: rgba(0, 0, 0, 0.5);
   --shadow-card: rgba(0, 0, 0, 0.6);
   --code-gutter-text: #6f7885;
-  --code-active-line: #242931;
+  --code-active-line: rgba(255, 255, 255, 0.035);
   --code-active-gutter: #2a303a;
   --code-selection: #34447a;
   --code-heading: #a3b5ff;
