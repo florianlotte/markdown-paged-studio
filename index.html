@@ -3,7 +3,19 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="color-scheme" content="light" />
+    <meta name="color-scheme" content="light dark" />
+    <!-- The saved theme before the first paint, so a dark studio never flashes white (src/theme.js takes over). -->
+    <script>
+      try {
+        var theme = localStorage.getItem('markdown-paged-studio:theme');
+        document.documentElement.dataset.theme =
+          theme === 'dark' || (theme !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches)
+            ? 'dark'
+            : 'light';
+      } catch (error) {
+        // Storage unavailable: the light theme shows until the script of the page decides.
+      }
+    </script>
     <meta
       name="description"
       content="Write Markdown, add custom CSS and get a paginated, print-ready document with cover page, headers, footers and page numbers. 100% in the browser."
@@ -30,6 +42,17 @@
                   />
                 </svg>
                 <select id="uiLanguage" aria-label="Interface language"></select>
+              </label>
+              <label class="theme-switch" title="Theme">
+                <svg viewBox="0 0 20 20" width="15" height="15" aria-hidden="true" focusable="false">
+                  <circle cx="10" cy="10" r="7.5" fill="none" stroke="currentColor" stroke-width="1.5" />
+                  <path d="M10 2.5a7.5 7.5 0 0 0 0 15z" fill="currentColor" />
+                </svg>
+                <select id="uiTheme" aria-label="Theme">
+                  <option value="system">Auto</option>
+                  <option value="light">Light</option>
+                  <option value="dark">Dark</option>
+                </select>
               </label>
               <button
                 id="closeSidebar"
@@ -132,9 +155,16 @@
             <div class="panel" role="tabpanel" id="panel-design" aria-labelledby="tabDesign" data-panel="design">
               <label>Header title<input id="headerTitle" /></label>
               <label class="check"
-                ><input id="runningHeader" type="checkbox" /> Use the current chapter (first-level heading) as header
-                title</label
+                ><input id="runningHeader" type="checkbox" /> Use the current heading as header title</label
               >
+              <label
+                >Running header level
+                <select id="runningHeaderLevel">
+                  <option value="h1">Level 1 (chapters)</option>
+                  <option value="h2">Level 2 (sections)</option>
+                  <option value="h3">Level 3</option>
+                </select>
+              </label>
               <label
                 >Heading numbering
                 <select id="numberHeadings">

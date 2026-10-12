@@ -227,7 +227,7 @@ Good to know:
 ![The four cover templates: classic, centered, colour band and minimal](docs/screenshots/covers.png)
 
 - **Content** tab: title, subtitle, author, date, the cover page toggle, the logo (any image; wider than 1200 px it is scaled down), and the cover template (classic, centered, colour band, minimal) with its accent colour. The templates arrange the same content, so a stylesheet written for one works with the others.
-- **Design** tab: header title (top left), header name (top right) and footer text (bottom left). The page counter always sits at the bottom right. With **Use the current chapter as header title**, the header shows the first-level heading the page belongs to instead of the header title.
+- **Design** tab: header title (top left), header name (top right) and footer text (bottom left). The page counter always sits at the bottom right. With **Use the current heading as header title**, the header shows the heading the page belongs to instead of the header title: the chapter (level 1), or, with **Running header level** set to level 2 or 3, the current section, going back to the chapter title on the page where a chapter starts.
 
 ### Page setup
 
@@ -313,6 +313,12 @@ The footer of the sidebar shows which build is running, for example `v1.13.1 · 
 The studio speaks English and French. It follows the language of the browser and the selector at the top of the sidebar, next to the logo, changes it; the choice is remembered on that device. It is a setting of the studio, not of the document: the language of the document, which drives hyphenation and quotes, is set in the **Page** tab.
 
 ![The studio in French](docs/screenshots/french.png)
+
+### Theme
+
+The studio follows the light or dark theme of the system, and the selector next to the language, at the top of the sidebar, forces one or the other (**Auto**, **Light**, **Dark**; on desktop also View → Theme). The choice is remembered on that device, apart from the document. Only the chrome changes: the pages of the preview are shown as they print, white in both themes, and the exports are identical.
+
+![The studio in its dark theme: dark sidebar, toolbar and editor, white pages](docs/screenshots/dark.png)
 
 ### Personal defaults
 

@@ -26,8 +26,10 @@ const scrolls = new WeakMap(); // file -> scrollTop
 // Texts of the search panel, translated in place when the language changes (see setEditorPhrases).
 const phrases = {};
 
+// Colours come from the tokens of src/ui.css, so the editor follows the light or dark theme of the studio
+// without a theme of its own.
 const theme = EditorView.theme({
-  '&': { height: '100%', fontSize: '13px', backgroundColor: '#fff', color: '#1f2733' },
+  '&': { height: '100%', fontSize: '13px', backgroundColor: 'var(--surface)', color: 'var(--text)' },
   '&.cm-focused': { outline: 'none' },
   '.cm-scroller': {
     fontFamily: "'SFMono-Regular', Consolas, 'Liberation Mono', monospace",
@@ -36,12 +38,17 @@ const theme = EditorView.theme({
   },
   '.cm-content': { padding: '10px 0' },
   '.cm-line': { padding: '0 14px 0 8px' },
-  '.cm-gutters': { backgroundColor: '#f8f9fb', color: '#9aa3ae', border: 'none', borderRight: '1px solid #e5e9ef' },
+  '.cm-gutters': {
+    backgroundColor: 'var(--surface-2)',
+    color: 'var(--code-gutter-text)',
+    border: 'none',
+    borderRight: '1px solid var(--border-faint)',
+  },
   '.cm-lineNumbers .cm-gutterElement': { padding: '0 8px 0 10px', minWidth: '28px' },
-  '.cm-activeLine': { backgroundColor: '#f4f6fb' },
-  '.cm-activeLineGutter': { backgroundColor: '#eef1f8', color: '#4f5660' },
-  '.cm-selectionBackground, &.cm-focused .cm-selectionBackground': { backgroundColor: '#cfd9ff' },
-  '.cm-panels': { backgroundColor: '#f8f9fb', color: '#1f2733', borderColor: '#e5e9ef' },
+  '.cm-activeLine': { backgroundColor: 'var(--code-active-line)' },
+  '.cm-activeLineGutter': { backgroundColor: 'var(--code-active-gutter)', color: 'var(--text-soft)' },
+  '.cm-selectionBackground, &.cm-focused .cm-selectionBackground': { backgroundColor: 'var(--code-selection)' },
+  '.cm-panels': { backgroundColor: 'var(--surface-2)', color: 'var(--text)', borderColor: 'var(--border-faint)' },
   '.cm-panel.cm-search': { padding: '6px 8px', fontSize: '12px' },
   '.cm-panel.cm-search input, .cm-panel.cm-search button': { fontSize: '12px', margin: '2px 4px 2px 0' },
   '.cm-panel.cm-search label': { fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '3px' },
@@ -51,15 +58,15 @@ const theme = EditorView.theme({
 // Markdown colours: structure stands out, the marks themselves stay quiet. No background blocks, so wrapped
 // lines keep an even rhythm.
 const colours = HighlightStyle.define([
-  { tag: tags.heading, color: '#1d2b6b', fontWeight: '700' },
+  { tag: tags.heading, color: 'var(--code-heading)', fontWeight: '700' },
   { tag: tags.strong, fontWeight: '700' },
   { tag: tags.emphasis, fontStyle: 'italic' },
   { tag: tags.strikethrough, textDecoration: 'line-through' },
-  { tag: [tags.link, tags.url], color: '#2456c8' },
-  { tag: tags.monospace, color: '#a3381f' },
-  { tag: tags.quote, color: '#5d6672' },
-  { tag: [tags.processingInstruction, tags.meta, tags.contentSeparator], color: '#8a93a0' },
-  { tag: tags.labelName, color: '#7a4fc4' },
+  { tag: [tags.link, tags.url], color: 'var(--code-link)' },
+  { tag: tags.monospace, color: 'var(--code-mono)' },
+  { tag: tags.quote, color: 'var(--code-quote)' },
+  { tag: [tags.processingInstruction, tags.meta, tags.contentSeparator], color: 'var(--code-mark)' },
+  { tag: tags.labelName, color: 'var(--code-label)' },
 ]);
 
 const imageFiles = transfer => [...(transfer?.files ?? [])].filter(file => file.type.startsWith('image/'));

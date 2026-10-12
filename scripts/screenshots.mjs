@@ -86,8 +86,8 @@ const rendered = page =>
       !document.getElementById('preview').classList.contains('is-stale'),
   );
 
-async function openStudio(browser, { locale = 'en-US', markdown } = {}) {
-  const context = await browser.newContext({ viewport: VIEWPORT, locale, deviceScaleFactor: 1 });
+async function openStudio(browser, { locale = 'en-US', markdown, colorScheme = 'light' } = {}) {
+  const context = await browser.newContext({ viewport: VIEWPORT, locale, deviceScaleFactor: 1, colorScheme });
   const page = await context.newPage();
   await page.goto(URL);
   await rendered(page);
@@ -188,6 +188,13 @@ try {
   await page.waitForTimeout(300);
   await rendered(page);
   await shot(page, 'french.png');
+  await page.context().close();
+
+  // The dark theme, followed from the system: the chrome and the editor are dark, the pages stay white.
+  page = await openStudio(browser, { colorScheme: 'dark' });
+  await page.locator('.preview-shell').evaluate(shell => (shell.scrollTop = 330));
+  await page.waitForTimeout(300);
+  await shot(page, 'dark.png');
   await page.context().close();
 
   console.log(`Screenshots written to ${path.relative(root, out)}/`);

@@ -18,6 +18,7 @@ import {
   showText,
   TextRenderingMode,
 } from 'pdf-lib';
+import { closeCssString } from './escape.js';
 import { inlineFontCss } from './fonts.js';
 import { GLYPH_WIDTH, GLYPHLESS_FONT, TO_UNICODE } from './glyphless-font.js';
 import { inlineMathCss } from './math.js';
@@ -42,11 +43,18 @@ function counterReset(pages, index) {
 }
 
 // The page as an SVG image the browser renders exactly like the preview (same engine, same styles).
-async function pageImage(pages, index, fonts) {
+// Exported for the tests.
+export async function pageImage(pages, index, fonts) {
   const page = pages[index];
   const width = page.offsetWidth;
   const height = page.offsetHeight;
   const clone = page.cloneNode(true);
+  // The running header: Paged.js leaves its string values unclosed in the inline style, and the image
+  // document of Chromium then drops them (an empty margin box). Written again, closed.
+  for (const name of [...clone.style]) {
+    if (name.startsWith('--pagedjs-string-'))
+      clone.style.setProperty(name, closeCssString(clone.style.getPropertyValue(name)));
+  }
   for (const element of clone.querySelectorAll(STUDIO_ONLY)) element.remove();
   for (const element of clone.querySelectorAll('.is-selected')) element.classList.remove('is-selected');
   const wrapper = document.createElement('div');

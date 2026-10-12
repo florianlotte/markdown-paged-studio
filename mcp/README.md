@@ -51,7 +51,8 @@ current `dist/`.
 `headerTitle`, `headerName`, `footerText`, `language`, `pageSize` (`A4`, `Letter`, `A5`), `marginTop`,
 `marginRight`, `marginBottom`, `marginLeft` (mm), `cover`, `customCss`, `logoDataUrl`, `coverTemplate`
 (`classic`, `centered`, `band`, `minimal`), `accentColor` (`#rrggbb`), `codeTheme` (`light`, `dark`,
-`none`), `runningHeader`, `mirrorMargins` and `numberFigures` (booleans), `numberHeadings` (`none`, `h1`, `h2`). Invalid values are ignored, like a JSON import
+`none`), `runningHeader`, `mirrorMargins` and `numberFigures` (booleans), `runningHeaderLevel` (`h1`, `h2`, `h3`),
+`numberHeadings` (`none`, `h1`, `h2`). Invalid values are ignored, like a JSON import
 in the app.
 
 Also in `markdown`: a line holding only `\newpage` starts a new page, a line holding only `[[toc]]` (or

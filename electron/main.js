@@ -1,7 +1,7 @@
 // Electron main process for the desktop build. It serves the Vite build (dist/) over a private app://
 // scheme, keeps the renderer sandboxed, and adds one native capability: direct PDF export through
 // Chromium's print-to-PDF, exposed to the page as `window.desktop.exportPdf` by preload.cjs.
-import { app, BrowserWindow, dialog, ipcMain, Menu, net, protocol, shell } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, Menu, nativeTheme, net, protocol, shell } from 'electron';
 import { randomUUID } from 'node:crypto';
 import { writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -63,6 +63,9 @@ function createWindow() {
     minHeight: 600,
     title: 'Markdown Paged Studio',
     icon: path.join(__dirname, 'icons', 'icon.png'),
+    // The window shows the colour of the system theme until the page paints (the page may still choose
+    // the other theme: it is a setting of the studio).
+    backgroundColor: nativeTheme.shouldUseDarkColors ? '#15181d' : '#e9edf2',
     autoHideMenuBar: !isMac,
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
@@ -117,6 +120,10 @@ const MENU_FR = {
   'Print…': 'Imprimer…',
   View: 'Affichage',
   'Toggle Sidebar': 'Afficher ou masquer la barre latérale',
+  Theme: 'Thème',
+  Auto: 'Auto',
+  Light: 'Clair',
+  Dark: 'Sombre',
   Edit: 'Édition',
   'Side by side': 'Côte à côte',
   Preview: 'Aperçu',
@@ -166,6 +173,15 @@ function buildMenu() {
         },
         { type: 'separator' },
         { label: label('Toggle Sidebar'), accelerator: 'CmdOrCtrl+B', click: () => sendCommand('toggle-sidebar') },
+        {
+          label: label('Theme'),
+          // The page remembers the choice; the menu only sends it.
+          submenu: [
+            { label: label('Auto'), click: () => sendCommand('theme-system') },
+            { label: label('Light'), click: () => sendCommand('theme-light') },
+            { label: label('Dark'), click: () => sendCommand('theme-dark') },
+          ],
+        },
         { type: 'separator' },
         { role: 'reload' },
         { role: 'toggleDevTools' },

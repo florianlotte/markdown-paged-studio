@@ -45,8 +45,11 @@ const TRANSLATIONS = {
     '. You can also drop or paste images into the editor.':
       '. Vous pouvez aussi déposer ou coller des images dans l’éditeur.',
     'Header title': "Titre d'en-tête",
-    'Use the current chapter (first-level heading) as header title':
-      "Utiliser le chapitre en cours (titre de niveau 1) comme titre d'en-tête",
+    'Use the current heading as header title': "Utiliser le titre en cours comme titre d'en-tête",
+    'Running header level': 'Niveau du titre en en-tête',
+    'Level 1 (chapters)': 'Niveau 1 (chapitres)',
+    'Level 2 (sections)': 'Niveau 2 (sections)',
+    'Level 3': 'Niveau 3',
     'Heading numbering': 'Numérotation des titres',
     'From level 1 (1, 1.1, 1.1.1)': 'À partir du niveau 1 (1, 1.1, 1.1.1)',
     'From level 2 (level 1 is the title)': 'À partir du niveau 2 (le niveau 1 est le titre)',
@@ -74,6 +77,7 @@ const TRANSLATIONS = {
     'Release notes': 'Notes de version',
     'Commit this build was made from': 'Commit dont provient cette version',
     'Interface language': "Langue de l'interface",
+    Theme: 'Thème',
     'Florian LOTTE on LinkedIn': 'Florian LOTTE sur LinkedIn',
 
     // Toolbar

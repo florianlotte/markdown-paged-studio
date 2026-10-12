@@ -2,7 +2,7 @@
 // and the standalone file used for export, print and PDF. The class names here are public API (see README):
 // cover, content, diagrams, images, captions, table of contents, footnotes, task lists, formulas (.math),
 // alerts (.alert), code blocks.
-import { LANGUAGE_TAG, PAGE_HEIGHT_MM, state } from './config.js';
+import { LANGUAGE_TAG, PAGE_HEIGHT_MM, RUNNING_HEADER_LEVELS, state } from './config.js';
 import { escCssString, escapeHtml } from './escape.js';
 import { inlineFontCss } from './fonts.js';
 import { highlightCode, md, renderDiagrams } from './markdown.js';
@@ -48,6 +48,14 @@ ${block} .hljs-title, ${block} .hljs-section, ${block} .hljs-selector-id, ${bloc
 ${block} .hljs-attr, ${block} .hljs-attribute, ${block} .hljs-name, ${block} .hljs-tag, ${block} .hljs-addition { color: ${attribute}; }
 ${block} .hljs-built_in, ${block} .hljs-type, ${block} .hljs-params { color: ${builtin}; }
 ${block} .hljs-strong { font-weight: 700; }`;
+}
+
+// The headings that set the running header: every level down to the chosen one, so the header goes back
+// to the chapter where a chapter starts and then follows its sections.
+function runningHeadings() {
+  const depth = Math.max(1, RUNNING_HEADER_LEVELS.indexOf(state.runningHeaderLevel) + 1);
+  const levels = Array.from({ length: depth }, (_, i) => `h${i + 1}`);
+  return levels.length === 1 ? levels[0] : `:is(${levels.join(', ')})`;
 }
 
 // Margin boxes of a page. With mirrored margins the left-hand pages swap sides, so the page number stays
@@ -124,7 +132,7 @@ export function documentCss() {
   margin: 0;${NO_MARGIN_BOXES}
 }`
       : ''
-  }${state.runningHeader ? '\n.document-content h1 { string-set: chapter content(text); }' : ''}
+  }${state.runningHeader ? `\n.document-content ${runningHeadings()} { string-set: chapter content(text); }` : ''}
 .cover-page {
   page: cover;
   break-after: page;

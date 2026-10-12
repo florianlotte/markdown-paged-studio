@@ -54,6 +54,49 @@ test('switches between one and two page layouts, zooms, and remembers the view',
   expect(await page.locator('#preview').evaluate(el => Number(el.style.zoom))).toBeCloseTo(fitZoom, 2);
 });
 
+test('the studio follows the system theme, remembers a choice and keeps the pages white', async ({ page }) => {
+  const html = page.locator('html');
+  const background = selector =>
+    page
+      .locator(selector)
+      .first()
+      .evaluate(el => getComputedStyle(el).backgroundColor);
+  const luminance = rgb =>
+    rgb
+      .match(/\d+/g)
+      .slice(0, 3)
+      .reduce((sum, v) => sum + Number(v), 0) / 3;
+
+  await page.emulateMedia({ colorScheme: 'dark' });
+  await openFreshStudio(page);
+  await expect(html).toHaveAttribute('data-theme', 'dark');
+  await expect(page.locator('#uiTheme')).toHaveValue('system');
+  expect(luminance(await background('.sidebar'))).toBeLessThan(80);
+  expect(luminance(await background('#markdown .cm-editor'))).toBeLessThan(80);
+  // The document is shown as it prints.
+  expect(await background('#preview .pagedjs_page')).toBe('rgb(255, 255, 255)');
+
+  await page.locator('#uiTheme').selectOption('light');
+  await expect(html).toHaveAttribute('data-theme', 'light');
+  expect(luminance(await background('.sidebar'))).toBeGreaterThan(200);
+  // Remembered, and applied before the page script runs (no flash): the attribute is there at load.
+  await page.reload();
+  await expect(html).toHaveAttribute('data-theme', 'light');
+  await expect(page.locator('#uiTheme')).toHaveValue('light');
+  await expect(status(page)).toHaveText(STATUS_DONE);
+
+  await page.locator('#uiTheme').selectOption('dark');
+  await expect(html).toHaveAttribute('data-theme', 'dark');
+  await page.emulateMedia({ colorScheme: 'light' });
+  await expect(html).toHaveAttribute('data-theme', 'dark');
+  // Back to the system: follows the media query, live.
+  await page.locator('#uiTheme').selectOption('system');
+  await expect(html).toHaveAttribute('data-theme', 'light');
+  await page.emulateMedia({ colorScheme: 'dark' });
+  await expect(html).toHaveAttribute('data-theme', 'dark');
+  expect(await background('#preview .pagedjs_page')).toBe('rgb(255, 255, 255)');
+});
+
 test('sidebar tabs follow the ARIA tabs pattern with keyboard navigation', async ({ page }) => {
   await openFreshStudio(page);
   const contentTab = page.locator('#tabContent');
@@ -167,11 +210,14 @@ test('on a phone the settings are a closed drawer and the preview fits the scree
   expect(drawer.width).toBe(390);
   await expect(page.locator('#title')).toBeVisible();
   await expect(page.locator('#closeSidebar')).toBeVisible();
-  // The language selector shares the header line with the close button, without overlapping it.
+  // The language and theme selectors share the header line with the close button, without overlapping it.
   await expect(page.locator('#uiLanguage')).toBeVisible();
+  await expect(page.locator('#uiTheme')).toBeVisible();
   const language = await page.locator('.language-switch').boundingBox();
+  const theme = await page.locator('.theme-switch').boundingBox();
   const close = await page.locator('#closeSidebar').boundingBox();
-  expect(language.x + language.width).toBeLessThanOrEqual(close.x);
+  expect(language.x + language.width).toBeLessThanOrEqual(theme.x);
+  expect(theme.x + theme.width).toBeLessThanOrEqual(close.x);
 
   await page.locator('#closeSidebar').click();
   await expect(sidebar).toBeHidden();

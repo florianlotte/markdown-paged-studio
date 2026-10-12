@@ -6,9 +6,11 @@ import { flushPersist, loadStoredConfig, LOCAL_IMAGES, mergeConfig, restoreLogo,
 import { initLanguage } from './i18n.js';
 import { loadImages, onImagesChange, setBuiltinImages } from './images.js';
 import { render, scheduleRender } from './render.js';
+import { initTheme } from './theme.js';
 import { initUi } from './ui.js';
 import { flushView, initView } from './view.js';
 
+initTheme();
 initLanguage();
 mergeConfig(state, loadStoredConfig());
 initUi();

@@ -7,6 +7,8 @@ All notable changes to Markdown Paged Studio are listed here, newest first. The 
 
 ## [Unreleased]
 
+## [1.22.0] - 2026-10-12
+
 ### Added
 
 - Automatic numbering and cross-references, in the style of pandoc-crossref. A label numbers its element:
@@ -18,10 +20,20 @@ All notable changes to Markdown Paged Studio are listed here, newest first. The 
 - Two settings of the Design tab: **Heading numbering** (from level 1, or from level 2 when level 1 is the
   title) and **Number figures and tables** for those that carry no label. Headings ending with `{-}` keep
   no number; `{#custom}` at the end of a heading sets its anchor.
+- A **dark theme** for the studio: it follows the system, and the selector next to the language at the top
+  of the sidebar (View → Theme on desktop) forces light or dark. The pages of the preview stay white, as
+  they print; exports do not change.
+- **Running header level** in the Design tab: the running header can follow the sections (level 2 or 3)
+  instead of the chapters only, going back to the chapter title where a chapter starts.
 
 ### Changed
 
 - The sample document labels its diagram instead of writing "Figure 1" by hand.
+
+### Fixed
+
+- The running header was missing from "PDF with project" in Chromium: Paged.js leaves its string values
+  unclosed in the inline style of the pages, and the image Chromium draws each page from dropped them.
 
 ## [1.21.1] - 2026-10-04
 
@@ -402,7 +414,8 @@ All notable changes to Markdown Paged Studio are listed here, newest first. The 
 - Portable desktop app for Windows, Linux and macOS with direct PDF export.
 - Docker image, Playwright integration tests and CI.
 
-[Unreleased]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.21.1...HEAD
+[Unreleased]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.22.0...HEAD
+[1.22.0]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.21.1...v1.22.0
 [1.21.1]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.21.0...v1.21.1
 [1.21.0]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.20.0...v1.21.0
 [1.20.0]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.19.2...v1.20.0

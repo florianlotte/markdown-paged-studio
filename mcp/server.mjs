@@ -195,7 +195,11 @@ const configShape = {
   runningHeader: z
     .boolean()
     .optional()
-    .describe('Show the current first-level heading top left instead of headerTitle'),
+    .describe('Show the current heading top left instead of headerTitle (see runningHeaderLevel)'),
+  runningHeaderLevel: z
+    .enum(['h1', 'h2', 'h3'])
+    .optional()
+    .describe('Deepest heading level the running header follows: the chapter (h1), or its sections (h2, h3)'),
   numberHeadings: z
     .enum(['none', 'h1', 'h2'])
     .optional()

@@ -18,6 +18,7 @@ test('the interface switches to French and back, and remembers the choice', asyn
   // In the fixed header of the sidebar, shown as a short code, whatever the tab.
   await expect(page.locator('.sidebar-header #uiLanguage')).toHaveCount(1);
   await expect(language.locator('option')).toHaveText(['EN', 'FR']);
+  await expect(page.locator('#uiTheme option')).toHaveText(['Auto', 'Light', 'Dark']);
   await page.getByRole('tab', { name: 'Design' }).click();
   await expect(language).toBeVisible();
   await page.getByRole('tab', { name: 'Content' }).click();
@@ -32,6 +33,8 @@ test('the interface switches to French and back, and remembers the choice', asyn
   await language.selectOption('fr');
   await expect(page.locator('html')).toHaveAttribute('lang', 'fr');
   await expect(page.locator('.tabs').getByRole('tab')).toHaveText(['Contenu', 'Style', 'Page']);
+  await expect(page.locator('#uiTheme option')).toHaveText(['Auto', 'Clair', 'Sombre']);
+  await expect(page.locator('.theme-switch')).toHaveAttribute('title', 'Thème');
   // The text of the editor is the user's: never translated.
   await expect(page.locator('#markdown .cm-line').nth(0)).toHaveText('Export');
   await expect(page.locator('#markdown .cm-line').nth(2)).toHaveText('Reset');

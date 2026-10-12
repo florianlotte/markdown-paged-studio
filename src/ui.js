@@ -30,6 +30,7 @@ import { currentLanguage, LANGUAGES, onLanguageChange, setLanguage, t } from './
 import { scheduleRender } from './render.js';
 import { APP_COMMIT, APP_VERSION, COMMIT_URL, RELEASE_URL, REPOSITORY_URL } from './version.js';
 import { alignPreview, editorScrolled, initSync } from './sync.js';
+import { currentTheme, onThemeChange, setTheme } from './theme.js';
 import { applyView, revealEditor, setMode, toggleSidebar, toggleSync } from './view.js';
 
 // Every state key has a form control with the same id, except the logo (a file input) and the text of the
@@ -43,6 +44,12 @@ export function syncInputs() {
     if (el.type === 'checkbox') el.checked = Boolean(state[key]);
     else el.value = state[key];
   }
+  syncRunningHeaderLevel();
+}
+
+// The level of the running header only matters while the running header is on.
+function syncRunningHeaderLevel() {
+  document.getElementById('runningHeaderLevel').disabled = !document.getElementById('runningHeader').checked;
 }
 
 // Merge a (possibly untrusted) config object into the state, refresh the form and the editor, and re-render.
@@ -64,6 +71,7 @@ function bindInputs() {
       scheduleRender();
     });
   }
+  document.getElementById('runningHeader').addEventListener('change', syncRunningHeaderLevel);
 }
 
 function bindTabs() {
@@ -526,6 +534,7 @@ function bindPdf() {
       else if (command === 'mode-edit') setMode('edit');
       else if (command === 'mode-split') setMode('split');
       else if (command === 'mode-view') setMode('view');
+      else if (command.startsWith('theme-')) setTheme(command.slice('theme-'.length));
     });
   } else {
     // In the browser the PDF with project is drawn by the studio, page by page, where the engine allows it:
@@ -739,9 +748,20 @@ function bindLanguage() {
   });
 }
 
+// Header selector of the theme: follows a choice made from the desktop menu too.
+function bindTheme() {
+  const select = document.getElementById('uiTheme');
+  select.value = currentTheme();
+  select.addEventListener('change', () => setTheme(select.value));
+  onThemeChange(theme => {
+    select.value = theme;
+  });
+}
+
 export function initUi() {
   showVersion();
   bindLanguage();
+  bindTheme();
   bindPreviewLinks();
   initChapters(document.getElementById('markdown'), {
     onChange: scheduleRender,

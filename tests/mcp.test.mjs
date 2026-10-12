@@ -317,6 +317,7 @@ test('render_html supports the table of contents, page breaks, captions, highlig
         accentColor: '#AA3366',
         codeTheme: 'dark',
         runningHeader: true,
+        runningHeaderLevel: 'h2',
         mirrorMargins: true,
       },
     },
@@ -333,5 +334,5 @@ test('render_html supports the table of contents, page breaks, captions, highlig
   assert.match(html, /float: footnote/);
   assert.match(html, /#aa3366 22mm/);
   assert.match(html, /@page :left/);
-  assert.match(html, /string-set: chapter/);
+  assert.match(html, /\.document-content :is\(h1, h2\) \{ string-set: chapter content\(text\); \}/);
 });

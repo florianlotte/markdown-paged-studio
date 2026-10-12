@@ -135,6 +135,69 @@ test('code blocks are highlighted with the chosen theme, diagrams and images tak
   expect(JSON.parse(readFileSync(await download.path(), 'utf8')).codeTheme).toBe('none');
 });
 
+test('the running header can follow the sections, in the drawn PDF too', async ({ page }) => {
+  const SECTIONS = [
+    '# Report',
+    'Intro.',
+    '\\newpage',
+    '# First chapter',
+    'Opening.',
+    '\\newpage',
+    '## Details',
+    'Text.',
+    '\\newpage',
+    '## More',
+    'Text.',
+  ].join('\n\n');
+  await openDocument(page, SECTIONS, 'Report');
+  await page.getByRole('tab', { name: 'Design' }).click();
+  const level = page.locator('#runningHeaderLevel');
+  await expect(level).toBeDisabled();
+  await page.locator('#runningHeader').check();
+  await expect(level).toBeEnabled();
+  await expect(level).toHaveValue('h1');
+  await expect(page.locator('#preview')).not.toHaveClass(/is-stale/);
+  await expect(status(page)).toHaveText('5 pages');
+  // Level 1: the chapter, on every page of the chapter.
+  await expect.poll(() => marginBoxContent(page, 3, 'top-left')).toBe('"First chapter"');
+  expect(await marginBoxContent(page, 4, 'top-left')).toBe('"First chapter"');
+  // Level 2: the section, and the chapter title on the page where the chapter starts.
+  await level.selectOption('h2');
+  await expect.poll(() => marginBoxContent(page, 3, 'top-left')).toBe('"Details"');
+  expect(await marginBoxContent(page, 2, 'top-left')).toBe('"First chapter"');
+  expect(await marginBoxContent(page, 4, 'top-left')).toBe('"More"');
+  await expect
+    .poll(async () => {
+      const [download] = await Promise.all([page.waitForEvent('download'), exportVia(page, 'exportProject')]);
+      return JSON.parse(readFileSync(await download.path(), 'utf8')).runningHeaderLevel;
+    })
+    .toBe('h2');
+
+  // The page drawn for "PDF with project" shows the header: dark pixels in the top-left margin box.
+  const dark = await page.evaluate(async () => {
+    const { pageImage } = await import('/src/pdf-render.js');
+    const pages = [...document.querySelectorAll('#preview .pagedjs_page')];
+    const sheet = pages[3];
+    const image = await pageImage(pages, 3, '');
+    const bitmap = await createImageBitmap(new Blob([image.bytes], { type: image.type }));
+    const scale = bitmap.width / image.width;
+    const zoom = Number(getComputedStyle(sheet).getPropertyValue('--view-zoom')) || 1;
+    const box = sheet.querySelector('.pagedjs_margin-top-left').getBoundingClientRect();
+    const origin = sheet.getBoundingClientRect();
+    const canvas = document.createElement('canvas');
+    canvas.width = bitmap.width;
+    canvas.height = bitmap.height;
+    const context = canvas.getContext('2d');
+    context.drawImage(bitmap, 0, 0);
+    const region = [box.left - origin.left, box.top - origin.top, box.width, box.height].map(v => (v / zoom) * scale);
+    const data = context.getImageData(...region.map(Math.round)).data;
+    let count = 0;
+    for (let i = 0; i < data.length; i += 4) if (data[i] < 200) count++;
+    return count;
+  });
+  expect(dark).toBeGreaterThan(0);
+});
+
 test('the running header follows the chapters and facing pages mirror margins and margin boxes', async ({ page }) => {
   await openDocument(page, REPORT, 'Report');
   await page.getByRole('tab', { name: 'Design' }).click();

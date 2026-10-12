@@ -14,6 +14,8 @@ export const COVER_TEMPLATES = ['classic', 'centered', 'band', 'minimal'];
 // Where the numbering of headings starts: nowhere, at the first level, or at the second one (the first
 // level is then the title of the document).
 export const HEADING_NUMBERING = ['none', 'h1', 'h2'];
+// The deepest heading level the running header follows.
+export const RUNNING_HEADER_LEVELS = ['h1', 'h2', 'h3'];
 const COLOR = /^#[0-9a-f]{6}$/i;
 // BCP 47 language tag such as "en", "fr", "pt-BR" or "zh-Hant".
 export const LANGUAGE_TAG = /^[a-z]{2,3}(?:-[a-z0-9]{2,8})*$/i;
@@ -118,6 +120,7 @@ const DEFAULT_STATE = {
   logoDataUrl: '',
   codeTheme: 'light',
   runningHeader: false,
+  runningHeaderLevel: 'h1',
   numberHeadings: 'none',
   numberFigures: false,
   mirrorMargins: false,
@@ -147,6 +150,7 @@ export const CONFIG_SCHEMA = {
   logoDataUrl: 'imageDataUrl',
   codeTheme: 'codeTheme',
   runningHeader: 'boolean',
+  runningHeaderLevel: 'runningHeaderLevel',
   numberHeadings: 'headingNumbering',
   numberFigures: 'boolean',
   mirrorMargins: 'boolean',
@@ -184,6 +188,9 @@ export function sanitizeConfig(input) {
         break;
       case 'headingNumbering':
         if (HEADING_NUMBERING.includes(value)) out[key] = value;
+        break;
+      case 'runningHeaderLevel':
+        if (RUNNING_HEADER_LEVELS.includes(value)) out[key] = value;
         break;
       case 'color':
         if (typeof value === 'string' && COLOR.test(value.trim())) out[key] = value.trim().toLowerCase();
