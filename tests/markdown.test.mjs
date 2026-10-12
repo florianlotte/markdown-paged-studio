@@ -293,22 +293,25 @@ test('headings are numbered as text, from the chosen level, and the table of con
       match => match.slice(2),
     ),
     [
-      ['sec-one', '1', 'One'],
-      ['sec-two', '1.1', 'Two'],
-      ['sec-three', '1.1.1', 'Three'],
+      ['sec-one', '1.', 'One'],
+      ['sec-two', '1.1.', 'Two'],
+      ['sec-three', '1.1.1.', 'Three'],
       ['sec-four', undefined, 'Four'],
       ['sec-five', undefined, 'Five'],
-      ['sec-six', '2', 'Six'],
+      ['sec-six', '2.', 'Six'],
     ],
   );
   // The number never enters the anchor, and the table of contents shows it.
-  assert.match(all, /<a href="#sec-two"><span class="toc-text"><span class="heading-number">1\.1<\/span> Two<\/span>/);
+  assert.match(
+    all,
+    /<a href="#sec-two"><span class="toc-text"><span class="heading-number">1\.1\.<\/span> Two<\/span>/,
+  );
   assert.match(all, /<a href="#sec-four"><span class="toc-text">Four<\/span>/);
   // From the second level: the first one is the title of the document.
   const below = md.render(source, { numberHeadings: 'h2' });
   assert.match(below, /<h1 id="sec-one">One<\/h1>/);
-  assert.match(below, /<h2 id="sec-two"><span class="heading-number">1<\/span> Two<\/h2>/);
-  assert.match(below, /<h3 id="sec-three"><span class="heading-number">1\.1<\/span> Three<\/h3>/);
+  assert.match(below, /<h2 id="sec-two"><span class="heading-number">1\.<\/span> Two<\/h2>/);
+  assert.match(below, /<h3 id="sec-three"><span class="heading-number">1\.1\.<\/span> Three<\/h3>/);
   // Without the setting, nothing changes; the unnumbered mark is still taken out of the title.
   assert.equal(md.render('# One\n\n## Two {-}\n'), '<h1 id="sec-one">One</h1>\n<h2 id="sec-two">Two</h2>\n');
 });

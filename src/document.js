@@ -187,6 +187,7 @@ export function documentCss() {
 .image-caption, .diagram-caption { display: block; }
 .table-caption { margin: 0 0 2mm; caption-side: top; }
 .caption-label { font-weight: 600; }
+.heading-number { margin-right: .5em; }
 a.ref { color: inherit; text-decoration: none; }
 .ref-missing { color: #b3261e; }
 .document-image.has-caption > .image-caption { box-sizing: border-box; width: 0; min-width: 100%; }

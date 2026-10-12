@@ -215,7 +215,8 @@ md.renderer.rules.math_block = (tokens, idx, options, env, self) =>
 
 const TABLE_CAPTION = /^(?:Table)?:[ \t]+(\S[^]*)$/;
 const captionLabelSpan = text => `<span class="caption-label">${escapeHtml(text)}</span>`;
-const headingNumber = number => `<span class="heading-number">${escapeHtml(number)}</span>`;
+// The number of a heading ends with a dot ("1.", "1.1."), as in print; a reference keeps the bare number.
+const headingNumber = number => `<span class="heading-number">${escapeHtml(number)}.</span>`;
 
 md.core.ruler.after('block', 'structure_attributes', state => {
   const { tokens } = state;

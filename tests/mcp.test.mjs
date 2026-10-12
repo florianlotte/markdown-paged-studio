@@ -119,7 +119,7 @@ test('headings and figures are numbered on demand, references are resolved', asy
   });
   assert.equal(result.isError, undefined);
   const html = result.content[0].text;
-  assert.match(html, /<h2 id="sec-part"><span class="heading-number">1\.1<\/span> Part<\/h2>/);
+  assert.match(html, /<h2 id="sec-part"><span class="heading-number">1\.1\.<\/span> Part<\/h2>/);
   assert.match(html, /<a class="ref ref-fig" href="#fig-flow">figure(?:\u00a0|&nbsp;)1<\/a>/);
   assert.match(
     html,

@@ -489,12 +489,16 @@ test('figures, tables, equations and headings are numbered, and references lead 
   // Heading numbers: in the titles, in the references, and in the running header.
   await page.getByRole('tab', { name: 'Design' }).click();
   await page.locator('#numberHeadings').selectOption('h1');
-  await expect(preview.locator('.document-content :is(h1, h2)')).toHaveText(['1 Report', '1.1 Details', '1.2 Later']);
+  await expect(preview.locator('.document-content :is(h1, h2)')).toHaveText([
+    '1. Report',
+    '1.1. Details',
+    '1.2. Later',
+  ]);
   await expect(references.nth(3)).toHaveText('section\u00a01.1');
   await page.locator('#runningHeader').check();
-  await expect.poll(() => marginBoxContent(page, 1, 'top-left')).toBe('"1 Report"');
+  await expect.poll(() => marginBoxContent(page, 1, 'top-left')).toBe('"1. Report"');
   await page.locator('#numberHeadings').selectOption('h2');
-  await expect(preview.locator('.document-content :is(h1, h2)')).toHaveText(['Report', '1 Details', '2 Later']);
+  await expect(preview.locator('.document-content :is(h1, h2)')).toHaveText(['Report', '1. Details', '2. Later']);
   await expect.poll(() => marginBoxContent(page, 1, 'top-left')).toBe('"Report"');
 
   // The settings travel with the project, and the exported document resolves the same references.
