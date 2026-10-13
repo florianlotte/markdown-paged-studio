@@ -183,9 +183,13 @@ function bindFiles() {
     scheduleRender();
   });
 
-  document
-    .getElementById('downloadMarkdown')
-    .addEventListener('click', () => download(activeFile().name, activeFile().markdown, 'text/markdown;charset=utf-8'));
+  // Alone, the file is named after the title, like the PDF; among several, it keeps its own name, which tells
+  // them apart.
+  document.getElementById('downloadMarkdown').addEventListener('click', () => {
+    const file = activeFile();
+    const name = state.files.length === 1 ? `${fileStem(state.title)}.md` : file.name;
+    download(name, file.markdown, 'text/markdown;charset=utf-8');
+  });
 
   document.getElementById('import').addEventListener('click', () => document.getElementById('importFile').click());
   document.getElementById('importFile').addEventListener('change', async e => {

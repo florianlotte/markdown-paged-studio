@@ -12,6 +12,7 @@ import {
   exportVia,
   focusEditor,
   openDocument,
+  savedAs,
   status,
 } from './helpers/studio.mjs';
 
@@ -140,6 +141,10 @@ test('Markdown files are added as files of the document, and the preview edits t
 
 test('the files travel with the project and the Markdown export, a plain Markdown is one file', async ({ page }) => {
   await openDocument(page, '# One\n\nFirst.\n', 'One');
+  // Alone, the file downloads under the title, like the PDF.
+  await page.locator('#title').fill('My report');
+  const [alone] = await Promise.all([page.waitForEvent('download'), page.locator('#downloadMarkdown').click()]);
+  expect(savedAs(alone)).toBe('My report.md');
   page.on('dialog', dialog => dialog.accept());
   await page.locator('#chapterFiles').setInputFiles([md('two.md', '# Two\n\nSecond.\n')]);
   await expect(names(page)).toHaveText(['document.md', 'two.md']);

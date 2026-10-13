@@ -7,6 +7,13 @@ All notable changes to Markdown Paged Studio are listed here, newest first. The 
 
 ## [Unreleased]
 
+## [1.22.4] - 2026-10-13
+
+### Changed
+
+- The `.md` download of the editor bar is named after the title, like the PDF, when the document has one
+  file (`document.md` before); among several files, each keeps its own name.
+
 ## [1.22.3] - 2026-10-13
 
 ### Fixed
@@ -437,7 +444,8 @@ All notable changes to Markdown Paged Studio are listed here, newest first. The 
 - Portable desktop app for Windows, Linux and macOS with direct PDF export.
 - Docker image, Playwright integration tests and CI.
 
-[Unreleased]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.22.3...HEAD
+[Unreleased]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.22.4...HEAD
+[1.22.4]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.22.3...v1.22.4
 [1.22.3]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.22.2...v1.22.3
 [1.22.2]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.22.1...v1.22.2
 [1.22.1]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.22.0...v1.22.1
