@@ -7,6 +7,14 @@ All notable changes to Markdown Paged Studio are listed here, newest first. The 
 
 ## [Unreleased]
 
+## [1.24.0] - 2026-10-13
+
+### Added
+
+- A **Prettify** button above the editor formats the current file with Prettier (loaded on demand): one space
+  after `#`, `-` lists, `_emphasis_`, aligned tables, one blank line between blocks. Formulas, labels, page breaks
+  and the other syntax of the studio are kept, and Ctrl+Z reverts the formatting.
+
 ## [1.23.0] - 2026-10-13
 
 ### Changed
@@ -457,7 +465,8 @@ All notable changes to Markdown Paged Studio are listed here, newest first. The 
 - Portable desktop app for Windows, Linux and macOS with direct PDF export.
 - Docker image, Playwright integration tests and CI.
 
-[Unreleased]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.23.0...HEAD
+[Unreleased]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.24.0...HEAD
+[1.24.0]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.23.0...v1.24.0
 [1.23.0]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.22.4...v1.23.0
 [1.22.4]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.22.3...v1.22.4
 [1.22.3]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.22.2...v1.22.3

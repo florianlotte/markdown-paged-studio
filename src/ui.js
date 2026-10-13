@@ -33,6 +33,7 @@ import { alignPreview, editorScrolled, initSync } from './sync.js';
 import { currentTheme, onThemeChange, setTheme } from './theme.js';
 import { applyView, revealEditor, setMode, toggleSidebar, toggleSync } from './view.js';
 import { fileStem } from './files.js';
+import { writeFile } from './editor.js';
 
 // Every state key has a form control with the same id, except the logo (a file input) and the text of the
 // document (the files and the editor, see chapters.js).
@@ -157,6 +158,18 @@ function bindFiles() {
     .addEventListener('change', e =>
       readTextFile(e.target, async text => replaceActiveText(await markdownOfText(text))),
     );
+
+  // The current file rewritten by Prettier (loaded on demand), as one edit that Ctrl+Z reverts.
+  document.getElementById('prettifyMarkdown').addEventListener('click', async () => {
+    const file = activeFile();
+    try {
+      const { prettifyMarkdown } = await import('./prettify.js');
+      writeFile(file, await prettifyMarkdown(file.markdown));
+    } catch (error) {
+      console.error(error);
+      alert(t('This file could not be formatted: {error}', { error: error?.message || error }));
+    }
+  });
 
   // More files for the document: an empty one, or Markdown files, each becoming a file of its name.
   document.getElementById('addFile').addEventListener('click', addEmptyFile);

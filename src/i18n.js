@@ -114,6 +114,10 @@ const TRANSLATIONS = {
     'Scroll the editor and the preview together': 'Faire défiler l’éditeur et l’aperçu ensemble',
     'Replace this file with a Markdown file': 'Remplacer ce fichier par un fichier Markdown',
     'Download this file': 'Télécharger ce fichier',
+    Prettify: 'Mettre en forme',
+    'Format this file: one space after #, - lists, _emphasis_, aligned tables (Prettier)':
+      'Mettre en forme ce fichier : une espace après #, listes en -, _emphase_, tableaux alignés (Prettier)',
+    'This file could not be formatted: {error}': 'Ce fichier n’a pas pu être mis en forme : {error}',
     'File name': 'Nom du fichier',
     chapter: 'chapitre',
     'Remove {name} and its text from the document?': 'Retirer {name} et son texte du document ?',

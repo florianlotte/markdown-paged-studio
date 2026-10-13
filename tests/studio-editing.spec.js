@@ -290,3 +290,16 @@ test('the editor and the preview scroll together, and a double-click on a block 
   const [download] = await Promise.all([page.waitForEvent('download'), exportVia(page, 'exportHtml')]);
   expect(readFileSync(await download.path(), 'utf8')).not.toContain('data-source-line');
 });
+
+test('the Prettify button formats the current file as one undoable edit', async ({ page }) => {
+  await openFreshStudio(page);
+  await setMarkdown(page, '#  Messy\n\n* one\n* two\n\n| a | b |\n|---|---|\n| 1 | 22 |\n\n$$\nx\n$$ {#eq:x}\n');
+  await page.locator('#prettifyMarkdown').click();
+  await expectMarkdown(
+    page,
+    '# Messy\n\n- one\n- two\n\n| a   | b   |\n| --- | --- |\n| 1   | 22  |\n\n$$\nx\n$$ {#eq:x}\n',
+  );
+  await focusEditor(page);
+  await page.keyboard.press('Control+z');
+  await expectMarkdown(page, /^# {2}Messy\n/);
+});
