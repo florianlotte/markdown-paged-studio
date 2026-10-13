@@ -3,6 +3,11 @@ dist/
 .claude/settings.local.json
 CLAUDE.local.md
 
+# Understand Anything
+.ua/
+*.log
+*.pid
+
 # Personal defaults (name, company logo, stylesheet, template): see local/README.md
 /local/*
 !/local/README.md
