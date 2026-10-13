@@ -38,3 +38,10 @@ test('no element of the studio uses an id prefix that belongs to the document', 
   const taken = [...page.matchAll(/\sid="((?:sec|fig|tab|eq)-[^"]*)"/g)].map(match => match[1]);
   assert.deepEqual(taken, []);
 });
+
+test('the README includes the CSS contract of docs/css-contract.md', () => {
+  const readme = readFileSync(new URL('../README.md', import.meta.url), 'utf8');
+  const contract = readFileSync(new URL('../docs/css-contract.md', import.meta.url), 'utf8').trim();
+  const included = /<!-- css-contract:start -->\n([^]*?)\n<!-- css-contract:end -->/.exec(readme)?.[1].trim();
+  assert.equal(included, contract);
+});

@@ -110,7 +110,7 @@ test('ignores unknown keys and invalid values in a stored configuration', async 
 test('exports a standalone HTML file that paginates offline', async ({ page, context }) => {
   await openFreshStudio(page);
   const [download] = await Promise.all([page.waitForEvent('download'), exportVia(page, 'exportHtml')]);
-  expect(download.suggestedFilename()).toBe('document.html');
+  expect(savedAs(download)).toBe('Architecture Report.html');
   const html = readFileSync(await download.path(), 'utf8');
   expect(html).not.toContain('unpkg.com');
   expect(html).toContain('window.PagedConfig={auto:true}');
@@ -171,7 +171,7 @@ test('PDF only opens the print window inside the gesture, the Export menu works 
 
   // The three other entries are plain downloads: the HTML page, the Markdown and the project file.
   const [htmlDownload] = await Promise.all([page.waitForEvent('download'), exportVia(page, 'exportHtml')]);
-  expect(htmlDownload.suggestedFilename()).toBe('document.html');
+  expect(savedAs(htmlDownload)).toBe('Architecture Report.html');
   const [markdown] = await Promise.all([page.waitForEvent('download'), exportVia(page, 'exportMarkdown')]);
   expect(savedAs(markdown)).toBe('Architecture Report.md');
   expect(readFileSync(await markdown.path(), 'utf8')).toMatch(

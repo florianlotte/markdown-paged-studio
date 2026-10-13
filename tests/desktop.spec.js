@@ -118,20 +118,20 @@ test('the desktop app renders the document and exports a PDF directly', async ()
       });
     });
     await send('export-html');
-    await expect.poll(() => app.evaluate(() => globalThis.downloads)).toEqual(['document.html']);
+    await expect.poll(() => app.evaluate(() => globalThis.downloads)).toEqual(['Architecture Report.html']);
     await send('export-markdown');
     await expect
       .poll(() => app.evaluate(() => globalThis.downloads))
-      .toEqual(['document.html', 'Architecture Report.md']);
+      .toEqual(['Architecture Report.html', 'Architecture Report.md']);
     await send('export-archive');
     await expect
       .poll(() => app.evaluate(() => globalThis.downloads))
-      .toEqual(['document.html', 'Architecture Report.md', 'Architecture Report.zip']);
+      .toEqual(['Architecture Report.html', 'Architecture Report.md', 'Architecture Report.zip']);
     await send('export-project');
     await expect
       .poll(() => app.evaluate(() => globalThis.downloads))
       .toEqual([
-        'document.html',
+        'Architecture Report.html',
         'Architecture Report.md',
         'Architecture Report.zip',
         'markdown-paged-studio-project.json',

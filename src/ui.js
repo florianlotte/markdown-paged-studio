@@ -32,6 +32,7 @@ import { APP_COMMIT, APP_VERSION, COMMIT_URL, RELEASE_URL, REPOSITORY_URL } from
 import { alignPreview, editorScrolled, initSync } from './sync.js';
 import { currentTheme, onThemeChange, setTheme } from './theme.js';
 import { applyView, revealEditor, setMode, toggleSidebar, toggleSync } from './view.js';
+import { fileStem } from './files.js';
 
 // Every state key has a form control with the same id, except the logo (a file input) and the text of the
 // document (the files and the editor, see chapters.js).
@@ -216,7 +217,7 @@ function bindFiles() {
 // The exports that are plain downloads: the self-contained HTML page, the Markdown with its front matter,
 // the archive of files and the project file.
 async function exportHtml() {
-  download('document.html', await standaloneHtml({ source: sourceJson() }), 'text/html;charset=utf-8');
+  download(`${fileStem(state.title)}.html`, await standaloneHtml({ source: sourceJson() }), 'text/html;charset=utf-8');
 }
 
 async function exportMarkdown() {
@@ -326,7 +327,11 @@ async function exportPdfRendered() {
       onProgress: (done, total) => progress(t('Drawing page {done} of {total}…', { done, total })),
     });
     progress(t('Writing the file…'));
-    const bytes = await attachSources(pdf, { json: sourceJson(), markdown: state.markdown });
+    const bytes = await attachSources(pdf, {
+      json: sourceJson(),
+      markdown: state.markdown,
+      name: `${fileStem(state.title)}.md`,
+    });
     download(`${fileStem(state.title)}.pdf`, bytes, 'application/pdf');
     status.textContent = t('PDF saved with its project');
   } catch (error) {
@@ -396,16 +401,6 @@ function describeExport() {
   document.querySelector('#exportPdfOnly span').textContent = t('The document alone, through the print dialog');
 }
 
-// A file name made of the title: letters, digits and a few signs, "document" when nothing is left.
-function fileStem(title) {
-  const stem = String(title ?? '')
-    .trim()
-    .replace(/[\\/:*?"<>|\s]+/g, ' ')
-    .trim()
-    .slice(0, 80);
-  return stem || 'document';
-}
-
 // Opens the print-ready document in a new window; it prints itself once Paged.js is done. In the browser
 // this is also how a PDF is produced ("Save as PDF" in the print dialog), so it must run inside a user
 // gesture (click or key press) or pop-up blockers stop it: window.open comes before the first await.
@@ -440,7 +435,11 @@ async function exportPdfDirect({ project }) {
     if (project) {
       try {
         const { attachSources } = await import('./pdf-sources.js');
-        bytes = await attachSources(result.pdf, { json: sourceJson(), markdown: state.markdown });
+        bytes = await attachSources(result.pdf, {
+          json: sourceJson(),
+          markdown: state.markdown,
+          name: `${fileStem(state.title)}.md`,
+        });
         saved = t('PDF saved with its project');
       } catch (error) {
         console.error(error);

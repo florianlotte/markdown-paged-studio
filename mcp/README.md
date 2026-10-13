@@ -41,11 +41,11 @@ current `dist/`.
 
 ## Tools
 
-| Tool              | Input                                                                                      | Result                                                                                    |
-| ----------------- | ------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------- |
-| `render_pdf`      | `markdown`, optional `config`, `output_path`, optional `overwrite`, `images` and `project` | Writes the PDF; returns `{ path, pages, bytes, missing_images, editable }`                |
-| `render_html`     | `markdown`, optional `config`, optional `output_path`, `overwrite` and `images`            | Standalone HTML, written to disk or returned inline                                       |
-| `describe_config` | none                                                                                       | Current defaults (including `local/`) and the accepted keys, page sizes and margin limits |
+| Tool              | Input                                                                                      | Result                                                                                                                 |
+| ----------------- | ------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------- |
+| `render_pdf`      | `markdown`, optional `config`, `output_path`, optional `overwrite`, `images` and `project` | Writes the PDF; returns `{ path, pages, bytes, missing_images, editable }`                                             |
+| `render_html`     | `markdown`, optional `config`, optional `output_path`, `overwrite` and `images`            | Standalone HTML returned inline, or written with `output_path`: `{ path, bytes, missing_images }`                      |
+| `describe_config` | none                                                                                       | Current defaults (including `local/`; `logoDataUrl` shown as `<set>`), the accepted keys, page sizes and margin limits |
 
 `config` accepts the same keys as `local/config.json`: `title`, `subtitle`, `author`, `date`,
 `headerTitle`, `headerName`, `footerText`, `language`, `pageSize` (`A4`, `Letter`, `A5`), `marginTop`,
@@ -55,18 +55,19 @@ current `dist/`.
 `numberHeadings` (`none`, `h1`, `h2`). Invalid values are ignored, like a JSON import
 in the app.
 
-Also in `markdown`: a line holding only `\newpage` starts a new page, a line holding only `[[toc]]` (or
-`[[toc depth=2]]`) becomes the table of contents of the headings that follow it, a caption is the title
-of an image (`![Alt](photo.png "Caption")`) or `caption="..."` on a mermaid fence line, code fences
-with a language are syntax-highlighted, footnotes are written `Text[^1]` with `[^1]: the note` (or `^[in
-place]`), and task lists `- [ ] to do`.
+`markdown` takes everything the studio understands, described in the [README](../README.md#usage): `\newpage`,
+`[[toc]]`, Mermaid fences sized on their opening line (` ```mermaid width=60% align=left `), captions, highlighted
+code, footnotes, task lists, formulas, alerts, labels and cross-references. The description of the tool repeats the
+essentials for the model.
 
-In `markdown`, a diagram is sized on its opening line: ` ```mermaid width=60% align=left ` (`width` from `10%` to `100%` or in `mm`; `align` is `left`, `center` or `right`).
-
-`images` lists the local image files of the document: `[{ "path": "/data/charts/q3.png" }]`, with an optional `name` when the Markdown uses another file name. The document matches them **by file name only**, so `![Chart](charts/q3.png)` and `![Chart](q3.png)` both use that file; size and place them with `![Chart](q3.png){width=60% align=right}`: alone on its line an image is centered unless `align` says `left` or `right`, inside a sentence `left` and `right` float it with the text around and `center` gives it a line of its own. Supported types: png, jpg, webp, gif, svg, up to 20 MB each. `missing_images` in the result names the images the Markdown references but that were not provided.
+`images` lists the local image files of the document: `[{ "path": "/data/charts/q3.png" }]`, with an optional `name`
+when the Markdown uses another file name. The document matches them **by file name only**, so `![Chart](charts/q3.png)`
+and `![Chart](q3.png)` both use that file; size and place them in braces, `![Chart](q3.png){width=60% align=right}`,
+as the [README](../README.md#images) explains. Supported types: png, jpg, webp, gif, svg, up to 20 MB each.
+`missing_images` in the result names the images the Markdown references but that were not provided.
 
 Unless `project` is `false`, the PDF carries its sources as file attachments: `markdown-paged-studio.json` (the validated configuration with
-the Markdown and the images, as **Export → Project only** writes it) and `document.md`. The studio reopens such a PDF
+the Markdown and the images, as **Export → Project only** writes it) and the Markdown named after the title. The studio reopens such a PDF
 with **Import…**, so a report generated by an assistant can be edited by hand afterwards.
 
 The resource `studio://css-contract` documents the HTML structure and class names a `customCss`

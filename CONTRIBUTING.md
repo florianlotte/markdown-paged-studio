@@ -10,7 +10,7 @@ most. Security problems go through the [security policy](SECURITY.md), not throu
 
 ## Working on the code
 
-You need Node.js 22 (20.19 or later also works).
+You need Node.js 22.12 or later (20.19 or later also works).
 
 ```bash
 npm install
@@ -55,10 +55,15 @@ npm run test:mcp          # after the build
 
 ## Releases
 
-Maintainers only. Move the `Unreleased` entries of `CHANGELOG.md` under the new version, set the same version
-in `package.json` (`npm version <version> --no-git-tag-version`), commit, push, then push the tag `v<version>`.
-The tag builds the desktop binaries and publishes the release, whose notes start with that section of the
-changelog. A unit test fails when the changelog has no section for the version of `package.json`.
+Maintainers only. Move the `Unreleased` entries of `CHANGELOG.md` under a dated heading `## [x.y.z] - YYYY-MM-DD`,
+first among the versions, and add its compare link at the bottom of the file
+(`[x.y.z]: https://github.com/florianlotte/markdown-paged-studio/compare/vA.B.C...vx.y.z`; point the `[Unreleased]`
+link at the new tag). Set the same version in `package.json` (`npm version <version> --no-git-tag-version`), commit,
+push, then push the tag `v<version>`. The tag builds the desktop binaries and publishes the release, whose notes
+start with that section of the changelog (`scripts/release-notes.mjs`). A unit test (`tests/repo.test.mjs`) fails
+when the changelog has no dated section or no compare link for the version of `package.json`. The `Desktop release`
+workflow can also be run by hand from the **Actions** tab: it attaches the binaries to the run, and publishes the
+release when **publish** is ticked.
 
 ## License
 

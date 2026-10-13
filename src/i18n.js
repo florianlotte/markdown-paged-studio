@@ -36,7 +36,6 @@ const TRANSLATIONS = {
     'Insert \\newpage at the cursor': 'Insérer \\newpage au curseur',
     'Table of contents': 'Table des matières',
     'Insert [[toc]] at the cursor': 'Insérer [[toc]] au curseur',
-    'Import .md': 'Importer .md',
     'Download .md': 'Télécharger .md',
     Images: 'Images',
     'Add images': 'Ajouter des images',

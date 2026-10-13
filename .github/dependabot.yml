@@ -8,9 +8,9 @@ updates:
       minor-and-patch:
         update-types: [minor, patch]
     ignore:
-      # Mermaid brings its own KaTeX: the same range keeps one copy of it in the build.
+      # Mermaid brings its own KaTeX (^0.18): the same range keeps one copy of it in the build.
       - dependency-name: katex
-        versions: ['>=0.17.0']
+        versions: ['>=0.19.0']
   - package-ecosystem: github-actions
     directory: /
     schedule:

@@ -3,7 +3,8 @@ import globals from 'globals';
 import prettier from 'eslint-config-prettier';
 
 export default [
-  { ignores: ['dist/', 'node_modules/'] },
+  // release/ and test-results/ are build outputs, .ua/ the working folder of a code analysis tool.
+  { ignores: ['dist/', 'node_modules/', 'release/', 'test-results/', '.ua/'] },
   js.configs.recommended,
   {
     files: ['**/*.js'],

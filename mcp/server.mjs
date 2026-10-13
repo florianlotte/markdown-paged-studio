@@ -12,11 +12,15 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { access, mkdir, readFile, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { readFileSync } from 'node:fs';
 import { chromium } from 'playwright';
 import { z } from 'zod';
+import { fileStem } from '../src/files.js';
 import { attachSources } from '../src/pdf-sources.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+// The CSS contract of the document, the same text as the Custom CSS section of the README.
+const CSS_CONTRACT = readFileSync(path.join(ROOT, 'docs', 'css-contract.md'), 'utf8').trim();
 const DIST = path.join(ROOT, 'dist');
 const ORIGIN = 'http://studio.local';
 const RENDER_TIMEOUT_MS = 60_000;
@@ -108,7 +112,10 @@ async function renderPdf(config, images, { project = true } = {}) {
     if (!project) return { pdf: printed, pages, missing: missingImages(html) };
     // The validated configuration and the Markdown travel inside the PDF, which the studio can reopen.
     const source = await page.evaluate(() => window.studio.source());
-    const pdf = Buffer.from(await attachSources(printed, { json: source, markdown: JSON.parse(source).markdown }));
+    const sources = JSON.parse(source);
+    const pdf = Buffer.from(
+      await attachSources(printed, { json: source, markdown: sources.markdown, name: `${fileStem(sources.title)}.md` }),
+    );
     return { pdf, pages, missing: missingImages(html) };
   });
 }
@@ -227,7 +234,13 @@ const markdownField = z
       'holding only \\newpage starts a new page; a line holding only [[toc]] (or [[toc depth=2]]) becomes the ' +
       'table of contents of the headings that follow it, with page numbers. Code fences with a language are ' +
       'syntax-highlighted. Footnotes: Text[^1] with "[^1]: the note" on its own line, or ^[a note in place]; ' +
-      'they are printed at the foot of the page. Task lists: "- [ ] to do" and "- [x] done".',
+      'they are printed at the foot of the page. Task lists: "- [ ] to do" and "- [x] done". Formulas in TeX: ' +
+      '$E = mc^2$ inline, $$…$$ on lines of their own, or a ```math fence. Alerts: a quote whose first line is ' +
+      '[!NOTE], [!TIP], [!IMPORTANT], [!WARNING] or [!CAUTION]. Also ==highlighted==, H~2~O, x^2^ and definition ' +
+      'lists (a line starting with ": " after the term). Labels number their element and @ refers to it: ' +
+      '{#fig:name} in the braces of an image, #fig:name on a mermaid fence, "Table: caption {#tab:name}" after a ' +
+      'table, {#eq:name} after the closing $$, {#sec:name} at the end of a heading; @fig:name in the text becomes ' +
+      '"figure 1" with a link.',
   );
 const imagesField = z
   .array(
@@ -264,7 +277,7 @@ server.registerTool(
       'using Markdown Paged Studio. Mermaid code fences are rendered as diagrams. Writes the file to ' +
       'output_path and returns its path, size and page count. Unless project is false, the PDF carries its ' +
       'sources as attachments (markdown-paged-studio.json with the settings, Markdown and images; ' +
-      'document.md), so the studio can reopen and edit it.',
+      'the Markdown named after the title), so the studio can reopen and edit it.',
     inputSchema: {
       markdown: markdownField,
       config: configField,
@@ -364,29 +377,8 @@ server.registerResource(
         mimeType: 'text/markdown',
         text: `# Document CSS contract
 
-The rendered document has this structure (the cover section only when \`cover\` is true):
+${CSS_CONTRACT}
 
-\`\`\`html
-<section class="cover-page">
-  <img class="cover-logo" />
-  <h1 class="cover-title">…</h1>
-  <div class="cover-subtitle">…</div>
-  <div class="cover-meta"><div>author</div><div>date</div></div>
-</section>
-<article class="document-content">…Markdown as HTML…</article>
-\`\`\`
-
-Mermaid diagrams live in \`.mermaid-diagram\` (inline SVG, select it with \`.mermaid-diagram > svg\`); a failed diagram is a \`<pre class="mermaid-error">\`.
-A diagram is sized from its fence line (\`width=60%\`, \`align=left\`), which sets \`.is-sized\`, \`--diagram-width\` and \`data-align\`.
-Images are wrapped in \`<span class="document-image">\` (\`.is-block\` when alone in a paragraph, \`.is-sized\` with \`--image-width\` for \`![Alt](photo.png){width=60% align=center}\`); an image that was not provided is a \`.image-missing\` box. \`data-align\` on a block image moves it left or right of its centered default; on an image inside text it floats it (\`left\`, \`right\`) or gives it its own line (\`center\`).
-A caption is \`.image-caption\` inside the image wrapper (\`.has-caption\`) or \`.diagram-caption\` inside the diagram.
-Headings carry an id (\`sec-\` plus the slug of their text). The table of contents is \`<nav class="toc">\` with an \`<ol class="toc-list">\` of \`<li class="toc-item toc-level-N">\`, each holding a link with \`.toc-text\` and \`.toc-dots\`; the page number is the \`::after\` of the link. A forced page break is \`<div class="page-break">\`.
-A footnote is \`<span class="footnote">\` written where it is called and moved to the foot of the page (style its call with \`.footnote::footnote-call\`, its number with \`.footnote::footnote-marker\`, the area with \`@page { @footnote { … } }\`); a repeated call is \`<sup class="footnote-ref">\`. Task lists are \`.contains-task-list\` holding \`.task-list-item\` with an \`input\`.
-A formula (\`$…$\`, \`$$…$$\` or a \`math\` fence, in TeX) is \`.math\` with \`.math-inline\` or \`.math-block\`, holding KaTeX's \`.katex\`; \`.math-error\` marks one that could not be read. An alert (\`> [!NOTE]\`, \`[!TIP]\`, \`[!IMPORTANT]\`, \`[!WARNING]\`, \`[!CAUTION]\`) is \`.alert\` with \`.alert-<type>\`, its title in \`.alert-title\`, coloured by \`--alert-color\`. Highlighted text is \`mark\`; subscript, superscript and definition lists are \`sub\`, \`sup\`, \`dl\`, \`dt\`, \`dd\`.
-Numbering and references: a label (\`{#fig:name}\` in the braces of an image, \`#fig:name\` on a mermaid fence, \`Table: caption {#tab:name}\` after a table, \`$$ … $$ {#eq:name}\`, \`# Title {#sec:name}\`) numbers its element and \`@fig:name\` in the text becomes a link \`a.ref.ref-fig\` (\`.ref-missing\` when unknown). A numbered heading starts with \`.heading-number\`, a numbered caption with \`.caption-label\`; a table caption is \`caption.table-caption\` in a \`table.has-caption\`; ids start with \`sec-\`, \`fig-\`, \`tab-\`, \`eq-\`. \`numberHeadings\` and \`numberFigures\` number what carries no label.
-Highlighted code blocks are \`<pre class="code-block code-light">\` (or \`code-dark\`) with highlight.js \`.hljs-*\` spans.
-Header, footer and the page counter are \`@page\` margin boxes driven by the config, not by CSS classes.
-Use print units (\`mm\`, \`pt\`) and paged-media properties such as \`break-before: page\` or \`break-inside: avoid\`.
 \`customCss\` replaces the default stylesheet entirely; start from \`describe_config().defaults.customCss\`.
 `,
       },

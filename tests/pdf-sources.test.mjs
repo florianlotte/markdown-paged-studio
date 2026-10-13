@@ -39,6 +39,9 @@ test('the sources are attached, read back, and replaced on a second pass', async
   const twice = await attachSources(once, { json: other, markdown: '# Second' });
   assert.deepEqual(await readSources(twice), { json: other });
   assert.deepEqual(await attachmentNames(twice), [SOURCE_NAME, MARKDOWN_NAME]);
+  // The Markdown is attached under the name of the document when one is given.
+  const named = await attachSources(twice, { json, markdown: '# Named', name: 'Étude.md' });
+  assert.deepEqual(await attachmentNames(named), [SOURCE_NAME, 'Étude.md']);
   // ArrayBuffer and Buffer inputs are accepted too.
   assert.deepEqual(await readSources(twice.buffer.slice(twice.byteOffset, twice.byteOffset + twice.byteLength)), {
     json: other,

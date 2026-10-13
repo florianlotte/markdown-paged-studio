@@ -59,10 +59,11 @@ function removeAttachments(document, names) {
 }
 
 // The PDF with the sources attached: `json` is the project (the content of a project file),
-// `markdown` the document alone. Attachments of the same names, from an earlier pass, are replaced.
-export async function attachSources(pdfBytes, { json, markdown }) {
+// `markdown` the document alone, attached under `name` (the title of the document, as a file name).
+// Attachments of the same names, from an earlier pass, are replaced.
+export async function attachSources(pdfBytes, { json, markdown, name = MARKDOWN_NAME }) {
   const document = await PDFDocument.load(bytesOf(pdfBytes), { ignoreEncryption: false });
-  removeAttachments(document, [SOURCE_NAME, MARKDOWN_NAME]);
+  removeAttachments(document, [SOURCE_NAME, MARKDOWN_NAME, name]);
   const now = new Date();
   await document.attach(encoder.encode(json), SOURCE_NAME, {
     mimeType: 'application/json',
@@ -71,7 +72,7 @@ export async function attachSources(pdfBytes, { json, markdown }) {
     creationDate: now,
     modificationDate: now,
   });
-  await document.attach(encoder.encode(markdown), MARKDOWN_NAME, {
+  await document.attach(encoder.encode(markdown), name, {
     mimeType: 'text/markdown',
     description: 'The Markdown source of the document.',
     creationDate: now,

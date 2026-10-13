@@ -7,6 +7,19 @@ All notable changes to Markdown Paged Studio are listed here, newest first. The 
 
 ## [Unreleased]
 
+## [1.23.0] - 2026-10-13
+
+### Changed
+
+- The HTML export and the Markdown attached to the PDF are named after the title, like the other exports
+  (`document.html` and `document.md` before).
+- Mermaid 12.2 and KaTeX 0.18 (one copy in the build), and the other dependencies updated within their ranges.
+- The CSS contract of the document is one file, `docs/css-contract.md`, included in the README and served by the MCP
+  server; the MCP README no longer repeats the Markdown syntax of the README.
+- Documentation brought in line with the studio: the browser draws the PDF with project, formulas and definition
+  lists are supported, the project layout lists every module, the desktop menu names, the release steps and the
+  MCP tool description are complete, and the CSS contract names `.toc-list`, `.has-caption` and `span.ref-missing`.
+
 ## [1.22.4] - 2026-10-13
 
 ### Changed
@@ -444,7 +457,8 @@ All notable changes to Markdown Paged Studio are listed here, newest first. The 
 - Portable desktop app for Windows, Linux and macOS with direct PDF export.
 - Docker image, Playwright integration tests and CI.
 
-[Unreleased]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.22.4...HEAD
+[Unreleased]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.23.0...HEAD
+[1.23.0]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.22.4...v1.23.0
 [1.22.4]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.22.3...v1.22.4
 [1.22.3]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.22.2...v1.22.3
 [1.22.2]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.22.1...v1.22.2

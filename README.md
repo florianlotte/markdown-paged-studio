@@ -45,7 +45,7 @@
 - **Edit, Split or View**: the editor and the paged preview share the window with a draggable splitter, or one of them takes it all; plus one page or two pages side by side, zoom, fit to width, Ctrl + wheel, and a collapsible settings sidebar.
 - **Autosave** in the browser, plus export and import of the whole configuration as JSON.
 - **Personal defaults** (your name, company logo, stylesheet, template) from a gitignored `local/` folder.
-- **Export menu**: PDF with project, PDF only, HTML with project (a standalone page that paginates offline), Markdown with project (a `.md` whose YAML front matter holds the settings and images), Markdown files (a zip of the files, the stylesheet and the images side by side) or the project alone. The PDF comes from the print dialog in the browser, as a direct file in the desktop app.
+- **Export menu**: PDF with project, PDF only, HTML with project (a standalone page that paginates offline), Markdown with project (a `.md` whose YAML front matter holds the settings and images), Markdown files (a zip of the files, the stylesheet and the images side by side) or the project alone. In the browser the studio draws the PDF with project itself and the PDF only goes through the print dialog; the desktop app writes both directly.
 - **Editable exports**: the HTML export, the Markdown export, the zip of files and the PDF with project carry the document, its settings and its images, and **Import…** reopens them.
 - **Desktop app** for Windows (x64 and ARM64), Linux and macOS (Apple Silicon and Intel), portable, no installation.
 - **MCP server** so a local AI assistant can generate reports through the same rendering pipeline.
@@ -65,15 +65,15 @@ npm run build     # static site in dist/
 npm run preview   # serve dist/ locally to check the build
 ```
 
-Node.js 20.19 or newer (or 22.12+) is required by Vite 8.
+Node.js 20.19+ or 22.12+ is required by Vite 8.
 
 ## Usage
 
 ### Writing
 
-The Markdown editor sits in the main area, beside the paged preview (**Split**) or alone (**Edit**); **View** shows the preview alone. It colours the Markdown, numbers the lines and searches or replaces with Ctrl+F. The bar above it inserts a page break or a table of contents, replaces the current file with an existing `.md` file or downloads it (named after the title, like the PDF, when it is the only file), and switches the scroll synchronisation: while it is on, the pane you scroll takes the other one to the same part of the document. A double-click on a block of the preview puts the cursor on its source line. The **Content** tab of the sidebar holds the cover fields and the images. The parser is [markdown-it](https://github.com/markdown-it/markdown-it): all of [CommonMark](https://commonmark.org) and of GitHub Flavored Markdown (tables, strikethrough, task lists, automatic links), plus footnotes and typographic replacements. Raw HTML inside Markdown is intentionally disabled. [Markdown support](docs/markdown-support.md) lists what is understood, the four deliberate differences with the specification, what is not supported (formulas, definition lists…), and the conformance measured on the official examples.
+The Markdown editor sits in the main area, beside the paged preview (**Split**) or alone (**Edit**); **View** shows the preview alone. It colours the Markdown, numbers the lines and searches or replaces with Ctrl+F. The bar above it inserts a page break or a table of contents, replaces the current file with an existing `.md` file or downloads it (named after the title, like the PDF, when it is the only file), and switches the scroll synchronisation: while it is on, the pane you scroll takes the other one to the same part of the document. A double-click on a block of the preview puts the cursor on its source line. The **Content** tab of the sidebar holds the cover fields and the images. The parser is [markdown-it](https://github.com/markdown-it/markdown-it): all of [CommonMark](https://commonmark.org) and of GitHub Flavored Markdown (tables, strikethrough, task lists, automatic links), plus footnotes and typographic replacements. Raw HTML inside Markdown is intentionally disabled. [Markdown support](docs/markdown-support.md) lists what is understood, the four deliberate differences with the specification, what is not supported (abbreviations, emoji shortcodes), and the conformance measured on the official examples.
 
-Whatever the studio writes into the editor for you (the insert buttons, a pasted image, a size set from the preview) is an ordinary edit: Ctrl+Z undoes it like something you typed.
+Whatever the studio writes into the editor for you (the insert buttons, a pasted image, a size set from the preview) is an ordinary edit: Ctrl+Z undoes it like something you typed, and Ctrl+Y or Ctrl+Shift+Z redoes it.
 
 ### Several files
 
@@ -170,7 +170,7 @@ Give an element a label and refer to it by that label: the studio writes the num
 | `- [ ] to do`, `- [x] done`     | A task list with check boxes                                                                           |
 | ` ```js ` … ` ``` `             | A code block highlighted for its language (about 35 common languages); unknown ones stay plain         |
 
-The **Page break** and **Table of contents** buttons under the editor write the markers at the cursor. The table lists what comes after it: a heading placed above it, such as "Contents", is not part of it. Clicking an entry in the preview scrolls to its page.
+The **Page break** and **Table of contents** buttons above the editor write the markers at the cursor. The table lists what comes after it: a heading placed above it, such as "Contents", is not part of it. Clicking an entry in the preview scrolls to its page.
 
 Every heading gets an anchor named after its text, the way GitHub does: `[see the details](#details)` links to the heading "Details", in the preview and in the exports. Two headings with the same text are told apart with a number (`#details-2`).
 
@@ -237,7 +237,11 @@ The **Page** tab selects the paper size, the four margins in millimetres, and th
 
 ### Custom CSS
 
-The **Design** tab has a CSS editor. Its content is appended after the built-in styles, so your rules win on equal specificity. The colours of the code theme are the exception: choose **None** as code highlighting to style the code blocks yourself. The rendered document has this structure:
+The **Design** tab has a CSS editor. Its content is appended after the built-in styles, so your rules win on equal specificity. The colours of the code theme are the exception: choose **None** as code highlighting to style the code blocks yourself. The structure and the class names below are the contract of the document, kept in `docs/css-contract.md` and also served to AI assistants by the MCP server:
+
+<!-- css-contract:start -->
+
+The rendered document has this structure (the cover section only when the cover page is on):
 
 ```html
 <section class="cover-page">
@@ -254,24 +258,28 @@ The **Design** tab has a CSS editor. Its content is appended after the built-in 
 
 Inside the content, these class names are stable and meant to be styled:
 
-| Element           | Selector                                                                                                                                                                                                                                                                   |
-| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Diagram           | `.mermaid-diagram`, its drawing `.mermaid-diagram > svg`; `.is-sized` with `--diagram-width`, `data-align`; a failed one is `.mermaid-error`                                                                                                                               |
-| Image             | `.document-image` around the `img`; `.is-block` alone in a paragraph, `.is-sized` with `--image-width`, `data-align`; `.image-missing` if not uploaded                                                                                                                     |
-| Number, reference | `.heading-number` in a numbered heading ("1.1.", with a right margin), `.caption-label` opening a numbered caption ("Figure 1: "), `a.ref` with `.ref-fig`, `.ref-tab`, `.ref-eq` or `.ref-sec`, `.ref-missing` for an unknown label; ids start with `fig-`, `tab-`, `eq-` |
-| Table caption     | `caption.table-caption` inside a `table.has-caption`                                                                                                                                                                                                                       |
-| Caption           | `.image-caption`, `.diagram-caption`                                                                                                                                                                                                                                       |
-| Table of contents | `nav.toc`, `.toc-item` with `.toc-level-1`…, holding a link with `.toc-text` and `.toc-dots`; the page number is the `::after` of the link                                                                                                                                 |
-| Page break        | `.page-break`                                                                                                                                                                                                                                                              |
-| Footnote          | `.footnote` for the note, `.footnote::footnote-call` for its call in the text, `.footnote::footnote-marker` for its number, `.footnote-ref` for a repeated call; the area of the notes is `@page { @footnote { … } }`                                                      |
-| Task list         | `.contains-task-list` on the list, `.task-list-item` on the item, holding an `input`                                                                                                                                                                                       |
-| Formula           | `.math` with `.math-inline` or `.math-block`, holding KaTeX's `.katex`; `.math-error` when the formula could not be read                                                                                                                                                   |
-| Alert             | `.alert` with `.alert-note`, `.alert-tip`, `.alert-important`, `.alert-warning` or `.alert-caution`, its title in `.alert-title`; the colour is `--alert-color`                                                                                                            |
-| Highlighted text  | `mark`; subscript and superscript are `sub` and `sup`, definition lists `dl`, `dt`, `dd`                                                                                                                                                                                   |
-| Highlighted code  | `pre.code-block` with `.code-light` or `.code-dark`, and highlight.js `.hljs-*` spans                                                                                                                                                                                      |
-| Heading           | an `id` made of `sec-` and the anchor name: `#sec-details`                                                                                                                                                                                                                 |
+| Element           | Selector                                                                                                                                                                                                                                                                                     |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Diagram           | `.mermaid-diagram`, its drawing `.mermaid-diagram > svg`; `.is-sized` with `--diagram-width`, `data-align`; a failed one is `.mermaid-error`                                                                                                                                                 |
+| Image             | `.document-image` around the `img`; `.is-block` alone in a paragraph, `.is-sized` with `--image-width`, `data-align`, `.has-caption` with a caption; `.image-missing` if not uploaded                                                                                                        |
+| Number, reference | `.heading-number` in a numbered heading ("1.1.", with a right margin), `.caption-label` opening a numbered caption ("Figure 1: "), `.ref` (a link) with `.ref-fig`, `.ref-tab`, `.ref-eq` or `.ref-sec`, a `span.ref.ref-missing` for an unknown label; ids start with `fig-`, `tab-`, `eq-` |
+| Table caption     | `caption.table-caption` inside a `table.has-caption`                                                                                                                                                                                                                                         |
+| Caption           | `.image-caption`, `.diagram-caption`                                                                                                                                                                                                                                                         |
+| Table of contents | `nav.toc` holding an `ol.toc-list` of `.toc-item` with `.toc-level-1`…, holding a link with `.toc-text` and `.toc-dots`; the page number is the `::after` of the link                                                                                                                        |
+| Page break        | `.page-break`                                                                                                                                                                                                                                                                                |
+| Footnote          | `.footnote` for the note, `.footnote::footnote-call` for its call in the text, `.footnote::footnote-marker` for its number, `.footnote-ref` for a repeated call; the area of the notes is `@page { @footnote { … } }`                                                                        |
+| Task list         | `.contains-task-list` on the list, `.task-list-item` on the item, holding an `input`                                                                                                                                                                                                         |
+| Formula           | `.math` with `.math-inline` or `.math-block`, holding KaTeX's `.katex`; `.math-error` when the formula could not be read                                                                                                                                                                     |
+| Alert             | `.alert` with `.alert-note`, `.alert-tip`, `.alert-important`, `.alert-warning` or `.alert-caution`, its title in `.alert-title`; the colour is `--alert-color`                                                                                                                              |
+| Highlighted text  | `mark`; subscript and superscript are `sub` and `sup`, definition lists `dl`, `dt`, `dd`                                                                                                                                                                                                     |
+| Highlighted code  | `pre.code-block` with `.code-light` or `.code-dark`, and highlight.js `.hljs-*` spans                                                                                                                                                                                                        |
+| Heading           | an `id` made of `sec-` and the anchor name: `#sec-details`                                                                                                                                                                                                                                   |
 
-Use print units (`mm`, `pt`) and paged-media properties such as `break-before: page` or `break-inside: avoid`. A minimal example:
+Header, footer and the page counter are `@page` margin boxes driven by the settings, not by classes. Use print units (`mm`, `pt`) and paged-media properties such as `break-before: page` or `break-inside: avoid`.
+
+<!-- css-contract:end -->
+
+A minimal example:
 
 ```css
 .document-content {
@@ -290,17 +298,17 @@ Use print units (`mm`, `pt`) and paged-media properties such as `break-before: p
 
 ### Preview controls
 
-| Control                                  | Effect                                                                                                                                                                                      |
-| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Edit** / **Split** / **View**          | The editor alone, both side by side, or the preview alone: Ctrl+Shift+1/2/3 (Cmd+Alt+1/2/3 on macOS), in the desktop app also the **View** menu. On phones Split gives way to Edit and View |
-| **Scroll together** (bar of the editor)  | The pane you scroll takes the other one along; switch it off to read one part while writing another                                                                                         |
-| **Splitter** between editor and preview  | Drag to share the width (20 to 80 %); arrow keys move it by 2 %, Home and End to the ends, a double-click resets the half                                                                   |
-| **1 page** / **2 pages**                 | One continuous column, or two pages side by side                                                                                                                                            |
-| **−** / **+**                            | Zoom out or in by 10 %, between 25 % and 300 %                                                                                                                                              |
-| **Fit**                                  | Fit the page (or the pair of pages) to the available width, and keep following window resizes                                                                                               |
-| **Ctrl + wheel** (Cmd on macOS)          | Zoom with the mouse over the preview                                                                                                                                                        |
-| **Sidebar toggle** (left of the toolbar) | Hide or show the settings sidebar to give the preview the full width; in the desktop app also **View → Toggle Sidebar** (Ctrl+B)                                                            |
-| **Links** of the document                | Open in a new tab (the system browser in the desktop app), so the studio stays in place                                                                                                     |
+| Control                                  | Effect                                                                                                                                                                                                                    |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Edit** / **Split** / **View**          | The editor alone, both side by side, or the preview alone: Ctrl+Shift+1/2/3 (Cmd+Alt+1/2/3 on macOS), in the desktop app also the **View** menu (Edit, Side by side, Preview). On phones Split gives way to Edit and View |
+| **Scroll together** (bar of the editor)  | The pane you scroll takes the other one along; switch it off to read one part while writing another                                                                                                                       |
+| **Splitter** between editor and preview  | Drag to share the width (20 to 80 %); arrow keys move it by 2 %, Home and End to the ends, a double-click resets the half                                                                                                 |
+| **1 page** / **2 pages**                 | One continuous column, or two pages side by side                                                                                                                                                                          |
+| **−** / **+**                            | Zoom out or in by 10 %, between 25 % and 300 %                                                                                                                                                                            |
+| **Fit**                                  | Fit the page (or the pair of pages) to the available width, and keep following window resizes                                                                                                                             |
+| **Ctrl + wheel** (Cmd on macOS)          | Zoom with the mouse over the preview                                                                                                                                                                                      |
+| **Sidebar toggle** (left of the toolbar) | Hide or show the settings sidebar to give the preview the full width; in the desktop app also **View → Toggle Sidebar** (Ctrl+B)                                                                                          |
+| **Links** of the document                | Open in a new tab (the system browser in the desktop app), so the studio stays in place                                                                                                                                   |
 
 ![Two pages side by side in the preview: table of contents, highlighted code and a captioned diagram](docs/screenshots/spread.png)
 
@@ -322,7 +330,7 @@ The studio follows the light or dark theme of the system, and the selector next 
 
 ### Personal defaults
 
-To start every session with your own name, company logo, stylesheet or document template, put them in the gitignored `local/` folder: `local/config.json` for the text fields and page setup, `local/logo.png` (or `.svg`, `.jpg`, `.webp`, `.gif`) for the cover logo, `local/custom.css` and `local/template.md` for the defaults of the two editors. They apply on first launch and on **Reset**, and a document saved in the browser always takes precedence. See [local/README.md](local/README.md) for details.
+To start every session with your own name, company logo, stylesheet or document template, put them in the gitignored `local/` folder: `local/config.json` for the text fields and page setup, `local/logo.png` (or `.svg`, `.jpg`, `.jpeg`, `.webp`, `.gif`) for the cover logo, `local/custom.css` and `local/template.md` for the defaults of the two editors, and `local/images/` for images available to every document. They apply on first launch and on **Reset**, and a document saved in the browser always takes precedence. See [local/README.md](local/README.md) for details.
 
 ### Saving your work
 
@@ -330,7 +338,7 @@ The document autosaves in the browser after every change (the logo and the image
 
 ### Export and print
 
-The **Export** button exports the PDF with the project; its arrow opens the six exports.
+The **Export** button exports the PDF with the project (Ctrl+Shift+E in the desktop app); its arrow opens the six exports.
 
 - **PDF with project** (the default): settings, Markdown and images attached, so the file reopens in the studio. The desktop app and the MCP server write it through the embedded Chromium print engine, so it is a vector PDF. The browser has no print engine a page can use, so there the studio draws the PDF itself from the preview: each page is stored as an image (2 pixels per CSS pixel, about 192 dpi) under an invisible text layer that keeps the text selectable and searchable in any script (Latin, Cyrillic, Greek, Chinese…), with the links of the document kept as links. It downloads in one step, behind a lock that reports the progress; count on a few hundred kilobytes per page.
 - **PDF only** is the document alone, as a vector PDF: in the browser it opens the print-ready document in a new tab and triggers the print dialog once pagination is complete; choose _Save as PDF_. Allow pop-ups for the site if nothing opens. Ctrl+P (Cmd+P on macOS) does the same. In the desktop app it writes the file directly.
@@ -347,9 +355,9 @@ An exported file carries everything needed to edit it again: the Markdown, every
 - The **HTML export** holds them in a data block.
 - The **Markdown export** holds them in its YAML front matter, recognised by its first key, `markdown-paged-studio: 1`. The files of the document are written one after the other, and the front matter lists their names and lengths to cut them apart again.
 - The **zip of Markdown files** holds them as files, with the settings in `markdown-paged-studio.yaml`.
-- A **PDF** holds them as file attachments (`markdown-paged-studio.json` and `document.md`), which PDF readers list in their attachments panel. The desktop app and the MCP server attach them when they write the PDF. In the browser the print dialog writes the PDF outside the studio, in the browser the studio draws the PDF itself and attaches them (see above).
+- A **PDF** holds them as file attachments (`markdown-paged-studio.json` and the Markdown, named after the title), which PDF readers list in their attachments panel. The desktop app and the MCP server attach them when they write the PDF. In the browser, the PDF with project is drawn by the studio itself and holds them (see above); the PDF only comes from the print dialog, outside the studio, and holds nothing.
 
-**Import…** opens all five: a project JSON, an HTML, a Markdown, a zip or a PDF exported by the studio. Any other zip that holds Markdown files opens as a document too: its `.md` files in the order of their names, its images, and the first heading as the title. A Markdown file without that front matter (none, or another tool's) replaces the Markdown, takes its first level 1 heading (`# Title`) as the title of the cover, and keeps the other settings and the images; a foreign front matter stays in the text, where it is easy to remove. The desktop app has the same commands in its **File** menu (Ctrl+O imports).
+**Import…** opens all five: a project JSON, an HTML, a Markdown, a zip or a PDF exported by the studio. Any other zip that holds Markdown files opens as a document too: its `.md` files in the order of their names, its images, and the first heading as the title. A Markdown file without that front matter (none, or another tool's) replaces the Markdown, takes its first level 1 heading (`# Title`) as the title of the cover, and keeps the other settings and the images; a foreign front matter stays in the text, where it is easy to remove. The desktop app has the same commands in its **File** menu, named Export PDF…, Export PDF without project…, Export HTML…, Export Markdown…, Export Markdown files (zip)…, Save project… and Import… (Ctrl+O).
 
 Chromium-based browsers give the most faithful print output for paged media. Where a browser cannot draw the PDF that carries the project (some older versions of Safari cannot read back the pages they drew), **Export** opens the print dialog instead and says so once: that PDF does not hold the project, the HTML, Markdown and zip exports do.
 
@@ -396,7 +404,7 @@ npm run desktop:build   # package for the current OS into release/
 npm run test:desktop    # Playwright smoke test of the Electron app (run npm run build first)
 ```
 
-Binaries are built by the `Desktop release` workflow (`.github/workflows/release-desktop.yml`). Run it manually from the **Actions** tab with **Run workflow**: the three binaries are attached to the run as downloadable artifacts, and ticking **publish** also creates the GitHub Release `v<version>` with them. Pushing a tag `v*` publishes the release automatically, with notes taken from `CHANGELOG.md`. Bump `version` in `package.json` and add the section of the version to the changelog first: see [CONTRIBUTING.md](CONTRIBUTING.md#releases).
+Binaries are built by the `Desktop release` workflow (`.github/workflows/release-desktop.yml`). Run it manually from the **Actions** tab with **Run workflow**: the three binaries are attached to the run as downloadable artifacts, and ticking **publish** also creates the GitHub Release `v<version>` with them. Pushing a tag `v*` publishes the release automatically, with notes taken from `CHANGELOG.md`; the steps are in [CONTRIBUTING.md](CONTRIBUTING.md#releases).
 
 ## MCP server for AI assistants
 
@@ -430,7 +438,7 @@ The build context includes the gitignored `local/` folder, so an image built on 
 
 ## Development
 
-GitHub Actions workflows in `.github/workflows/`: `ci.yml` runs on every push and pull request (lint, Prettier check, the web, desktop and MCP test suites, the Vite build, a Docker build with a smoke test of the container); `release-desktop.yml` builds and publishes the desktop binaries on `v*` tags or on demand, once the same checks have passed on that commit (it waits for the CI run of the commit and only runs the checks itself when there is none), with release notes taken from `CHANGELOG.md`; `pages.yml` deploys the web app to GitHub Pages once `ci.yml` has passed on `main`. A commit that fails the tests is neither deployed nor released. Dependabot keeps npm packages and the actions up to date.
+GitHub Actions workflows in `.github/workflows/`: `ci.yml` runs on every push to `main` and every pull request (lint, Prettier check, the unit, web, desktop and MCP test suites, the Vite build, a Docker build with a smoke test of the container, then the web suite again under Firefox and WebKit); `release-desktop.yml` builds and publishes the desktop binaries on `v*` tags or on demand, once the same checks have passed on that commit (it waits for the CI run of the commit and only runs the checks itself when there is none), with release notes taken from `CHANGELOG.md`; `pages.yml` deploys the web app to GitHub Pages once `ci.yml` has passed on `main`. A commit that fails the tests is neither deployed nor released. Dependabot keeps npm packages and the actions up to date.
 
 | Script                  | What it does                                                                              |
 | ----------------------- | ----------------------------------------------------------------------------------------- |
@@ -446,6 +454,7 @@ GitHub Actions workflows in `.github/workflows/`: `ci.yml` runs on every push an
 | `npm run desktop`       | Build and open the Electron desktop app                                                   |
 | `npm run desktop:build` | Package the desktop app for the current OS into `release/`                                |
 | `npm run test:desktop`  | Playwright smoke test of the desktop app (after `npm run build`)                          |
+| `npm run desktop:dir`   | Package the desktop app unpacked into `release/`, as the CI does before its smoke test    |
 | `npm run mcp`           | Start the MCP server on stdio (after `npm run build`)                                     |
 | `npm run test:mcp`      | End-to-end test of the MCP server with a real MCP client (after `npm run build`)          |
 | `npm run conformance`   | Measure the parser against the CommonMark and GFM examples (`-- --write` updates the doc) |
@@ -458,29 +467,43 @@ index.html          entry point and the studio markup
 vite.config.js      build-time constants: version and commit shown in the sidebar footer
 src/main.js         wires the modules: restore, UI, view, first render
 src/config.js       defaults (built-in and local/), state, validation, autosave
-src/markdown.js     markdown-it rules: images, anchors, table of contents, page breaks; Mermaid, highlighting
+src/markdown.js     markdown-it rules: images, anchors, table of contents, page breaks, formulas, alerts, numbering; Mermaid, highlighting
+src/diagram-labels.js HTML tags in Mermaid labels: bold and italic kept, the other tags dropped
+src/crossref.js     labels, references and numbering (pure helpers)
+src/math-core.js    formulas: KaTeX output and the font faces a document needs (pure helpers)
+src/math.js         KaTeX, its stylesheet and its fonts, loaded on demand
 src/images.js       image library: matching by file name, storage, upload; logo storage
+src/files.js        the files of a document: assembly, line mapping, safe names (pure helpers)
+src/chapters.js     the tabs of the files above the editor
+src/editor.js       the CodeMirror editor: one state per file, edits that keep the undo history
+src/sync.js         scroll synchronisation between the editor and the preview
 src/i18n.js         interface language: French translations, applied to the markup
-src/editor.js       edits of the Markdown editor that keep its undo history
-src/pdf-sources.js  the sources of the document as PDF attachments: attach, read back
+src/theme.js        light or dark theme of the studio
 src/fonts.js        bundled document font: loaded for the preview, inlined in exports
 src/font-faces.js   which font subsets a text needs (pure helpers)
 src/resize-controls.js resize controls on the diagrams and images of the preview
 src/document.js     document CSS (page rules, cover templates, code themes) and HTML, standalone export
 src/render.js       Paged.js preview lifecycle, undo history of the preview
-src/view.js         layout and zoom of the preview
+src/view.js         workspace: Edit, Split or View, splitter, layout and zoom of the preview, sidebar
 src/ui.js           form, tabs, files, images, links of the preview, export and print
-src/automation.js   headless API used by the MCP server
+src/pdf-capability.js can this browser draw the pages of a PDF
+src/pdf-render.js   the PDF drawn by the browser: page images, text layer, links
+src/pdf-sources.js  the sources of the document as PDF attachments: attach, read back
+src/markdown-sources.js the Markdown export with its YAML front matter, read back on import
+src/archive.js      the zip of Markdown files, written and read
+src/glyphless-font.js the invisible font of the PDF text layer (Tesseract, Apache 2.0)
+src/automation.js   headless API used by the MCP server and the tests
 src/version.js      version and commit of the running build
 src/escape.js       escaping of text placed in HTML and in CSS strings
-src/ui.css          studio chrome (sidebar, toolbar, preview frame)
+src/ui.css          studio chrome (sidebar, toolbar, editor, preview frame)
 src/assets/logo.svg logo and favicon
 electron/           Electron main process, sandboxed preload and app icon
 electron-builder.yml packaging targets: Windows portable exe and zip, Linux AppImage, macOS dmg and zip
 mcp/                MCP server (stdio) rendering reports headlessly through dist/
-Dockerfile          two-stage image: Vite build, then nginx serving dist/
+Dockerfile          two-stage image: Vite build, then nginx serving dist/ (docker/nginx.conf); compose.yaml serves it on port 8080
+local/              personal defaults, gitignored (local/README.md)
 docs/screenshots/   images used in this README, taken by scripts/screenshots.mjs
-scripts/            release notes from the changelog, README screenshots, Markdown conformance
+scripts/            release notes from the changelog, README screenshots, Markdown conformance, repository scan for Understand Anything
 docs/markdown-support.md supported Markdown, deliberate differences, measured conformance
 tests/              web (studio-*.spec.js), desktop, MCP and unit tests
 .github/            workflows, Dependabot, issue forms and pull request template
@@ -494,9 +517,16 @@ Recent Chromium-based browsers (Chrome, Edge, Brave, Arc) are the reference for 
 
 ## Roadmap
 
-- Dark theme for the studio
 - More interface languages
 - Code signing of the desktop binaries (Windows and macOS)
+
+Possible improvements, not scheduled:
+
+- Split the entry bundle (about 1 MB: CodeMirror, markdown-it and its plugins) into chunks loaded when needed.
+- An installable web app that works offline (web manifest and service worker).
+- `<u>` in Mermaid labels drawn underlined, like the bold and italic tags.
+- Desktop tests of the menu commands, and an accessibility check of the studio in the test suite.
+- An outline of the headings with a search panel, and more writing comfort in the editor.
 
 ## Contributing
 
