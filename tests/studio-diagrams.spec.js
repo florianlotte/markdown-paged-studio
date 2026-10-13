@@ -151,3 +151,40 @@ test('a clicked diagram keeps its tools until another click or Escape', async ({
   await page.mouse.move(away.x, away.y, { steps: 5 });
   await expect(tools).toBeHidden();
 });
+
+test('HTML tags in diagram labels are formatted or dropped', async ({ page }) => {
+  await openFreshStudio(page);
+  await setMarkdown(
+    page,
+    '# Tags\n\n```mermaid\nflowchart LR\n  A["<b>Bold</b> plain<br><i>soft</i>"] --> B[<u>Under</u> <span class="x">in</span>]\n```\n\n' +
+      '```mermaid\nsequenceDiagram\n  Alice->>Bob: <b>Hi</b> <u>there</u>\n```\n',
+  );
+  await expect(page.locator('#preview .document-content h1')).toHaveText('Tags');
+  await expect(page.locator('#preview')).not.toHaveClass(/is-stale/);
+  const drawings = page.locator('#preview .mermaid-diagram > svg');
+  await expect(drawings).toHaveCount(2);
+
+  // The text of the labels, without tags nor marks, and the styled runs.
+  const labels = await drawings.evaluateAll(svgs =>
+    svgs.map(svg => ({
+      // One tspan per line in a flowchart label: joined with a space.
+      text: [...svg.querySelectorAll('text')].map(text =>
+        [...text.childNodes]
+          .map(line => line.textContent)
+          .join(' ')
+          .replace(/\s+/g, ' ')
+          .trim(),
+      ),
+      bold: [...svg.querySelectorAll('tspan[style*="font-weight: bold"]')].map(span => span.textContent),
+      italic: [...svg.querySelectorAll('tspan[style*="font-style: italic"]')].map(span => span.textContent),
+      marks: [...svg.querySelectorAll('text')].some(text => /[\u2061-\u2064<>]/.test(text.textContent)),
+    })),
+  );
+  expect(labels[0].text).toContain('Bold plain soft');
+  expect(labels[0].text).toContain('Under in');
+  expect(labels[0].bold).toEqual(['Bold']);
+  expect(labels[0].italic).toEqual(['soft']);
+  expect(labels[1].text).toContain('Hi there');
+  expect(labels[1].bold).toEqual(['Hi']);
+  expect(labels.map(label => label.marks)).toEqual([false, false]);
+});

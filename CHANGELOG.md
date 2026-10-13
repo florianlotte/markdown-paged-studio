@@ -7,6 +7,13 @@ All notable changes to Markdown Paged Studio are listed here, newest first. The 
 
 ## [Unreleased]
 
+## [1.22.3] - 2026-10-13
+
+### Fixed
+
+- Mermaid labels: `<b>`, `<strong>`, `<i>` and `<em>` format the text, which was drawn with its tags, and
+  any other HTML tag is dropped while its text stays (labels are SVG text, where only `<br>` was understood).
+
 ## [1.22.2] - 2026-10-12
 
 ### Changed
@@ -430,7 +437,8 @@ All notable changes to Markdown Paged Studio are listed here, newest first. The 
 - Portable desktop app for Windows, Linux and macOS with direct PDF export.
 - Docker image, Playwright integration tests and CI.
 
-[Unreleased]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.22.2...HEAD
+[Unreleased]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.22.3...HEAD
+[1.22.3]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.22.2...v1.22.3
 [1.22.2]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.22.1...v1.22.2
 [1.22.1]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.22.0...v1.22.1
 [1.22.0]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.21.1...v1.22.0

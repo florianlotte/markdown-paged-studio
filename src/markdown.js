@@ -18,6 +18,7 @@ import {
   trailingLabel,
 } from './crossref.js';
 import { escapeHtml } from './escape.js';
+import { markLabels, stripMarks, styleLabels } from './diagram-labels.js';
 import { findImage, imageName, isExternalSource } from './images.js';
 
 export const md = new MarkdownIt({ html: false, linkify: true, typographer: true });
@@ -841,12 +842,17 @@ let diagramCounter = 0;
 async function diagramSvg(mermaid, source) {
   if (diagramCache.has(source)) return diagramCache.get(source);
   const id = `mermaid-${++diagramCounter}`;
+  // The HTML tags of the labels, which SVG text cannot show: bold and italic become marks, the rest is dropped.
+  const text = markLabels(source);
   let html;
   try {
     // parse() reports syntax errors without touching the DOM; render() on bad input leaves temp nodes behind.
-    await mermaid.parse(source);
-    const { svg } = await mermaid.render(id, source);
-    html = svg;
+    await mermaid.parse(text);
+    const { svg } = await mermaid.render(id, text);
+    const drawing = document.createElement('div');
+    drawing.innerHTML = svg;
+    styleLabels(drawing);
+    html = stripMarks(drawing.innerHTML);
   } catch (error) {
     html = `<pre class="mermaid-error">${escapeHtml(error?.message || String(error))}\n\n${escapeHtml(source)}</pre>`;
   } finally {

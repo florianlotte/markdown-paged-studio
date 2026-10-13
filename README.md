@@ -122,7 +122,7 @@ You rarely need to type the size and the alignment: hover or click a diagram in 
 
 Every change is written back to that opening line, so the size travels with the Markdown into exports, the desktop app and the MCP server. Ctrl+Z undoes it, in the editor or straight from the preview (also in View mode, when the editor is hidden). Without attributes a diagram keeps its natural size, and it is never taller than the text area of a page.
 
-Every diagram type supported by [Mermaid](https://mermaid.js.org) works. Diagrams are rendered before pagination, so Paged.js knows their exact size, and the resulting SVG is part of the exported file. A diagram with a syntax error shows its error message and source in place, without breaking the rest of the document. Mermaid is loaded on demand the first time a document contains a diagram.
+Every diagram type supported by [Mermaid](https://mermaid.js.org) works. Diagrams are rendered before pagination, so Paged.js knows their exact size, and the resulting SVG is part of the exported file. Labels are drawn as SVG text: `<br>` breaks a line, `<b>`, `<strong>`, `<i>` and `<em>` format the text, and any other HTML tag is removed while its text stays; Mermaid's own Markdown strings (`A["`**bold**`"]`) work too. A diagram with a syntax error shows its error message and source in place, without breaking the rest of the document. Mermaid is loaded on demand the first time a document contains a diagram.
 
 ![A diagram selected in the preview, with its size and alignment tools and its caption](docs/screenshots/diagram.png)
 
