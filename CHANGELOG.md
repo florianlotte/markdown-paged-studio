@@ -7,6 +7,24 @@ All notable changes to Markdown Paged Studio are listed here, newest first. The 
 
 ## [Unreleased]
 
+## [1.28.0] - 2026-10-14
+
+### Added
+
+- On a phone a tap on a diagram or an image opens its tools, a second tap closes them, and the resize
+  handle is sized for a finger.
+- A removed file comes back from its toast (**Undo**, ten seconds) instead of asking a native confirmation.
+
+### Changed
+
+- Under 760 px the toolbar keeps one row: sidebar toggle, page count, Edit | View, Export and the ⋯ menu,
+  where **Import…** now lives; the pages are fit in one column there, whatever the layout and zoom chosen on
+  a desktop.
+- The settings drawer of a phone is a modal dialog: the focus goes in and stays, Escape or the close button
+  puts it away and gives the focus back to the toggle.
+- The notice banner lies over the top of the workbench, under the toolbar, instead of pushing the editor and
+  the pages down; a long notice scrolls.
+
 ## [1.27.0] - 2026-10-14
 
 ### Added
@@ -565,7 +583,8 @@ All notable changes to Markdown Paged Studio are listed here, newest first. The 
 - Portable desktop app for Windows, Linux and macOS with direct PDF export.
 - Docker image, Playwright integration tests and CI.
 
-[Unreleased]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.27.0...HEAD
+[Unreleased]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.28.0...HEAD
+[1.28.0]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.27.0...v1.28.0
 [1.27.0]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.26.0...v1.27.0
 [1.26.0]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.25.0...v1.26.0
 [1.25.0]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.24.0...v1.25.0

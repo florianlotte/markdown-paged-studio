@@ -298,6 +298,21 @@ test('on a phone the settings are a closed drawer and the preview fits the scree
   expect(pageBox.width).toBeLessThanOrEqual(390);
   expect(pageBox.y).toBeLessThan(200);
   await expect(page.locator('#exportDefault')).toBeVisible();
+  // One row: the sidebar toggle, the page count, Edit | View, Export and the ⋯ menu; the layout and zoom
+  // groups and the Import button are gone (the pages are fit in one column, Import… is in the ⋯ menu).
+  expect((await page.locator('.toolbar').boundingBox()).height).toBeLessThan(70);
+  await expect(page.locator('#status')).toBeVisible();
+  await expect(page.locator('#import')).toBeHidden();
+  await expect(page.locator('#layoutSpread')).toBeHidden();
+  await expect(page.locator('#zoomFit')).toBeHidden();
+  await expect(page.locator('#exportDefault')).toBeInViewport({ ratio: 0.99 });
+  await expect(page.locator('#moreMenu')).toBeInViewport({ ratio: 0.99 });
+  await page.locator('#moreMenu').click();
+  await expect(page.locator('#importEntry')).toBeVisible();
+  await expect(page.locator('#importEntry')).toBeFocused();
+  const [chooser] = await Promise.all([page.waitForEvent('filechooser'), page.locator('#importEntry').click()]);
+  expect(chooser.isMultiple()).toBe(false);
+  await expect(page.locator('#moreOptions')).toBeHidden();
   // No room for two panes: Split gives way to a switch between Edit and View, View first.
   await expect(page.locator('#modeSplit')).toBeHidden();
   await expect(page.locator('#modeView')).toHaveAttribute('aria-pressed', 'true');
@@ -319,6 +334,24 @@ test('on a phone the settings are a closed drawer and the preview fits the scree
   const drawer = await sidebar.boundingBox();
   expect(drawer.x).toBe(0);
   expect(drawer.width).toBe(390);
+  // The drawer is a modal dialog: the focus goes in and stays, the workspace behind is inert.
+  await expect(page.locator('#closeSidebar')).toBeFocused();
+  await expect(sidebar).toHaveAttribute('role', 'dialog');
+  await expect(sidebar).toHaveAttribute('aria-modal', 'true');
+  await expect(sidebar).toHaveAttribute('aria-label', 'Settings');
+  expect(await page.evaluate(() => document.querySelector('main.workspace').inert)).toBe(true);
+  for (let i = 0; i < 8; i++) {
+    await page.keyboard.press('Tab');
+    expect(await page.evaluate(() => Boolean(document.activeElement.closest('#sidebar')))).toBe(true);
+  }
+  // Escape closes it and gives the focus back to the toggle.
+  await page.keyboard.press('Escape');
+  await expect(sidebar).toBeHidden();
+  await expect(page.locator('#toggleSidebar')).toBeFocused();
+  expect(await page.evaluate(() => document.querySelector('main.workspace').inert)).toBe(false);
+  await expect(sidebar).not.toHaveAttribute('role', 'dialog');
+  await page.locator('#toggleSidebar').click();
+  await expect(sidebar).toBeVisible();
   await expect(page.locator('#title')).toBeVisible();
   await expect(page.locator('#closeSidebar')).toBeVisible();
   // The language and theme selectors share the header line with the close button, without overlapping it.
@@ -332,7 +365,46 @@ test('on a phone the settings are a closed drawer and the preview fits the scree
 
   await page.locator('#closeSidebar').click();
   await expect(sidebar).toBeHidden();
+  await expect(page.locator('#toggleSidebar')).toBeFocused();
   await expect(page.locator('#preview .pagedjs_page').first()).toBeVisible();
+
+  // Back on a desktop the Import button is in the toolbar, the sidebar is a plain sidebar again (hidden,
+  // as it was closed on the phone) and the ⋯ menu starts at the welcome tour.
+  await page.setViewportSize({ width: 1400, height: 900 });
+  await expect(page.locator('#import')).toBeVisible();
+  await page.locator('#toggleSidebar').click();
+  await expect(sidebar).toBeVisible();
+  expect(await page.evaluate(() => document.querySelector('main.workspace').inert)).toBe(false);
+  await expect(sidebar).not.toHaveAttribute('role', 'dialog');
+  await expect(page.locator('#closeSidebar')).toBeHidden();
+  await page.locator('#moreMenu').click();
+  await expect(page.locator('#importEntry')).toBeHidden();
+  await expect(page.locator('#showWelcome')).toBeFocused();
+  await page.keyboard.press('Escape');
+});
+
+test('the banner lies over the workbench without moving it, scrolls when long, and closes', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await openFreshStudio(page);
+  const bench = await page.locator('.workbench').boundingBox();
+  const bar = await page.locator('.toolbar').boundingBox();
+  await page.evaluate(() => {
+    document.getElementById('noticeText').textContent = 'word '.repeat(600);
+    document.getElementById('notice').hidden = false;
+  });
+  const notice = page.locator('#notice');
+  await expect(notice).toBeVisible();
+  const box = await notice.boundingBox();
+  expect(box.x).toBeGreaterThanOrEqual(0);
+  expect(box.x + box.width).toBeLessThanOrEqual(390);
+  expect(box.y).toBeGreaterThanOrEqual(bar.y + bar.height - 1);
+  expect(box.height).toBeLessThanOrEqual(0.4 * 844 + 1);
+  expect(await notice.evaluate(el => el.scrollHeight > el.clientHeight)).toBe(true);
+  await expect(page.locator('#dismissNotice')).toBeInViewport();
+  // Nothing moved under it.
+  expect(await page.locator('.workbench').boundingBox()).toEqual(bench);
+  await page.locator('#dismissNotice').click();
+  await expect(notice).toBeHidden();
 });
 
 test('the editor shares the workspace: Edit, Split and View modes, the splitter and the phone', async ({ page }) => {
@@ -417,6 +489,21 @@ test('the editor shares the workspace: Edit, Split and View modes, the splitter 
   await page.setViewportSize({ width: 1400, height: 900 });
   await expect(page.locator('#modeEdit')).toHaveAttribute('aria-pressed', 'true');
   await expect(shell).toBeHidden();
+
+  // A layout and a zoom chosen on the desktop give way to one fitted column on the phone, and come back.
+  await page.locator('#modeView').click();
+  await page.locator('#layoutSpread').click();
+  await page.locator('#zoomIn').click();
+  const zoomOnDesk = await page.locator('#zoomValue').textContent();
+  await expect(page.locator('#preview')).toHaveAttribute('data-layout', 'spread');
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.locator('#preview')).toHaveAttribute('data-layout', 'single');
+  await expect
+    .poll(async () => (await page.locator('#preview .pagedjs_page').first().boundingBox()).width)
+    .toBeLessThanOrEqual(390);
+  await page.setViewportSize({ width: 1400, height: 900 });
+  await expect(page.locator('#preview')).toHaveAttribute('data-layout', 'spread');
+  await expect(page.locator('#zoomValue')).toHaveText(zoomOnDesk);
 });
 
 test('the sidebar footer shows the running version and stays at the bottom', async ({ page }) => {

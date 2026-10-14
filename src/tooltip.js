@@ -79,6 +79,8 @@ function restore() {
 export function initTooltips() {
   box = document.getElementById('tooltip');
   document.addEventListener('mouseover', event => {
+    // A tap synthesises a mouseover: no tooltip where nothing hovers.
+    if (matchMedia('(hover: none)').matches) return;
     const element = target(event.target);
     if (!element) return;
     if (element === shown) return;

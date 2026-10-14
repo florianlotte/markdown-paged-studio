@@ -162,7 +162,7 @@ const TRANSLATIONS = {
     'This file could not be formatted: {error}': 'Ce fichier n’a pas pu être mis en forme : {error}',
     'File name': 'Nom du fichier',
     chapter: 'chapitre',
-    'Remove {name} and its text from the document?': 'Retirer {name} et son texte du document ?',
+    '{name} removed from the document': '{name} retiré du document',
     '{name}: right-click for the actions, double-click to rename, drag to move':
       '{name} : clic droit pour les actions, double-clic pour renommer, glisser pour déplacer',
     'All the files': 'Tous les fichiers',

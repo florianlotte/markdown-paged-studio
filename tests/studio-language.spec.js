@@ -75,6 +75,17 @@ test('the interface switches to French and back, and remembers the choice', asyn
   await page.locator('#fileTabs .file-tab').first().click({ button: 'right' });
   await expect(page.locator('#fileMenu [role="menuitem"] .menu-label')).toHaveText(['Renommer', 'Télécharger']);
   await page.keyboard.press('Escape');
+  // A removed file and its toast; the drawer of a phone names itself.
+  await page.locator('#addFile').click();
+  await page.locator('#fileTabs .file-tab').nth(1).locator('.file-close').click();
+  await expect(toast(page)).toHaveText('chapitre.md retiré du document');
+  await expect(toastAction(page)).toHaveText('Annuler');
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.locator('#toggleSidebar').click();
+  await expect(page.locator('#sidebar')).toHaveAttribute('aria-label', 'Réglages');
+  await expect(page.locator('#importEntry strong')).toHaveText('Importer…');
+  await page.keyboard.press('Escape');
+  await page.setViewportSize({ width: 1400, height: 900 });
   await expect(page.locator('#showShortcuts strong')).toContainText('Raccourcis clavier');
   await expect(page.locator('#showWelcome strong')).toHaveText('Visite guidée');
   await page.locator('#moreMenu').click();

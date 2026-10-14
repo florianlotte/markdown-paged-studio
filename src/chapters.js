@@ -19,6 +19,7 @@ import { keys } from './shortcuts.js';
 let active = 0;
 let documentChanged = () => {};
 let downloadFile = () => {};
+let fileRemoved = () => {};
 let dragged = null;
 
 const strip = () => document.getElementById('fileTabs');
@@ -95,13 +96,22 @@ function move(index, to) {
   commit();
 }
 
+// Removes at once; the toast of ui.js offers to undo. The same file object comes back at its place, so the
+// editor finds its state and its history again (src/editor.js keeps one per object).
 function remove(index) {
-  const file = state.files[index];
   if (state.files.length < 2) return;
-  if (file.markdown.trim() && !confirm(t('Remove {name} and its text from the document?', { name: file.name }))) return;
-  state.files.splice(index, 1);
+  const [file] = state.files.splice(index, 1);
   showFile(Math.min(index === active ? index : state.files.indexOf(currentFile()), state.files.length - 1));
+  // Removed from the keyboard, the focus stays on the strip rather than falling to the page.
+  if (document.activeElement === document.body) strip().querySelector('.file-tab.active')?.focus();
   commit();
+  fileRemoved(file, () => {
+    if (state.files.includes(file)) return;
+    const at = Math.min(index, state.files.length);
+    state.files.splice(at, 0, file);
+    showFile(at);
+    commit();
+  });
 }
 
 // ---- The popup menu of the strip: the actions of a file (right-click or Shift+F10 on its tab) and, when
@@ -445,10 +455,12 @@ export function revealDocumentLine(line) {
 }
 
 // Creates the editor and the tabs. `onChange()` runs after every change of the document; `onScroll()` and
-// `onImageFiles(files, kind)` come from the editor; `onDownload(file)` saves a file from the menu of its tab.
-export function initChapters(host, { onChange, onScroll, onImageFiles, onDownload }) {
+// `onImageFiles(files, kind)` come from the editor; `onDownload(file)` saves a file from the menu of its tab;
+// `onRemove(file, restore)` tells that a file was removed, with the function that puts it back.
+export function initChapters(host, { onChange, onScroll, onImageFiles, onDownload, onRemove }) {
   documentChanged = onChange;
   downloadFile = onDownload;
+  fileRemoved = onRemove;
   bindMenu();
   bindOverflow();
   initEditor(host, { onChange: commit, onScroll, onImageFiles });

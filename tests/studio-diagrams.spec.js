@@ -153,6 +153,60 @@ test('a clicked diagram keeps its tools until another click or Escape', async ({
   await expect(tools).toBeHidden();
 });
 
+test.describe('on a touch screen', () => {
+  test.use({ hasTouch: true, viewport: { width: 390, height: 844 } });
+
+  test('a tap opens the tools of a figure, a second tap closes them, a scroll does not open them', async ({ page }) => {
+    await openDiagramDocument(page, 'Tap');
+    const diagram = page.locator('#preview .mermaid-diagram');
+    const tools = diagram.locator('.diagram-tools');
+    const handle = diagram.locator('.diagram-handle');
+    const drawing = async () => centre(await diagram.locator('> svg').boundingBox());
+    // A finger has no hover: the engine says so through the media query, which the handle size follows.
+    const hoverless = await page.evaluate(() => matchMedia('(hover: none)').matches);
+
+    // A press alone (the start of a scroll) selects nothing; the tap does.
+    await diagram.dispatchEvent('pointerdown', { pointerType: 'touch', pointerId: 2, isPrimary: true, bubbles: true });
+    await expect(diagram).not.toHaveClass(/is-selected/);
+    let point = await drawing();
+    await page.touchscreen.tap(point.x, point.y);
+    await expect(diagram).toHaveClass(/is-selected/);
+    await expect(tools).toBeVisible();
+    await expect(handle).toBeVisible();
+    if (hoverless) {
+      const box = await handle.boundingBox();
+      // 28 × 44 px, give or take the rounding of the zoom.
+      expect(box.width).toBeGreaterThanOrEqual(27);
+      expect(box.height).toBeGreaterThanOrEqual(43);
+    }
+    // The tools fit the narrow page.
+    const bar = await tools.boundingBox();
+    expect(bar.x).toBeGreaterThanOrEqual(0);
+    expect(bar.x + bar.width).toBeLessThanOrEqual(390);
+
+    // A tap on a preset writes the width and keeps the figure selected after the render.
+    const half = centre(await diagram.getByRole('button', { name: 'Width 50 %' }).boundingBox());
+    await page.touchscreen.tap(half.x, half.y);
+    await expectMarkdown(page, /```mermaid width=50%\n/);
+    await expect(page.locator('#preview')).not.toHaveClass(/is-stale/);
+    await expect(diagram).toHaveClass(/is-selected/);
+    await expect(tools).toBeVisible();
+
+    // A second tap on the figure closes its tools; a tap on the text does too.
+    point = await drawing();
+    await page.touchscreen.tap(point.x, point.y);
+    await expect(diagram).not.toHaveClass(/is-selected/);
+    if (hoverless) await expect(tools).toBeHidden();
+    point = await drawing();
+    await page.touchscreen.tap(point.x, point.y);
+    await expect(diagram).toHaveClass(/is-selected/);
+    // The heading above is under the tools bar: the page below the figure is free.
+    const box = await diagram.boundingBox();
+    await page.touchscreen.tap(box.x + box.width / 2, box.y + box.height + 40);
+    await expect(diagram).not.toHaveClass(/is-selected/);
+  });
+});
+
 test('HTML tags in diagram labels are formatted or dropped', async ({ page }) => {
   await openFreshStudio(page);
   await setMarkdown(

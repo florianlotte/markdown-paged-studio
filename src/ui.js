@@ -635,11 +635,12 @@ function exportPdf({ project }) {
 function bindMenu(buttonId, menuId, actions) {
   const arrow = document.getElementById(buttonId);
   const menu = document.getElementById(menuId);
-  const items = [...menu.querySelectorAll('[role="menuitem"]')];
+  // The entries shown at this width (an entry may exist on a phone only), read once the menu is open.
+  const items = () => [...menu.querySelectorAll('[role="menuitem"]')].filter(item => item.getClientRects().length);
   const open = () => {
     menu.hidden = false;
     arrow.setAttribute('aria-expanded', 'true');
-    items[0].focus();
+    items()[0].focus();
   };
   const close = ({ focus = false } = {}) => {
     if (menu.hidden) return;
@@ -649,13 +650,14 @@ function bindMenu(buttonId, menuId, actions) {
   };
   arrow.addEventListener('click', () => (menu.hidden ? open() : close()));
   menu.addEventListener('keydown', event => {
-    const index = items.indexOf(document.activeElement);
+    const shown = items();
+    const index = shown.indexOf(document.activeElement);
     if (event.key === 'Escape') {
       event.preventDefault();
       close({ focus: true });
     } else if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
       event.preventDefault();
-      items[(index + (event.key === 'ArrowDown' ? 1 : items.length - 1)) % items.length].focus();
+      shown[(index + (event.key === 'ArrowDown' ? 1 : shown.length - 1)) % shown.length].focus();
     }
   });
   document.addEventListener('pointerdown', event => {
@@ -686,7 +688,12 @@ function bindPdf() {
     exportArchive: guarded(exportArchive, 'Export failed: {error}'),
     exportProject,
   });
-  bindMenu('moreMenu', 'moreOptions', { showWelcome, showShortcuts, resetDocument });
+  bindMenu('moreMenu', 'moreOptions', {
+    importEntry: () => document.getElementById('importFile').click(),
+    showWelcome,
+    showShortcuts,
+    resetDocument,
+  });
 
   if (window.desktop) {
     // File menu entries of the desktop app.
@@ -954,6 +961,13 @@ export function initUi() {
     onScroll: editorScrolled,
     onImageFiles: addEditorImages,
     onDownload: file => download(file.name, file.markdown, 'text/markdown;charset=utf-8'),
+    // A removed file comes back from its toast for a moment, like a reset document.
+    onRemove: (file, restore) =>
+      toast(t('{name} removed from the document', { name: file.name }), {
+        action: t('Undo'),
+        run: restore,
+        duration: UNDO_MS,
+      }),
   });
   initSync();
   document.getElementById('syncScroll').addEventListener('click', () => {

@@ -687,6 +687,10 @@ button:hover {
 .menu[hidden] {
   display: none;
 }
+/* Entries of a menu that only exist on a phone (Import…, when its button has left the toolbar). */
+.phone-only {
+  display: none;
+}
 .toolbar-actions .menu button,
 .insert-menu .menu button {
   display: grid;
@@ -703,18 +707,41 @@ button:hover {
   white-space: normal;
   font-weight: 500;
 }
-/* A notice under the toolbar: something the user must know once, with a button to put it away. */
-.notice {
+/* A notice under the toolbar: something the user must know once, with a button to put it away. A wrapper
+   of no height sits where the notices were in the flow, so they lie over the top of the workbench without
+   moving it; under the toolbar's own layer, so its menus drop over them. */
+.notices {
+  position: relative;
+  z-index: 4;
+  height: 0;
   flex-shrink: 0;
+}
+.notice-stack {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 14px;
+  pointer-events: none;
+}
+.notice {
+  pointer-events: auto;
+  display: flex;
+  align-items: flex-start;
   gap: 14px;
   padding: 10px 14px;
-  border-bottom: 1px solid var(--warning-border);
+  border: 1px solid var(--warning-border);
+  border-radius: 10px;
   background: var(--warning-bg);
   color: var(--warning-text);
   font-size: 13px;
   line-height: 1.45;
+  box-shadow: 0 10px 30px var(--shadow-menu);
+  max-height: min(40vh, 240px);
+  overflow: auto;
 }
 .notice[hidden] {
   display: none;
@@ -725,6 +752,8 @@ button:hover {
 }
 .notice button {
   flex-shrink: 0;
+  position: sticky;
+  top: 0;
 }
 /* The lock while a PDF is written: an overlay over the whole studio, the app itself made inert. */
 .busy {
@@ -1477,28 +1506,40 @@ kbd {
   .theme-switch svg {
     display: none;
   }
+  /* One row: the sidebar toggle, the page count, Edit | View, then Export and the ⋯ menu. Split needs room
+     (the phone switches between Edit and View), the pages are fit to the width in one column (the layout
+     and zoom groups are hidden), and Import… lives in the ⋯ menu. */
   .toolbar {
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     gap: 8px;
     padding: 8px 10px;
   }
-  /* Split needs room: the phone switches between Edit and View. The mode group joins the title on the
-     first row, the layout and zoom groups take the second. */
-  #modeSplit {
+  .toolbar-title {
+    min-width: 0;
+  }
+  .toolbar #status {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  #modeSplit,
+  .view-layout,
+  .view-zoom,
+  #import {
     display: none;
   }
   .view-controls {
     display: contents;
   }
-  .toolbar-actions {
-    width: 100%;
-    justify-content: flex-start;
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    padding-bottom: 2px;
-    scrollbar-width: thin;
+  .phone-only {
+    display: block;
   }
-  /* The scrolling actions would clip the menu: fixed to the toolbar, it drops under the whole bar. */
+  .toolbar-actions {
+    margin-left: auto;
+    flex-wrap: nowrap;
+  }
+  /* Dropped under the whole bar: `fixed` resolves against the toolbar, whose backdrop-filter makes it the
+     containing block of its fixed descendants (keep that property). */
   .toolbar-actions .menu {
     position: fixed;
     top: 100%;
@@ -1513,8 +1554,16 @@ kbd {
   .toolbar-actions button {
     flex-shrink: 0;
   }
+  .notice-stack {
+    padding: 8px 10px;
+  }
   .preview-shell {
     padding: 10px;
+  }
+  /* The tools of a figure wrap inside the narrow page (the bar grows upward). */
+  .preview .diagram-tools {
+    flex-wrap: wrap;
+    max-width: calc(100vw - 28px);
   }
   .preview .pagedjs_pages {
     gap: 12px;
@@ -1598,7 +1647,6 @@ kbd {
 .preview .resizable {
   position: relative;
 }
-.preview .resizable:hover > :is(svg, img),
 .preview .resizable:focus-within > :is(svg, img),
 .preview .resizable.is-resizing > :is(svg, img) {
   outline: 1px dashed #4263eb;
@@ -1622,8 +1670,6 @@ kbd {
   zoom: calc(1 / var(--view-zoom, 1));
   font-family: Inter, ui-sans-serif, system-ui, sans-serif;
 }
-.preview .resizable:hover > .diagram-tools,
-.preview .resizable:hover > .diagram-handle,
 .preview .resizable:focus-within > .diagram-tools,
 .preview .resizable:focus-within > .diagram-handle,
 .preview .resizable.is-resizing > .diagram-handle,
@@ -1632,6 +1678,30 @@ kbd {
   visibility: visible;
   opacity: 1;
   transition-delay: 0s;
+}
+/* With a mouse the tools show on hover too. A finger has no hover (a tap would leave it stuck on the
+   figure): the tap selects, and a second tap closes (see src/resize-controls.js). */
+@media (hover: hover) {
+  .preview .resizable:hover > :is(svg, img) {
+    outline: 1px dashed #4263eb;
+    outline-offset: 2px;
+  }
+  .preview .resizable:hover > .diagram-tools,
+  .preview .resizable:hover > .diagram-handle {
+    visibility: visible;
+    opacity: 1;
+    transition-delay: 0s;
+  }
+}
+@media (hover: none) {
+  /* No grace delay to wait for, a handle wide enough to hit, no image callout on a long press. */
+  .preview .diagram-tools,
+  .preview .diagram-handle {
+    transition: none;
+  }
+  .preview .resizable > img {
+    -webkit-touch-callout: none;
+  }
 }
 /* Invisible bridge over the gap between the toolbar and the diagram: crossing it keeps the hover. */
 .preview .diagram-tools::after {
@@ -1693,6 +1763,15 @@ kbd {
 }
 .preview .diagram-handle:focus-visible {
   outline: 2px solid #4263eb;
+}
+/* A handle wide enough for a finger. */
+@media (hover: none) {
+  .preview .diagram-handle {
+    width: 28px;
+    height: 44px;
+    margin: -22px 0 0 -14px;
+    border-radius: 10px;
+  }
 }
 .preview .diagram-handle[data-value]::after {
   content: attr(data-value);

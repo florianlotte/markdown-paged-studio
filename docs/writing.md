@@ -29,7 +29,7 @@ A document can be written as several Markdown files, one tab each above the edit
 | Add existing files | The folder button next to it: pick one or several `.md` files, each becomes a file of its own name |
 | Rename             | Double-click the tab, or F2                                                                        |
 | Move               | Drag the tab, or Alt + Left / Right                                                                |
-| Remove             | The **×** of the tab, or Delete; a file that holds text asks for a confirmation                    |
+| Remove             | The **×** of the tab, or Delete; the toast offers **Undo** for ten seconds                         |
 | Switch             | Click, or Left / Right, Home, End on the tabs; Enter goes to the editor                            |
 
 Each file keeps its own undo history and its place in the editor. A change made from the preview goes to the file that holds the source, shown or not. Footnote labels and link references are shared by the whole document: give them different names in different files.

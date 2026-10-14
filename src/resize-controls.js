@@ -54,6 +54,8 @@ let listening = false;
 // Key of the element whose handle was driven from the keyboard: the render that follows replaces the
 // handle, and the new one takes the focus so the arrow keys can go on.
 let keyboardKey = null;
+// How the last press was made (`mouse`, `pen`, `touch`): a finger selects on the tap, not on the press.
+let lastPointerType = 'mouse';
 
 function applySelection(preview) {
   for (const element of preview.querySelectorAll('.resizable')) {
@@ -74,14 +76,27 @@ function listenForDeselection(preview) {
     keyboardKey = null;
     select(preview, null);
   };
-  (preview.closest('.preview-shell') ?? preview).addEventListener('pointerdown', event => {
-    if (!event.target.closest('.resizable')) clear();
+  const shell = preview.closest('.preview-shell') ?? preview;
+  const outside = event => !event.target.closest('.resizable');
+  // A finger pressed outside may be starting a scroll: it closes the tools on the tap itself.
+  shell.addEventListener('pointerdown', event => {
+    if (event.pointerType !== 'touch' && outside(event)) clear();
+  });
+  shell.addEventListener('click', event => {
+    if (lastPointerType === 'touch' && outside(event)) clear();
   });
   document.addEventListener('keydown', event => {
     if (event.key === 'Escape' && selectedKey !== null) clear();
   });
-  // Any click ends the keyboard session of a handle.
-  document.addEventListener('pointerdown', () => (keyboardKey = null), true);
+  // Any press ends the keyboard session of a handle, and says how it was made.
+  document.addEventListener(
+    'pointerdown',
+    event => {
+      keyboardKey = null;
+      lastPointerType = event.pointerType || 'mouse';
+    },
+    true,
+  );
 }
 
 // The elements the studio adds to the pages, which exports and the source lookup leave out.
@@ -272,7 +287,15 @@ function enhance(diagram, target, commit, onSelect) {
     if (event.relatedTarget) keyboardKey = null;
   });
 
-  diagram.addEventListener('pointerdown', onSelect);
+  // Mouse and pen select on the press. A finger may be starting a scroll: it selects on the tap itself
+  // (a click, which a scroll never fires), and a tap on the selected figure closes its tools.
+  const onTool = node => node.closest('.diagram-tools, .diagram-handle');
+  diagram.addEventListener('pointerdown', event => {
+    if (event.pointerType !== 'touch') onSelect();
+  });
+  diagram.addEventListener('click', event => {
+    if (lastPointerType === 'touch' && !onTool(event.target)) onSelect({ toggle: true });
+  });
   // Selecting an image that is inside a link must not follow the link.
   if (diagram.closest('a')) diagram.addEventListener('click', event => event.preventDefault());
   diagram.classList.add('resizable');
@@ -315,7 +338,7 @@ export function enhanceResizables(preview, getMarkdown, applyMarkdown) {
           select(preview, key);
           applyMarkdown(target.rewrite(getMarkdown(), data, changes));
         },
-        () => select(preview, key),
+        ({ toggle = false } = {}) => select(preview, toggle && selectedKey === key ? null : key),
       );
     }
   }

@@ -677,12 +677,15 @@ test('where the pages cannot be drawn, Export opens the print dialog inside the 
   await expect(notice).toBeHidden();
 
   await stubPrintWindow(page);
+  const bench = await page.locator('.workbench').boundingBox();
   await page.locator('#exportDefault').click();
   // The window opened in the click itself, before anything was awaited, then received the document.
   expect(await page.evaluate(() => window.__print.opened)).toBe(1);
   await expect.poll(() => page.evaluate(() => window.__print.url)).toMatch(/^blob:/);
   await expect(toast(page)).toHaveText('Print dialog opened: this PDF does not carry the project');
   await expect(notice).toBeVisible();
+  // The notice lies over the workbench: nothing moved.
+  expect(await page.locator('.workbench').boundingBox()).toEqual(bench);
   await expect(notice).toContainText('use HTML with project, Markdown with project or Markdown files (zip)');
   await expect(page.locator('#busy')).toBeHidden();
 
@@ -731,8 +734,16 @@ test('a full browser storage is reported once, in the banner, and the studio kee
       throw new DOMException('Quota exceeded', 'QuotaExceededError');
     };
   });
+  const bench = await page.locator('.workbench').boundingBox();
+  const editor = await page.locator('#markdown').boundingBox();
   await appendMarkdown(page, '\n\nMore text.\n');
   await expect(notice(page)).toHaveText('Autosave failed: the browser storage is full or disabled');
+  await expect(page.locator('#notice')).toHaveAttribute('role', 'alert');
+  // The banner lies over the top of the workbench, under the toolbar: the editor and the pages stay put.
+  expect(await page.locator('.workbench').boundingBox()).toEqual(bench);
+  expect(await page.locator('#markdown').boundingBox()).toEqual(editor);
+  const bar = await page.locator('.toolbar').boundingBox();
+  expect((await page.locator('#notice').boundingBox()).y).toBeGreaterThanOrEqual(bar.y + bar.height - 1);
   // The row of the tabs says it too, and stays red after the banner is closed.
   await expect(page.locator('#saveState')).toHaveText('Not saved: the browser storage is full or disabled');
   await expect(page.locator('#saveState')).toHaveClass(/is-failed/);

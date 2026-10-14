@@ -71,13 +71,13 @@ Done: a shadow on the side where tabs are hidden, the wheel scrolls the strip si
 
 The focus ring of the fields was at 1.7:1 on white and 2.1:1 in the dark theme, under the 3:1 of WCAG 2.2; the focus colour itself at 2.8:1; the line numbers of the editor at 2.6:1. No `prefers-reduced-motion`.
 
-Done: the focus colours are at 3:1 or more on every surface (4.3:1 to 5:1 in the light theme, 4.7:1 to 5.8:1 in the dark one), the line numbers at 3.6:1, the literals of the preview tools follow; under `prefers-reduced-motion` nothing sweeps or spins. Still open: the banner shifts the whole layout when it appears.
+Done: the focus colours are at 3:1 or more on every surface (4.3:1 to 5:1 in the light theme, 4.7:1 to 5.8:1 in the dark one), the line numbers at 3.6:1, the literals of the preview tools follow; under `prefers-reduced-motion` nothing sweeps or spins. The banner now lies over the top of the workbench, under the toolbar, and moves nothing.
 
-### 11. Phones — open
+### 11. Phones — done
 
 The reading view works, but the toolbar takes three rows, a fifth of the screen, and the preview tools only exist on hover.
 
-Proposed: a reduced bar (mode, Export, ⋯) and tools opened by a tap on a figure.
+Done: under 760 px the toolbar is one row (sidebar toggle, page count, Edit | View, Export, ⋯ where Import… lives); the pages are fit in one column there, whatever the layout and zoom remembered for the desktop; a tap on a figure opens its tools and a second tap closes them, with a handle sized for a finger; the settings drawer is a modal dialog (focus inside, Escape closes, focus back on the toggle). Also done from the roadmap: a removed file comes back from its toast instead of asking a native confirmation.
 
 ### 12. Wording — done
 
@@ -90,4 +90,4 @@ The card "Pagination: computed by Paged.js" was jargon without an action: replac
 | Quick fixes        | Responsive toolbar (1), Reset in a menu with Undo (3), stable page count and toasts (5), CSS buttons above the field (9), focus at 3:1 and reduced motion (10), Pagination card (12) | 1 to 2 days | done  |
 | Discoverability    | Context menu of the file tabs, tooltips on focus with the shortcuts, Shortcuts panel, autosave indicator, overflow shadows (4, 6, 8)                                                 | 2 to 3 days | done  |
 | Settings           | Grouping by intent, logo drop zone, date picker, margin presets, Insert menu (2, 7, 9)                                                                                               | 3 to 5 days | done  |
-| Phones and preview | Reduced bar, tools on tap, banner without layout shift (10, 11)                                                                                                                      | 2 days      | open  |
+| Phones and preview | Reduced bar, tools on tap, banner without layout shift (10, 11)                                                                                                                      | 2 days      | done  |

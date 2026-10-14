@@ -81,11 +81,10 @@ function pageNaturalWidth() {
   return page.getBoundingClientRect().width / currentZoom;
 }
 
-function fitZoom() {
+function fitZoom(columns) {
   const shell = document.querySelector('.preview-shell');
   const pageWidth = pageNaturalWidth();
   if (!pageWidth) return view.zoom;
-  const columns = view.layout === 'spread' ? 2 : 1;
   const shellStyle = getComputedStyle(shell);
   const available = shell.clientWidth - parseFloat(shellStyle.paddingLeft) - parseFloat(shellStyle.paddingRight);
   // The preview is hidden (Edit mode): keep the zoom instead of fitting into nothing.
@@ -101,6 +100,13 @@ export function effectiveMode() {
   return NARROW.matches && view.mode === 'split' ? 'view' : view.mode;
 }
 
+// The phone has no layout nor zoom controls: one column, fit to the width, whatever the saved view (which
+// the desktop finds again).
+const effectiveLayout = () => (NARROW.matches ? 'single' : view.layout);
+
+// The open sidebar is a modal drawer on a phone.
+const drawerOpen = () => NARROW.matches && view.sidebar;
+
 // Applies the mode, the editor width, the layout and the zoom to the workbench and the controls. Must run
 // after every successful render.
 export function applyView() {
@@ -109,6 +115,17 @@ export function applyView() {
   toggle.setAttribute('aria-expanded', String(view.sidebar));
   toggle.setAttribute('aria-label', t(view.sidebar ? 'Hide sidebar' : 'Show sidebar'));
   toggle.title = toggle.getAttribute('aria-label');
+  // On a phone the open sidebar is a modal drawer: the workspace behind it is inert and the aside says so.
+  const aside = document.getElementById('sidebar');
+  const drawer = drawerOpen();
+  document.querySelector('main.workspace').inert = drawer;
+  if (drawer) {
+    aside.setAttribute('role', 'dialog');
+    aside.setAttribute('aria-modal', 'true');
+    aside.setAttribute('aria-label', t('Settings'));
+  } else {
+    for (const name of ['role', 'aria-modal', 'aria-label']) aside.removeAttribute(name);
+  }
   const workbench = document.querySelector('.workbench');
   const mode = effectiveMode();
   workbench.dataset.mode = mode;
@@ -124,11 +141,14 @@ export function applyView() {
   splitter.setAttribute('aria-label', t('Editor width'));
   splitter.title = t('Drag to resize the editor (arrow keys: 2 % steps, double-click: half)');
   const preview = document.getElementById('preview');
-  preview.dataset.layout = view.layout;
-  if (view.fit) view.zoom = fitZoom();
-  preview.style.zoom = String(view.zoom);
-  preview.style.setProperty('--view-zoom', String(view.zoom));
-  document.getElementById('zoomValue').textContent = `${Math.round(view.zoom * 100)} %`;
+  const layout = effectiveLayout();
+  preview.dataset.layout = layout;
+  const fit = view.fit || NARROW.matches;
+  const zoom = fit ? fitZoom(layout === 'spread' ? 2 : 1) : view.zoom;
+  if (view.fit) view.zoom = zoom;
+  preview.style.zoom = String(zoom);
+  preview.style.setProperty('--view-zoom', String(zoom));
+  document.getElementById('zoomValue').textContent = `${Math.round(zoom * 100)} %`;
   const single = view.layout === 'single';
   document.getElementById('layoutSingle').classList.toggle('active', single);
   document.getElementById('layoutSingle').setAttribute('aria-pressed', String(single));
@@ -236,8 +256,12 @@ function bindModeShortcuts() {
 
 // Shows or hides the settings sidebar; in fit mode the ResizeObserver then refits the pages.
 export function toggleSidebar() {
+  const wasDrawer = drawerOpen();
   view.sidebar = !view.sidebar;
   applyView();
+  // The drawer takes the focus when it opens and gives it back to the toggle when it closes.
+  if (drawerOpen()) document.getElementById('closeSidebar').focus();
+  else if (wasDrawer) document.getElementById('toggleSidebar').focus();
 }
 
 // Restores the saved view and wires the toolbar controls, the splitter, the shortcuts, Ctrl + wheel and the
@@ -259,6 +283,14 @@ export function initView() {
   }
   bindSplitter();
   bindModeShortcuts();
+  // Escape closes the drawer. The shortcuts and welcome dialogs are native <dialog>s with their own Escape,
+  // and the Escape that closes an open <select> list bubbles in Firefox.
+  document.addEventListener('keydown', event => {
+    if (event.key !== 'Escape' || !drawerOpen() || document.querySelector('dialog[open]')) return;
+    if (event.target.matches?.('select')) return;
+    event.preventDefault();
+    toggleSidebar();
+  });
   // Crossing the phone breakpoint changes the effective mode without any resize of the preview. The sidebar
   // becomes a full-screen drawer there: it closes when the window narrows, and comes back as it was (or
   // stays open if it was opened meanwhile) when the window grows.

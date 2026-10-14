@@ -17,6 +17,8 @@ import {
   setMarkdown,
   status,
   STATUS_DONE,
+  toast,
+  toastAction,
 } from './helpers/studio.mjs';
 
 const tabs = page => page.locator('#fileTabs .file-tab');
@@ -29,7 +31,6 @@ test('a document is written as several files: added, renamed, moved, removed, ea
   page,
 }) => {
   await openDocument(page, '# One\n\nFirst.\n', 'One');
-  page.on('dialog', dialog => dialog.accept());
   await expect(names(page)).toHaveText(['document.md']);
   // A single file cannot be removed.
   await expect(page.locator('#fileTabs .file-close')).toHaveCount(0);
@@ -96,9 +97,11 @@ test('a document is written as several files: added, renamed, moved, removed, ea
   await expect(names(page)).toHaveText(['document.md', 'document-2.md']);
   await expect(headings(page)).toHaveText(['One', 'Two']);
 
-  // Removed after a confirmation: the document is one file again.
+  // Removed at once, with a toast to undo: the document is one file again.
   await tabs(page).nth(1).locator('.file-close').click();
   await expect(names(page)).toHaveText(['document.md']);
+  await expect(toast(page)).toHaveText('document-2.md removed from the document');
+  await expect(toastAction(page)).toHaveText('Undo');
   await expectMarkdown(page, '# One\n\nFirst.\nAdded to one.');
   await expect(headings(page)).toHaveText(['One']);
 });
@@ -151,7 +154,6 @@ test('the files travel with the project and the Markdown export, a plain Markdow
   await page.locator('#title').fill('My report');
   const [alone] = await Promise.all([page.waitForEvent('download'), page.locator('#downloadMarkdown').click()]);
   expect(savedAs(alone)).toBe('My report.md');
-  page.on('dialog', dialog => dialog.accept());
   await page.locator('#chapterFiles').setInputFiles([md('two.md', '# Two\n\nSecond.\n')]);
   await expect(names(page)).toHaveText(['document.md', 'two.md']);
   const assembled = '# One\n\nFirst.\n\n\n# Two\n\nSecond.\n';
@@ -192,7 +194,6 @@ test('the archive export holds the files, the stylesheet and the images, and reo
   page,
 }) => {
   await openDocument(page, '# One\n\n![Plan](plan.png)\n', 'One');
-  page.on('dialog', dialog => dialog.accept());
   await page.locator('#imageFiles').setInputFiles({ name: 'plan.png', mimeType: 'image/png', buffer: png(40, 30) });
   await page.locator('#chapterFiles').setInputFiles([md('two.md', '# Two\n\nSecond.\n')]);
   await page.locator('#title').fill('Zipped');
@@ -246,17 +247,29 @@ test('the archive export holds the files, the stylesheet and the images, and reo
   await expect(notice(page)).toHaveText('This file could not be opened: this archive holds no Markdown file');
 });
 
-test('closing a file can be declined, a rename can be cancelled, and the tabs answer Alt+Right, Home and End', async ({
+test('a removed file comes back from its toast with its history, a rename can be cancelled, and the tabs answer Alt+Right, Home and End', async ({
   page,
 }) => {
   await openDocument(page, '# One\n\nFirst.\n', 'One');
   await page.locator('#addFile').click();
   await setMarkdown(page, '# Two\n\nSecond.\n');
   await expect(names(page)).toHaveText(['document.md', 'chapter.md']);
-  // Declined: the file stays.
-  page.once('dialog', dialog => dialog.dismiss());
+  await expect(headings(page)).toHaveText(['One', 'Two']);
+  // Removed, then undone from the toast: the file is back at its place, text and history included.
   await tabs(page).nth(1).locator('.file-close').click();
+  await expect(names(page)).toHaveText(['document.md']);
+  await expect(headings(page)).toHaveText(['One']);
+  await expect(toast(page)).toHaveText('chapter.md removed from the document');
+  await toastAction(page).click();
   await expect(names(page)).toHaveText(['document.md', 'chapter.md']);
+  await expect(tabs(page).nth(1)).toHaveAttribute('aria-selected', 'true');
+  expect(await editorText(page)).toBe('# Two\n\nSecond.\n');
+  await expect(headings(page)).toHaveText(['One', 'Two']);
+  await focusEditor(page);
+  await page.keyboard.press('Control+z');
+  expect(await editorText(page)).toBe('');
+  await page.keyboard.press('Control+Shift+Z');
+  expect(await editorText(page)).toBe('# Two\n\nSecond.\n');
   // Escape leaves the name as it was.
   await tabs(page).nth(1).press('F2');
   await page.locator('.file-rename').fill('other');
@@ -333,11 +346,11 @@ test('the menu of a tab renames, moves, downloads and removes the file; the stri
   ]);
   expect(savedAs(download)).toBe('annex.md');
   expect(readFileSync(await download.path(), 'utf8')).toBe('# Two\n\nSecond.\n');
-  // Remove, confirmed.
-  page.once('dialog', dialog => dialog.accept());
+  // Remove: at once, with a toast.
   await tabs(page).nth(0).click({ button: 'right' });
   await menu.getByRole('menuitem', { name: 'Remove' }).click();
   await expect(names(page)).toHaveText(['document.md']);
+  await expect(toast(page)).toHaveText('annex.md removed from the document');
   // A single file has no Remove entry; a click elsewhere closes the menu.
   await tabs(page).nth(0).click({ button: 'right' });
   await expect(entries).toHaveText(['Rename', 'Download']);
