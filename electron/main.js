@@ -128,6 +128,7 @@ const MENU_FR = {
   'Print…': 'Imprimer…',
   View: 'Affichage',
   'Toggle Sidebar': 'Afficher ou masquer la barre latérale',
+  'Toggle Outline': 'Afficher ou masquer le plan',
   Theme: 'Thème',
   Auto: 'Auto',
   Light: 'Clair',
@@ -184,6 +185,11 @@ function buildMenu() {
         },
         { type: 'separator' },
         { label: label('Toggle Sidebar'), accelerator: 'CmdOrCtrl+B', click: () => sendCommand('toggle-sidebar') },
+        {
+          label: label('Toggle Outline'),
+          accelerator: 'CmdOrCtrl+Shift+O',
+          click: () => sendCommand('toggle-outline'),
+        },
         {
           label: label('Theme'),
           // The page remembers the choice; the menu only sends it.

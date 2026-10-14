@@ -3,6 +3,7 @@
 // presets and the "same on all sides" box, and the logo zone (drop, choose, replace, remove). None of it adds
 // a state key: the groups remember their fold in localStorage, the rest writes the existing keys.
 import { LANGUAGE_TAG, sanitizeConfig, state } from './config.js';
+import { syncCssEditor } from './css-editor.js';
 import { currentLanguage, onLanguageChange, t } from './i18n.js';
 import { findImage, listImages, MAX_LOGO_WIDTH, missingImages, onImagesChange, prepareImage } from './images.js';
 import { notify } from './notices.js';
@@ -252,6 +253,7 @@ export function syncSettings() {
   syncLanguage();
   syncMargins();
   syncLogo();
+  syncCssEditor();
 }
 
 export function initSettings() {

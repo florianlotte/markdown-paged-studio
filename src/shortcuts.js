@@ -67,6 +67,7 @@ function groups({ desktop }) {
       line(t('Next or previous match'), 'F3', 'Shift+F3'),
       line(t('Select the next occurrence'), 'Ctrl+D'),
       line(t('Go to a line'), 'Ctrl+Alt+G'),
+      line(t('Outline of the headings'), 'Ctrl+Shift+O'),
       line(t('Undo or redo'), 'Ctrl+Z', 'Ctrl+Shift+Z'),
     ],
     [

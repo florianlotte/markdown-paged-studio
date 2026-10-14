@@ -18,16 +18,18 @@ export function menuKeydown(event, items, close) {
 
 // A menu under a toolbar button (the arrow next to Export, the "more" button): Escape, a click elsewhere or
 // leaving it closes it; the arrow keys move between its entries; `actions` maps the id of an entry to what
-// it does.
-export function bindMenu(buttonId, menuId, actions) {
+// it does. A menu filled at each opening (the problems of the render) gives `onOpen`, and closes its own
+// entries with the `close` returned.
+export function bindMenu(buttonId, menuId, actions = {}, { onOpen = () => {} } = {}) {
   const arrow = document.getElementById(buttonId);
   const menu = document.getElementById(menuId);
   // The entries shown at this width (an entry may exist on a phone only), read once the menu is open.
   const items = () => [...menu.querySelectorAll('[role="menuitem"]')].filter(item => item.getClientRects().length);
   const open = () => {
+    onOpen();
     menu.hidden = false;
     arrow.setAttribute('aria-expanded', 'true');
-    items()[0].focus();
+    items()[0]?.focus();
   };
   const close = ({ focus = false } = {}) => {
     if (menu.hidden) return;
@@ -51,4 +53,5 @@ export function bindMenu(buttonId, menuId, actions) {
       action();
     });
   }
+  return { open, close };
 }

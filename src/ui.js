@@ -3,8 +3,9 @@
 // The form is in form.js, the exports in exports.js, the image library in image-library.js.
 import { activeFile, addEmptyFile, addFiles, initChapters, replaceActiveText } from './chapters.js';
 import { clearStoredConfig, DEFAULTS, onPersist, onStorageFailure, state } from './config.js';
+import { initCssEditor, setCss } from './css-editor.js';
 import { clearImages, onImageStorageFailure } from './images.js';
-import { writeFile } from './editor.js';
+import { focusEditor, writeFile } from './editor.js';
 import {
   bindExports,
   download,
@@ -31,6 +32,8 @@ import {
 } from './image-library.js';
 import { bindMenu } from './menu.js';
 import { guarded, notify, toast } from './notices.js';
+import { initOutline, outlineCursorMoved, toggleOutline } from './outline.js';
+import { initProblems } from './problems.js';
 import { refreshPreviewTools, scheduleRender } from './render.js';
 import { initSettings } from './settings.js';
 import { decorateMenus, initShortcuts, showShortcuts } from './shortcuts.js';
@@ -38,7 +41,7 @@ import { alignPreview, editorScrolled, initSync } from './sync.js';
 import { currentTheme, onThemeChange, setTheme } from './theme.js';
 import { initTooltips } from './tooltip.js';
 import { APP_COMMIT, APP_VERSION, COMMIT_URL, RELEASE_URL, REPOSITORY_URL } from './version.js';
-import { applyView, setMode, toggleSidebar, toggleSync } from './view.js';
+import { applyView, revealEditor, setMode, toggleSidebar, toggleSync } from './view.js';
 import { initWelcome, showWelcome } from './welcome.js';
 
 // The text of the file chosen in `input`, given to `callback`; a failure, of the reading or of the callback,
@@ -174,18 +177,12 @@ function bindFiles() {
   );
 
   document.getElementById('loadCss').addEventListener('click', () => document.getElementById('cssFile').click());
-  document.getElementById('cssFile').addEventListener('change', e =>
-    readTextFile(e.target, text => {
-      state.customCss = text;
-      document.getElementById('customCss').value = text;
-      scheduleRender();
-    }),
-  );
-
-  document.getElementById('resetCss').addEventListener('click', () => {
-    state.customCss = DEFAULTS.customCss;
-    document.getElementById('customCss').value = DEFAULTS.customCss;
-    scheduleRender();
+  document.getElementById('cssFile').addEventListener('change', e => readTextFile(e.target, setCss));
+  document.getElementById('resetCss').addEventListener('click', () => setCss(DEFAULTS.customCss));
+  // The empty document says what to do: the button takes the user to the editor.
+  document.getElementById('startWriting').addEventListener('click', () => {
+    revealEditor();
+    focusEditor();
   });
 
   // Alone, the file is named after the title, like the PDF; among several, it keeps its own name, which tells
@@ -247,6 +244,7 @@ function bindDesktop() {
     else if (command === 'shortcuts') showShortcuts();
     else if (command === 'welcome') showWelcome();
     else if (command === 'toggle-sidebar') toggleSidebar();
+    else if (command === 'toggle-outline') toggleOutline();
     else if (command === 'mode-edit') setMode('edit');
     else if (command === 'mode-split') setMode('split');
     else if (command === 'mode-view') setMode('view');
@@ -332,10 +330,13 @@ export function initUi() {
   bindLanguage();
   bindTheme();
   bindPreviewLinks();
+  // The CSS editor exists before the form is synchronised, which writes the state into it.
+  initCssEditor();
   initChapters(document.getElementById('markdown'), {
     onChange: scheduleRender,
     onScroll: editorScrolled,
     onImageFiles: addEditorImages,
+    onCursor: outlineCursorMoved,
     onDownload: file => download(file.name, file.markdown, 'text/markdown;charset=utf-8'),
     // A removed file comes back from its toast for a moment, like a reset document.
     onRemove: (file, restore) =>
@@ -358,4 +359,6 @@ export function initUi() {
   bindDesktop();
   bindImages();
   initSettings();
+  initOutline();
+  initProblems();
 }

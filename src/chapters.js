@@ -445,15 +445,16 @@ export function revealDocumentLine(line) {
 }
 
 // Creates the editor and the tabs. `onChange()` runs after every change of the document; `onScroll()` and
-// `onImageFiles(files, kind)` come from the editor; `onDownload(file)` saves a file from the menu of its tab;
-// `onRemove(file, restore)` tells that a file was removed, with the function that puts it back.
-export function initChapters(host, { onChange, onScroll, onImageFiles, onDownload, onRemove }) {
+// `onImageFiles(files, kind)` and `onCursor()` come from the editor; `onDownload(file)` saves a file from the
+// menu of its tab; `onRemove(file, restore)` tells that a file was removed, with the function that puts it
+// back.
+export function initChapters(host, { onChange, onScroll, onImageFiles, onCursor, onDownload, onRemove }) {
   documentChanged = onChange;
   downloadFile = onDownload;
   fileRemoved = onRemove;
   bindMenu();
   bindOverflow();
-  initEditor(host, { onChange: commit, onScroll, onImageFiles });
+  initEditor(host, { onChange: commit, onScroll, onImageFiles, onCursor });
   setEditorPhrases(searchPhrases());
   setEditorPlaceholder(t(PLACEHOLDER));
   onLanguageChange(() => {

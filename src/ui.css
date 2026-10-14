@@ -309,15 +309,26 @@ textarea:focus {
   width: auto;
   margin: 0;
 }
-.editor {
-  resize: vertical;
-  min-height: 230px;
-  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
-  font-size: 12px;
-  line-height: 1.5;
-}
+/* The custom CSS: a CodeMirror view (src/css-editor.js) in a box the user can stretch. */
 .css-editor {
-  min-height: 440px;
+  height: 440px;
+  min-height: 160px;
+  resize: vertical;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+}
+.css-editor .cm-editor {
+  height: 100%;
+  border-radius: inherit;
+}
+.css-editor .cm-editor.cm-focused {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: -2px;
+}
+.css-editor .cm-scroller {
+  font-size: 12px;
 }
 .grid2 {
   display: grid;
@@ -606,6 +617,37 @@ button:hover {
   font-size: 12px;
   color: var(--text-faint);
 }
+/* The problems of the last render, next to the page count: a count that opens the list of them. */
+.problems-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 28px;
+  padding: 3px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid var(--danger-border);
+  border-radius: 999px;
+  background: var(--danger-bg);
+  color: var(--danger-text);
+}
+.problems-button[hidden] {
+  display: none;
+}
+.problems-menu {
+  left: 0;
+  right: auto;
+  min-width: 300px;
+  max-width: min(520px, calc(100vw - 20px));
+  max-height: min(60vh, 420px);
+  overflow: auto;
+}
+.problems-menu button > span {
+  overflow-wrap: anywhere;
+}
+.problems-menu button[aria-disabled='true'] {
+  cursor: default;
+}
 .toolbar-actions {
   display: flex;
   gap: 6px;
@@ -692,7 +734,8 @@ button:hover {
   display: none;
 }
 .toolbar-actions .menu button,
-.insert-menu .menu button {
+.insert-menu .menu button,
+.problems-menu button {
   display: grid;
   grid-template-columns: 1fr auto;
   gap: 2px 12px;
@@ -1037,7 +1080,8 @@ kbd {
   flex-shrink: 0;
 }
 .toolbar-actions .menu button > span,
-.insert-menu .menu button > span {
+.insert-menu .menu button > span,
+.problems-menu button > span {
   grid-column: 1;
 }
 .toolbar-actions .menu kbd.shortcut,
@@ -1281,11 +1325,107 @@ kbd {
 .editor-files .bar-button {
   margin-bottom: 5px;
 }
+.editor-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  position: relative;
+}
 .editor-pane .markdown-editor {
   flex: 1;
+  min-width: 0;
   min-height: 0;
   /* CodeMirror fills the pane and scrolls inside it. */
   overflow: hidden;
+}
+/* The outline of the headings, a column at the left of the editor (src/outline.js). */
+.outline {
+  flex: 0 0 var(--outline-width, 220px);
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--border-faint);
+  background: var(--surface-2);
+}
+.outline[hidden] {
+  display: none;
+}
+.outline-head {
+  display: flex;
+  gap: 6px;
+  padding: 6px;
+  border-bottom: 1px solid var(--border-faint);
+}
+.outline-head input {
+  flex: 1;
+  min-width: 0;
+  padding: 4px 8px;
+  font-size: 12px;
+}
+.outline-list {
+  flex: 1;
+  min-height: 0;
+  margin: 0;
+  padding: 4px;
+  overflow: auto;
+  list-style: none;
+}
+.outline-item {
+  display: flex;
+  gap: 6px;
+  width: 100%;
+  padding: 4px 8px;
+  padding-left: calc(8px + (var(--depth) - 1) * 12px);
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.4;
+  text-align: left;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.outline-item[data-level='1'] {
+  --depth: 1;
+  font-weight: 600;
+}
+.outline-item[data-level='2'] {
+  --depth: 2;
+}
+.outline-item[data-level='3'] {
+  --depth: 3;
+}
+.outline-item[data-level='4'] {
+  --depth: 4;
+}
+.outline-item[data-level='5'] {
+  --depth: 5;
+}
+.outline-item[data-level='6'] {
+  --depth: 6;
+}
+.outline-item:hover {
+  background: var(--surface-3);
+}
+.outline-item[aria-current='true'] {
+  background: var(--accent);
+  color: var(--accent-text);
+}
+.outline-number {
+  flex-shrink: 0;
+  color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
+}
+.outline-item[aria-current='true'] .outline-number {
+  color: inherit;
+  opacity: 0.8;
+}
+.outline-empty {
+  margin: 0;
+  padding: 12px;
+  font-size: 12px;
+  color: var(--text-faint);
 }
 .splitter {
   flex: 0 0 6px;
@@ -1321,6 +1461,7 @@ kbd {
   flex: 1 1 0;
   min-width: 0;
   min-height: 0;
+  position: relative;
   overflow: auto;
   /* Reserve the scrollbar space so fit-to-width never reacts to a scrollbar appearing or disappearing. */
   scrollbar-gutter: stable;
@@ -1394,6 +1535,39 @@ kbd {
   background: white;
   box-shadow: 0 5px 24px rgba(20, 30, 45, 0.15);
   margin: 0 !important;
+}
+/* Over the pages of a document without text: what to do next (src/render.js shows it). */
+.preview-empty-anchor {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  height: 0;
+}
+.preview-empty {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: min(420px, calc(100% - 32px));
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 10px 30px var(--shadow-menu);
+  font-size: 13px;
+  line-height: 1.45;
+}
+.preview-empty[hidden] {
+  display: none;
+}
+.preview-empty p {
+  margin: 0;
 }
 .render-error {
   max-width: 800px;
@@ -1525,8 +1699,21 @@ kbd {
   #modeSplit,
   .view-layout,
   .view-zoom,
-  #import {
+  #import,
+  .problems-label {
     display: none;
+  }
+  .problems-button {
+    padding: 3px 8px;
+  }
+  /* The outline covers the editor; a chosen heading closes it. */
+  .outline {
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    flex: none;
+    width: 100%;
+    border-right: 0;
   }
   .view-controls {
     display: contents;
@@ -1605,7 +1792,8 @@ kbd {
   .sidebar,
   .toolbar,
   .editor-pane,
-  .splitter {
+  .splitter,
+  .preview-empty-anchor {
     display: none !important;
   }
   .preview {

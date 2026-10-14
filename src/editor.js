@@ -20,7 +20,7 @@ import { tags } from '@lezer/highlight';
 
 let view = null;
 let current = null; // the file object being edited
-let handlers = { onChange() {}, onScroll() {}, onImageFiles() {} };
+let handlers = { onChange() {}, onScroll() {}, onImageFiles() {}, onCursor() {} };
 const states = new WeakMap(); // file -> EditorState, for the files that are not shown
 const scrolls = new WeakMap(); // file -> scrollTop
 
@@ -30,8 +30,8 @@ const phrases = {};
 let placeholderText = '';
 
 // Colours come from the tokens of src/ui.css, so the editor follows the light or dark theme of the studio
-// without a theme of its own.
-const theme = EditorView.theme({
+// without a theme of its own. Shared with the CSS editor of the sidebar (src/css-editor.js).
+export const studioTheme = EditorView.theme({
   '&': { height: '100%', fontSize: '13px', backgroundColor: 'var(--surface)', color: 'var(--text)' },
   '&.cm-focused': { outline: 'none' },
   '.cm-scroller': {
@@ -100,6 +100,10 @@ const extensions = [
     return node;
   }),
   EditorView.contentAttributes.of({ 'aria-label': 'Markdown', spellcheck: 'false' }),
+  // The outline follows the cursor: told after every move of the selection or edit of the shown file.
+  EditorView.updateListener.of(update => {
+    if (update.selectionSet || update.docChanged) handlers.onCursor();
+  }),
   // Ctrl+Shift+Z redoes on every system, as in a plain text field (CodeMirror binds it on some only).
   keymap.of([
     { key: 'Mod-Shift-z', run: redo, preventDefault: true },
@@ -107,7 +111,7 @@ const extensions = [
     ...historyKeymap,
     ...searchKeymap,
   ]),
-  theme,
+  studioTheme,
   EditorView.updateListener.of(update => {
     if (!update.docChanged || !current) return;
     current.markdown = update.state.doc.toString();
@@ -151,7 +155,8 @@ function changeBetween(before, after) {
 }
 
 // Creates the editor inside `host`. `onChange(file)` runs after every change of a file, `onScroll()` when
-// the editor scrolls, `onImageFiles(files, 'drop' | 'paste')` when image files are dropped or pasted.
+// the editor scrolls, `onImageFiles(files, 'drop' | 'paste')` when image files are dropped or pasted,
+// `onCursor()` when the cursor of the shown file moves.
 export function initEditor(host, callbacks) {
   handlers = { ...handlers, ...callbacks };
   view = new EditorView({ parent: host, state: EditorState.create({ doc: '', extensions }) });
@@ -169,6 +174,8 @@ export function openFile(file) {
   // A file whose text was replaced from outside (import, reset) starts from a fresh state.
   if (states.has(file) && states.get(file).doc.toString() !== file.markdown) states.delete(file);
   view.setState(stateOf(file));
+  // A new state is no update: the listeners of the cursor are told here.
+  handlers.onCursor();
   const top = scrolls.get(file) ?? 0;
   view.requestMeasure({
     read() {},
@@ -254,6 +261,9 @@ export function scrollToLine(line) {
 }
 
 export const editorLineCount = () => view.state.doc.lines;
+
+// The line (from 0) of the cursor in the shown file.
+export const cursorLine = () => view.state.doc.lineAt(view.state.selection.main.head).number - 1;
 
 // Translations of the search panel: CodeMirror reads this table whenever it draws a text.
 export function setEditorPhrases(table) {

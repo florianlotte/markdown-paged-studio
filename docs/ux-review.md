@@ -38,7 +38,7 @@ Done: every file tab has a menu (right-click, long press, Shift+F10) with Rename
 
 The small grey text "3 pages" (13 px, contrast 4.3:1) also showed "Rendering…", "PDF saved with its project" and "Render error". A transient success and an error should not live in a counter.
 
-Done: the counter stays while a thin progress bar at the foot of the toolbar shows that the pages are being laid out again; the confirmations of the exports are a toast that goes away by itself; the errors are in the banner with their cause. Still open: a link from a render error to the faulty line.
+Done: the counter stays while a thin progress bar at the foot of the toolbar shows that the pages are being laid out again; the confirmations of the exports are a toast that goes away by itself; the errors are in the banner with their cause. The problems of the render (a diagram that does not parse, a formula KaTeX refuses, a missing image, an unknown reference) are counted next to the page count, and each entry of their list leads to the line in the editor.
 
 ### 6. Nothing says where the document lives — done
 
@@ -50,7 +50,7 @@ Done: the row of the file tabs says "Saved in this browser · just now" (then mi
 
 An empty document shows a white page with its header and an editor without a prompt.
 
-Done: an empty file shows a prompt that names the **Insert** menu, which replaces the two buttons and writes an example of a table, an image (chosen files, added to the library and referenced), a diagram, a formula, an alert, a footnote, a page break or a table of contents at the cursor. Still open: the white page of an empty document says nothing.
+Done: an empty file shows a prompt that names the **Insert** menu, which replaces the two buttons and writes an example of a table, an image (chosen files, added to the library and referenced), a diagram, a formula, an alert, a footnote, a page break or a table of contents at the cursor. A document without text shows a card over its pages that says what to do, with a button to the editor.
 
 ### 8. File tabs overflow without a signal — done
 
@@ -58,13 +58,13 @@ With six files the first tab was cut off on the left, with no shadow and no hori
 
 Done: a shadow on the side where tabs are hidden, the wheel scrolls the strip sideways, and a list button, shown only when tabs are hidden, offers every file with the current one checked.
 
-### 9. Uneven forms — done, except the CSS editor
+### 9. Uneven forms — done
 
 - Logo: a native file input ("Choose File" in the language of the browser, not translated, unsightly in the dark theme); **Remove logo** shown without a logo. Done: a drop zone (drop a file, or click to choose one), then a thumbnail with **Replace** and **Remove**.
 - Date: free text, no picker, no **Today**. Done: a **Today** button and a date picker, both writing the date the way the document language writes it; the field stays free text.
 - Language: the raw code (`en`) rather than the name. Done: a list of languages by name ("French (fr)"), and a tag field under "Other…" for any other BCP 47 tag.
 - Margins: four fields without presets (Narrow, Normal, Wide) nor "same on all sides". Done: a preset select (Custom when the fields match none) and a "Same on all sides" box that makes the top field rule.
-- Custom CSS: a plain textarea without colours or line numbers at the bottom of a scrolling panel, its **Import .css / Default CSS** buttons out of sight. Done: the buttons sit above the field. Proposed: a CodeMirror CSS editor.
+- Custom CSS: a plain textarea without colours or line numbers at the bottom of a scrolling panel, its **Import .css / Default CSS** buttons out of sight. Done: the buttons sit above the field, which is a CodeMirror editor with line numbers, CSS colours and its own undo history.
 - Long checkbox labels ("Number figures and tables (Figure 1, Table 1)"): the example belongs in a hint under the field. Done, for that box and for the mirrored margins.
 
 ### 10. Contrast and focus — done
@@ -91,3 +91,4 @@ The card "Pagination: computed by Paged.js" was jargon without an action: replac
 | Discoverability    | Context menu of the file tabs, tooltips on focus with the shortcuts, Shortcuts panel, autosave indicator, overflow shadows (4, 6, 8)                                                 | 2 to 3 days | done  |
 | Settings           | Grouping by intent, logo drop zone, date picker, margin presets, Insert menu (2, 7, 9)                                                                                               | 3 to 5 days | done  |
 | Phones and preview | Reduced bar, tools on tap, banner without layout shift (10, 11)                                                                                                                      | 2 days      | done  |
+| Writing comfort    | Outline of the headings with a filter, problems of the render with their line, CSS code editor, card of the empty document (5, 7, 9)                                                 | 1 to 2 days | done  |

@@ -573,29 +573,44 @@ test('margin presets fill the four fields, and "same on all sides" makes the top
     .toBe(175);
 });
 
-test('the custom CSS is applied to the document, loaded from a file and restored', async ({ page }) => {
+test('the custom CSS is edited in a code editor, applied to the document, loaded from a file and restored', async ({
+  page,
+}) => {
   await openFreshStudio(page);
   await page.getByRole('tab', { name: 'Design' }).click();
   const heading = page.locator('#preview .document-content h1').first();
+  const editor = page.locator('#customCss .cm-content');
+  const cssText = () => page.evaluate(() => window.studio.css.text());
   // The buttons of the stylesheet sit above it, in reach without scrolling the tall field.
   const cssBox = await page.locator('#customCss').boundingBox();
   for (const id of ['#loadCss', '#resetCss']) {
     const box = await page.locator(id).boundingBox();
     expect(box.y + box.height).toBeLessThanOrEqual(cssBox.y);
   }
-  await page.locator('#customCss').fill('.document-content h1 { color: rgb(200, 0, 0); }');
+  // A code editor: line numbers, the label of the field, colours once the CSS language is loaded.
+  await expect(page.locator('#customCss .cm-lineNumbers')).toBeVisible();
+  await expect(editor).toHaveAttribute('aria-labelledby', 'customCssLabel');
+  expect(await cssText()).toMatch(/font-family: Inter/);
+  await expect(page.locator('#customCss .cm-line span[class]').first()).toBeVisible();
+  // Typed rules reach the document and are undone like any edit.
+  await editor.click();
+  await page.keyboard.press('Control+A');
+  await page.keyboard.type('.document-content h1 { color: rgb(200, 0, 0); }');
   await expect(heading).toHaveCSS('color', 'rgb(200, 0, 0)');
+  await page.keyboard.press('Control+Z');
+  await expect(heading).not.toHaveCSS('color', 'rgb(200, 0, 0)');
+  expect(await cssText()).toMatch(/font-family: Inter/);
   // A stylesheet file replaces the text of the editor.
   await page.locator('#cssFile').setInputFiles({
     name: 'style.css',
     mimeType: 'text/css',
     buffer: Buffer.from('.document-content h1 { color: rgb(0, 120, 0); }'),
   });
-  await expect(page.locator('#customCss')).toHaveValue(/rgb\(0, 120, 0\)/);
+  await expect(editor).toContainText('rgb(0, 120, 0)');
   await expect(heading).toHaveCSS('color', 'rgb(0, 120, 0)');
   // Default CSS brings the sample stylesheet back.
   await page.locator('#resetCss').click();
-  await expect(page.locator('#customCss')).toHaveValue(/font-family: Inter/);
+  expect(await cssText()).toMatch(/font-family: Inter/);
   await expect(heading).not.toHaveCSS('color', 'rgb(0, 120, 0)');
 });
 

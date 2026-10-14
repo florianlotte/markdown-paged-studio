@@ -276,14 +276,15 @@
                   </select>
                 </label>
                 <div class="field-header">
-                  <label for="customCss">Custom CSS</label>
+                  <label id="customCssLabel" for="customCss">Custom CSS</label>
                   <div class="row-actions">
                     <button type="button" id="loadCss" class="secondary">Import .css</button>
                     <input id="cssFile" type="file" accept=".css,text/css" hidden />
                     <button type="button" id="resetCss" class="secondary">Default CSS</button>
                   </div>
                 </div>
-                <textarea id="customCss" class="editor css-editor" spellcheck="false"></textarea>
+                <!-- A CodeMirror view (src/css-editor.js); the label names it through aria-labelledby. -->
+                <div id="customCss" class="css-editor"></div>
               </details>
             </div>
 
@@ -399,6 +400,31 @@
               <div>
                 <strong class="toolbar-heading">Paged preview</strong>
                 <span id="status">Starting…</span>
+              </div>
+              <!-- The problems of the last render, each leading to its line (src/problems.js). -->
+              <div class="menu-button problems">
+                <button
+                  id="problems"
+                  class="problems-button"
+                  type="button"
+                  aria-haspopup="menu"
+                  aria-expanded="false"
+                  aria-controls="problemsMenu"
+                  hidden
+                >
+                  <svg viewBox="0 0 20 20" width="14" height="14" aria-hidden="true" focusable="false" fill="none">
+                    <path
+                      d="M10 3.2 17.6 16.5H2.4Zm0 4.6v4.2m0 2.2v.2"
+                      stroke="currentColor"
+                      stroke-width="1.8"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                  </svg>
+                  <span id="problemsCount">0</span>
+                  <span id="problemsLabel" class="problems-label">problems</span>
+                </button>
+                <ul id="problemsMenu" class="menu problems-menu" role="menu" aria-label="Problems" hidden></ul>
               </div>
             </div>
             <div class="view-controls">
@@ -696,6 +722,20 @@
                 <ul id="fileMenu" class="menu file-menu" role="menu" aria-label="File" hidden></ul>
               </div>
               <div class="editor-bar">
+                <button
+                  id="toggleOutline"
+                  class="bar-button"
+                  type="button"
+                  aria-pressed="false"
+                  aria-controls="outline"
+                  title="Outline of the headings"
+                  aria-label="Outline of the headings"
+                  data-shortcut="Ctrl+Shift+O"
+                >
+                  <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true" fill="none">
+                    <path d="M4 5h12M7 10h9M10 15h6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+                  </svg>
+                </button>
                 <div class="menu-button insert-menu">
                   <button
                     id="insertMenu"
@@ -832,7 +872,39 @@
                   </svg>
                 </button>
               </div>
-              <div id="markdown" class="markdown-editor"></div>
+              <div class="editor-body">
+                <!-- The headings of the document, filtered; a click shows the source (src/outline.js). -->
+                <aside id="outline" class="outline" aria-label="Outline" hidden>
+                  <div class="outline-head">
+                    <input
+                      id="outlineFilter"
+                      type="search"
+                      placeholder="Filter the headings"
+                      aria-label="Filter the headings"
+                      autocomplete="off"
+                    />
+                    <button
+                      id="closeOutline"
+                      class="bar-button"
+                      type="button"
+                      title="Close the outline"
+                      aria-label="Close the outline"
+                    >
+                      <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true" fill="none">
+                        <path
+                          d="M5 5l10 10M15 5 5 15"
+                          stroke="currentColor"
+                          stroke-width="1.8"
+                          stroke-linecap="round"
+                        />
+                      </svg>
+                    </button>
+                  </div>
+                  <ul id="outlineList" class="outline-list"></ul>
+                  <p id="outlineEmpty" class="outline-empty" hidden>No heading yet</p>
+                </aside>
+                <div id="markdown" class="markdown-editor"></div>
+              </div>
             </section>
             <div
               class="splitter"
@@ -847,6 +919,14 @@
               title="Drag to resize the editor (arrow keys: 2 % steps, double-click: half)"
             ></div>
             <section class="preview-shell">
+              <!-- Over the pages of a document without text (src/render.js shows it); the anchor of no height
+                   sticks to the top of the scrolled preview, so the card stays in view without moving the pages. -->
+              <div class="preview-empty-anchor">
+                <div id="previewEmpty" class="preview-empty" hidden>
+                  <p>No text yet. Write in the editor, or add a table, an image or a diagram from the Insert menu.</p>
+                  <button id="startWriting" type="button" class="secondary">Start writing</button>
+                </div>
+              </div>
               <div id="preview" class="preview"></div>
             </section>
           </div>

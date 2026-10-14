@@ -16,6 +16,8 @@ import {
   openFreshStudio,
   pages,
   setMarkdown,
+  status,
+  STATUS_DONE,
 } from './helpers/studio.mjs';
 
 test('links of the preview open in a new tab and never replace the studio', async ({ page, context }) => {
@@ -372,4 +374,138 @@ test('the Prettify button formats the current file as one undoable edit', async 
   await focusEditor(page);
   await page.keyboard.press('Control+z');
   await expectMarkdown(page, /^# {2}Messy\n/);
+});
+
+test('the outline lists the headings, filters them, follows the cursor and shows the source of a click', async ({
+  page,
+}) => {
+  await openFreshStudio(page);
+  const outline = page.locator('#outline');
+  const items = page.locator('#outline .outline-item');
+  await expect(outline).toBeHidden();
+  await expect(page.locator('#toggleOutline')).toHaveAttribute('aria-pressed', 'false');
+  await page.locator('#toggleOutline').click();
+  await expect(outline).toBeVisible();
+  await expect(page.locator('#outlineFilter')).toBeFocused();
+  // Every heading of the sample document, with its level, the first one holding the cursor.
+  await expect(items).toHaveText([
+    'Introduction',
+    'Features',
+    'Table example',
+    'Diagram',
+    'Second part',
+    'Tasks',
+    'Code',
+  ]);
+  await expect(items.nth(0)).toHaveAttribute('data-level', '1');
+  await expect(items.nth(1)).toHaveAttribute('data-level', '2');
+  await expect(items.nth(0)).toHaveAttribute('aria-current', 'true');
+  await expect(page.locator('#outline [aria-current="true"]')).toHaveCount(1);
+  // Numbers come with the setting of the document.
+  await page.getByRole('tab', { name: 'Design' }).click();
+  await page.locator('#numberHeadings').selectOption('h1');
+  await expect(items.nth(1).locator('.outline-number')).toHaveText('1.1');
+  await page.locator('#numberHeadings').selectOption('none');
+  await expect(items.nth(1).locator('.outline-number')).toHaveCount(0);
+
+  // The filter keeps the headings that hold every word, accents and case ignored.
+  await page.locator('#outlineFilter').fill('SECOND');
+  await expect(items).toHaveText(['Second part']);
+  await page.locator('#outlineFilter').fill('nothing here');
+  await expect(items).toHaveCount(0);
+  await expect(page.locator('#outlineEmpty')).toHaveText('No heading matches');
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#outlineFilter')).toHaveValue('');
+  await expect(items).toHaveCount(7);
+
+  // A click puts the cursor on the heading, in the editor, and the mark follows.
+  await items.nth(4).click();
+  await expect(page.locator('#markdown .cm-content')).toBeFocused();
+  const lineAtCursor = () =>
+    page.evaluate(() => {
+      const [from] = window.studio.editor.selection();
+      return window.studio.editor.text().slice(from).split('\n')[0];
+    });
+  expect(await lineAtCursor()).toBe('## Second part');
+  await expect(items.nth(4)).toHaveAttribute('aria-current', 'true');
+  await expect(items.nth(0)).not.toHaveAttribute('aria-current', 'true');
+  // The arrows move between the headings from the filter.
+  await page.locator('#outlineFilter').focus();
+  await page.keyboard.press('ArrowDown');
+  await expect(items.nth(0)).toBeFocused();
+  await page.keyboard.press('End');
+  await expect(items.nth(6)).toBeFocused();
+
+  // A heading typed appears once the pages are drawn again; the mark follows the cursor at its line.
+  await focusEditor(page);
+  await cursorToEnd(page);
+  await page.keyboard.type('\n\n## Typed heading\n');
+  await expect(items).toHaveText([
+    'Introduction',
+    'Features',
+    'Table example',
+    'Diagram',
+    'Second part',
+    'Tasks',
+    'Code',
+    'Typed heading',
+  ]);
+  await expect(items.nth(7)).toHaveAttribute('aria-current', 'true');
+
+  // Several files: the outline covers them all, a click shows the right file.
+  await page.locator('#addFile').click();
+  await page.keyboard.type('# Chapter two\n\nText');
+  await expect(items.last()).toHaveText('Chapter two');
+  await expect(items.last()).toHaveAttribute('title', 'chapter.md');
+  await expect(items.first()).toHaveAttribute('title', 'document.md');
+  await items.first().click();
+  await expect(page.locator('#fileTabs .file-tab.active')).toContainText('document.md');
+  await expect(items.first()).toHaveAttribute('aria-current', 'true');
+
+  // The shortcut closes and opens it (the focus leaves it for the button); the choice survives a reload.
+  await page.locator('#outlineFilter').focus();
+  await page.keyboard.press('Control+Shift+O');
+  await expect(outline).toBeHidden();
+  await expect(page.locator('#toggleOutline')).toBeFocused();
+  await page.keyboard.press('Control+Shift+O');
+  await expect(outline).toBeVisible();
+  await page.reload();
+  await expect(status(page)).toHaveText(STATUS_DONE);
+  await expect(page.locator('#outline')).toBeVisible();
+  await expect(page.locator('#outline .outline-item').first()).toHaveText('Introduction');
+  // From the preview alone, the outline brings the editor back.
+  await page.locator('#closeOutline').click();
+  await page.locator('#modeView').click();
+  await expect(page.locator('#editorPane')).toBeHidden();
+  await page.keyboard.press('Control+Shift+O');
+  await expect(page.locator('.workbench')).toHaveAttribute('data-mode', 'split');
+  await expect(page.locator('#outline')).toBeVisible();
+});
+
+test('a document without text says what to do, over the pages, until something is written', async ({ page }) => {
+  await openFreshStudio(page);
+  const hint = page.locator('#previewEmpty');
+  await expect(hint).toBeHidden();
+  await setMarkdown(page, '');
+  await expect(hint).toBeVisible();
+  await expect(hint).toContainText('No text yet');
+  // The pages stay where they are: the card lies over them.
+  const shell = page.locator('.preview-shell');
+  await expect(pages(page).first()).toBeVisible();
+  const before = await pages(page).first().boundingBox();
+  const card = await hint.boundingBox();
+  expect(card.y).toBeLessThan(before.y + before.height);
+  // Scrolled down, the card stays in view.
+  await shell.evaluate(element => (element.scrollTop = element.scrollHeight));
+  const scrolled = await hint.boundingBox();
+  const shellBox = await shell.boundingBox();
+  expect(scrolled.y).toBeGreaterThanOrEqual(shellBox.y);
+  expect(scrolled.y + scrolled.height).toBeLessThanOrEqual(shellBox.y + shellBox.height);
+  // Its button goes to the editor, even from the preview alone.
+  await page.locator('#modeView').click();
+  await page.locator('#startWriting').click();
+  await expect(page.locator('.workbench')).toHaveAttribute('data-mode', 'split');
+  await expect(page.locator('#markdown .cm-content')).toBeFocused();
+  await page.keyboard.type('Hello');
+  await expect(hint).toBeHidden();
 });

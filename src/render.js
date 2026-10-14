@@ -9,6 +9,8 @@ import { documentCss, documentHtml } from './document.js';
 import { writeDocument } from './chapters.js';
 import { loadPreviewFonts } from './fonts.js';
 import { prepareMathPreview } from './math.js';
+import { refreshOutline } from './outline.js';
+import { reportProblems } from './problems.js';
 import { t } from './i18n.js';
 import { applyView } from './view.js';
 import { lazy } from './util.js';
@@ -60,6 +62,13 @@ function renderErrorElement(error) {
 
 const pageCount = total => (total > 1 ? t('{count} pages', { count: total }) : t('1 page'));
 
+// After the pages (or the same ones) are shown: the empty document says what to do over its pages, the
+// outline follows the headings.
+function afterPages() {
+  document.getElementById('previewEmpty').hidden = Boolean(state.markdown.trim());
+  refreshOutline();
+}
+
 export async function render() {
   const token = ++renderToken;
   const preview = document.getElementById('preview');
@@ -89,6 +98,7 @@ export async function render() {
       // Nothing changed in the document itself: the pages shown are still right.
       preview.classList.remove('is-stale');
       status.textContent = pageCount(lastRendered.total);
+      afterPages();
       applyView();
       return;
     }
@@ -109,9 +119,11 @@ export async function render() {
     activePreviewer = previewer;
     lastRendered = { html, css, total: flow.total };
     status.textContent = pageCount(flow.total);
+    afterPages();
     applyView();
     enhanceResizables(preview, () => state.markdown, applyMarkdown);
     setMissingImages([...preview.querySelectorAll('.image-missing')].map(element => element.dataset.image));
+    reportProblems(preview);
   } catch (error) {
     disposePreviewer(previewer);
     if (token !== renderToken) return;
@@ -121,6 +133,7 @@ export async function render() {
     activePreviewer = null;
     lastRendered = null;
     preview.replaceChildren(renderErrorElement(error));
+    reportProblems(preview, error);
   } finally {
     stage.remove();
     if (pendingPreviewer === previewer) pendingPreviewer = null;

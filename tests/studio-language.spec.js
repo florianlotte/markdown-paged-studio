@@ -68,6 +68,23 @@ test('the interface switches to French and back, and remembers the choice', asyn
   await expect(page.locator('#insertPageBreak strong')).toHaveText('Saut de page');
   await expect(page.locator('#insertFootnote span')).toHaveText('Un appel dans le texte et sa note au bas de la page');
   await expect(page.locator('#loadMarkdown')).toHaveAttribute('title', 'Remplacer ce fichier par un fichier Markdown');
+  // The outline, the problems and the empty document.
+  await expect(page.locator('#toggleOutline')).toHaveAttribute('title', 'Plan des titres');
+  await page.locator('#toggleOutline').click();
+  await expect(page.locator('#outlineFilter')).toHaveAttribute('placeholder', 'Filtrer les titres');
+  await page.locator('#outlineFilter').fill('zzz');
+  await expect(page.locator('#outlineEmpty')).toHaveText('Aucun titre ne correspond');
+  await page.locator('#closeOutline').click();
+  await expect(page.locator('#previewEmpty p')).toHaveText(/Pas encore de texte/);
+  await expect(page.locator('#startWriting')).toHaveText('Commencer à écrire');
+  const written = await markdownText(page);
+  await setMarkdown(page, '![x](nothere.png)\n');
+  await expect(page.locator('#problems')).toHaveAttribute('aria-label', '1 problème');
+  await page.locator('#problems').click();
+  await expect(page.locator('#problemsMenu strong')).toHaveText(['Image introuvable, ligne 1']);
+  await page.keyboard.press('Escape');
+  await setMarkdown(page, written);
+  await expect(page.locator('#problems')).toBeHidden();
   await expect(page.locator('#addFile')).toHaveAttribute('aria-label', 'Nouveau fichier');
   await expect(page.locator('#fileTabs')).toHaveAttribute('aria-label', 'Fichiers du document');
   // Where the document lives, the menu of a tab and the panel of the shortcuts.

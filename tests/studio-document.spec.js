@@ -94,6 +94,61 @@ test('renders Mermaid diagrams and reports invalid ones in place', async ({ page
   await expect(status(page)).toHaveText(STATUS_DONE);
 });
 
+test('the problems of the render are counted in the toolbar and each one leads to its line', async ({ page }) => {
+  await openFreshStudio(page);
+  const problems = page.locator('#problems');
+  await expect(problems).toBeHidden();
+  await setMarkdown(
+    page,
+    [
+      '# Broken',
+      '',
+      '```mermaid',
+      'flowchart LR',
+      '  A --> B',
+      '  B -->> C',
+      '```',
+      '',
+      'A formula $\\frac{1}{$ here.',
+      '',
+      '![missing](nothere.png) and @fig:nope.',
+      '',
+    ].join('\n'),
+  );
+  await expect(problems).toBeVisible();
+  await expect(problems).toHaveAttribute('aria-label', '4 problems');
+  await expect(problems).toHaveText(/4\s+problems/);
+  await problems.click();
+  const entries = page.locator('#problemsMenu [role="menuitem"]');
+  await expect(entries.locator('strong')).toHaveText([
+    'Diagram, line 6',
+    'Formula, line 9',
+    'Image not found, line 11',
+    'Unknown reference, line 11',
+  ]);
+  await expect(entries.nth(0)).toContainText('Parse error on line 3');
+  await expect(entries.nth(2)).toContainText('nothere.png');
+  await expect(entries.nth(3)).toContainText('@fig:nope');
+  await expect(entries.first()).toBeFocused();
+  // The entry puts the cursor on the faulty line of the diagram, in the editor.
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('ArrowUp');
+  await page.keyboard.press('Enter');
+  await expect(page.locator('#problemsMenu')).toBeHidden();
+  await expect(page.locator('#markdown .cm-content')).toBeFocused();
+  const lineAtCursor = await page.evaluate(() => {
+    const [from] = window.studio.editor.selection();
+    return window.studio.editor.text().slice(from).split('\n')[0];
+  });
+  expect(lineAtCursor).toBe('  B -->> C');
+  // Fixed one by one, the count follows, then goes away.
+  await setMarkdown(page, '# Fixed\n\n![missing](nothere.png)\n');
+  await expect(problems).toHaveAttribute('aria-label', '1 problem');
+  await expect(problems).toHaveText(/1\s+problem\s*$/);
+  await setMarkdown(page, '# Fixed\n');
+  await expect(problems).toBeHidden();
+});
+
 test('autosaves the document, restores it on reload, and Reset brings the sample back', async ({ page }) => {
   await openFreshStudio(page);
   // The row of the tabs says where the document lives: nothing is written until the first edit.
@@ -181,7 +236,9 @@ test('exports a standalone HTML file that paginates offline', async ({ page, con
 test('a stylesheet or a header that would end the style element cannot run script in the exports', async ({ page }) => {
   await openFreshStudio(page);
   await page.getByRole('tab', { name: 'Design' }).click();
-  await page.locator('#customCss').fill('.document-content { color: #111 }\n</style><p id="pwned">x</p><style>');
+  await page.evaluate(() =>
+    window.studio.css.setText('.document-content { color: #111 }\n</style><p id="pwned">x</p><style>'),
+  );
   await page.locator('#headerTitle').fill('A</style><b id="pwned2">');
   const [download] = await Promise.all([page.waitForEvent('download'), exportVia(page, 'exportHtml')]);
   const html = readFileSync(await download.path(), 'utf8');

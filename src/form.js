@@ -7,9 +7,9 @@ import { scheduleRender } from './render.js';
 import { syncSettings } from './settings.js';
 
 // Every state key has a form control with the same id, except the logo (a file input, see settings.js), the
-// language (chosen by name, or typed as a tag, see settings.js) and the text of the document (the files and
-// the editor, see chapters.js).
-const ids = Object.keys(state).filter(k => !['logoDataUrl', 'language', 'markdown', 'files'].includes(k));
+// language (chosen by name, or typed as a tag, see settings.js), the custom CSS (a CodeMirror view, see
+// css-editor.js) and the text of the document (the files and the editor, see chapters.js).
+const ids = Object.keys(state).filter(k => !['logoDataUrl', 'language', 'customCss', 'markdown', 'files'].includes(k));
 
 export function syncInputs() {
   for (const key of ids) {

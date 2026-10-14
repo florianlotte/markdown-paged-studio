@@ -4,16 +4,19 @@ What you can write in the editor of Markdown Paged Studio, and how the pages com
 
 ## Writing
 
-The Markdown editor sits in the main area, beside the paged preview (**Split**) or alone (**Edit**); **View** shows the preview alone. It colours the Markdown, numbers the lines and searches or replaces with Ctrl+F. A double-click on a block of the preview puts the cursor on its source line.
+The Markdown editor sits in the main area, beside the paged preview (**Split**) or alone (**Edit**); **View** shows the preview alone. It colours the Markdown, numbers the lines and searches or replaces with Ctrl+F. A double-click on a block of the preview puts the cursor on its source line. A document without text says what to do over its pages, and its button takes you to the editor.
 
 The bar above the editor:
 
-- inserts a page break or a table of contents at the cursor;
+- opens the outline (the first button, or Ctrl+Shift+O): the headings of every file, with their numbers when the document numbers them, and a filter above (every word typed must appear, accents and case ignored; Escape clears it, then closes the outline). A click puts the cursor on the heading, and the heading that holds the cursor is marked; with several files the tooltip of a heading names its file. The arrows move between the headings, Enter chooses one;
+- inserts a table, an image, a diagram, a formula, an alert, a footnote, a page break or a table of contents at the cursor (the **Insert** menu);
 - **Prettify** formats the current file the way [Prettier](https://prettier.io) writes Markdown: one space after `#`, `-` lists, `_emphasis_`, aligned tables, one blank line between blocks; the syntax of the studio is kept, and Ctrl+Z reverts it;
 - replaces the current file with an existing `.md` file, or downloads it (named after the title, like the PDF, when it is the only file);
 - switches the scroll synchronisation: while it is on, the pane you scroll takes the other one to the same part of the document.
 
-The sidebar holds the settings in groups that fold: the **Content** tab the document fields (with a date picker and the language by name), the cover and its logo, and the images; the **Design** tab the headers and footers, the numbering, the code theme and the stylesheet; the **Page** tab the paper size and the margins, with presets.
+The sidebar holds the settings in groups that fold: the **Content** tab the document fields (with a date picker and the language by name), the cover and its logo, and the images; the **Design** tab the headers and footers, the numbering, the code theme and the stylesheet, in a code editor of its own (line numbers, colours, Ctrl+Z); the **Page** tab the paper size and the margins, with presets.
+
+When the pages differ from what was written, the toolbar counts the problems next to the page count: a diagram Mermaid cannot draw (with the line of its syntax error), a formula KaTeX refuses, an image the library does not have, a reference to nothing. Each entry of the list leads to the line in the editor; the count goes away once the document is fixed.
 
 The parser is [markdown-it](https://github.com/markdown-it/markdown-it): all of [CommonMark](https://commonmark.org) and of GitHub Flavored Markdown (tables, strikethrough, task lists, automatic links), plus footnotes and typographic replacements. Raw HTML inside Markdown is intentionally shown as text. [Markdown support](markdown-support.md) lists what is understood, the four deliberate differences with the specification, what is not supported (abbreviations, emoji shortcodes), and the conformance measured on the official examples.
 

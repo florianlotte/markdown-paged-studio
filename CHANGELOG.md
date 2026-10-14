@@ -7,6 +7,24 @@ All notable changes to Markdown Paged Studio are listed here, newest first. The 
 
 ## [Unreleased]
 
+## [1.30.0] - 2026-10-14
+
+### Added
+
+- An outline of the headings next to the editor (the first button of the editor bar, Ctrl+Shift+O, or
+  **View → Toggle Outline** in the desktop app): every heading of every file with its number, a filter above,
+  the heading that holds the cursor marked, and a click that puts the cursor on the heading. On phones it
+  covers the editor and closes on a choice.
+- The problems of the render are counted in the toolbar, next to the page count: a diagram Mermaid cannot
+  draw (with the line of its syntax error), a formula KaTeX refuses, an image the library does not have, a
+  reference to nothing. Each entry of the list leads to the line in the editor.
+- A document without text shows a card over its pages that says what to do, with a button to the editor.
+
+### Changed
+
+- The custom CSS is edited in a code editor with line numbers, CSS colours and its own undo history, instead
+  of a plain text area.
+
 ## [1.29.0] - 2026-10-14
 
 ### Changed
@@ -593,7 +611,8 @@ All notable changes to Markdown Paged Studio are listed here, newest first. The 
 - Portable desktop app for Windows, Linux and macOS with direct PDF export.
 - Docker image, Playwright integration tests and CI.
 
-[Unreleased]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.29.0...HEAD
+[Unreleased]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.30.0...HEAD
+[1.30.0]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.29.0...v1.30.0
 [1.29.0]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.28.0...v1.29.0
 [1.28.0]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.27.0...v1.28.0
 [1.27.0]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.26.0...v1.27.0

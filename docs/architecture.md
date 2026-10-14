@@ -47,6 +47,10 @@ src/images.js       image library: matching by file name, storage, upload; logo 
 src/files.js        the files of a document: assembly, line mapping, safe names (pure helpers)
 src/chapters.js     the tabs of the files above the editor
 src/editor.js       the CodeMirror editor: one state per file, edits that keep the undo history
+src/css-editor.js   the CodeMirror editor of the custom CSS in the sidebar
+src/headings.js     the headings of the document for the outline (pure helpers)
+src/outline.js      the outline of the headings next to the editor, with its filter
+src/problems.js     the problems of the last render, counted in the toolbar, each leading to its line
 src/sync.js         scroll synchronisation between the editor and the preview
 src/i18n.js         interface language: French translations, applied to the markup
 src/theme.js        light or dark theme of the studio
