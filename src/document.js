@@ -5,7 +5,10 @@
 import { LANGUAGE_TAG, PAGE_HEIGHT_MM, RUNNING_HEADER_LEVELS, state } from './config.js';
 import { escCssString, escapeHtml } from './escape.js';
 import { inlineFontCss } from './fonts.js';
-import { fragmentOf, highlightCode, md, renderDiagrams } from './markdown.js';
+import { fragmentOf } from './fragment.js';
+import { highlightCode } from './code-highlight.js';
+import { md } from './markdown.js';
+import { renderDiagrams } from './diagrams.js';
 import { lazy } from './util.js';
 import { inlineMathCss, renderMath } from './math.js';
 

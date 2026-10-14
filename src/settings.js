@@ -5,7 +5,9 @@
 import { LANGUAGE_TAG, sanitizeConfig, state } from './config.js';
 import { currentLanguage, onLanguageChange, t } from './i18n.js';
 import { findImage, listImages, MAX_LOGO_WIDTH, missingImages, onImagesChange, prepareImage } from './images.js';
+import { notify } from './notices.js';
 import { scheduleRender } from './render.js';
+import { readStoredJson, writeStoredJson } from './storage.js';
 
 export const SETTINGS_KEY = 'markdown-paged-studio:settings';
 
@@ -17,17 +19,12 @@ const MARGIN_KEYS = ['marginTop', 'marginRight', 'marginBottom', 'marginLeft'];
 export const MARGIN_PRESETS = { narrow: [12, 12, 12, 12], normal: [24, 18, 20, 18], wide: [30, 25, 30, 25] };
 
 const $ = id => document.getElementById(id);
-let handlers = { notify() {} };
 
 // --- Groups --------------------------------------------------------------------------------------------
 
 function closedGroups() {
-  try {
-    const stored = JSON.parse(localStorage.getItem(SETTINGS_KEY) ?? '{}');
-    return Array.isArray(stored.closed) ? stored.closed : [];
-  } catch {
-    return [];
-  }
+  const stored = readStoredJson(SETTINGS_KEY);
+  return Array.isArray(stored.closed) ? stored.closed : [];
 }
 
 function bindGroups() {
@@ -36,12 +33,7 @@ function bindGroups() {
   for (const group of groups) {
     group.open = !closed.has(group.dataset.group);
     group.addEventListener('toggle', () => {
-      try {
-        const list = groups.filter(other => !other.open).map(other => other.dataset.group);
-        localStorage.setItem(SETTINGS_KEY, JSON.stringify({ closed: list }));
-      } catch {
-        // Storage unavailable: the fold lasts for this session.
-      }
+      writeStoredJson(SETTINGS_KEY, { closed: groups.filter(other => !other.open).map(other => other.dataset.group) });
     });
   }
 }
@@ -220,7 +212,7 @@ async function setLogo(file) {
     scheduleRender();
   } catch (error) {
     console.error(error);
-    handlers.notify(t('The logo could not be read: {error}', { error: error?.message || error }));
+    notify(t('The logo could not be read: {error}', { error: error?.message || error }));
   }
 }
 
@@ -262,8 +254,7 @@ export function syncSettings() {
   syncLogo();
 }
 
-export function initSettings(callbacks = {}) {
-  handlers = { ...handlers, ...callbacks };
+export function initSettings() {
   bindGroups();
   bindDate();
   bindLanguage();

@@ -14,6 +14,7 @@ import {
 } from './editor.js';
 import { applyAssembledEdit, assembleFiles, DEFAULT_FILE_NAME, fileName, fileOffsets, locateLine } from './files.js';
 import { onLanguageChange, t } from './i18n.js';
+import { menuKeydown } from './menu.js';
 import { keys } from './shortcuts.js';
 
 let active = 0;
@@ -179,18 +180,7 @@ function closeMenu({ focus = false } = {}) {
 
 function bindMenu() {
   const list = menu();
-  list.addEventListener('keydown', event => {
-    const items = menuItems();
-    const index = items.indexOf(document.activeElement);
-    const moves = { ArrowDown: index + 1, ArrowUp: index + items.length - 1, Home: 0, End: items.length - 1 };
-    if (event.key === 'Escape' || event.key === 'Tab') {
-      event.preventDefault();
-      closeMenu({ focus: true });
-    } else if (event.key in moves) {
-      event.preventDefault();
-      items[moves[event.key] % items.length].focus();
-    }
-  });
+  list.addEventListener('keydown', event => menuKeydown(event, menuItems(), closeMenu));
   list.addEventListener('focusout', event => {
     if (!list.contains(event.relatedTarget)) closeMenu();
   });

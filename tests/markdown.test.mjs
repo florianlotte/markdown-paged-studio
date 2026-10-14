@@ -1,7 +1,8 @@
 // Unit tests of the pure Markdown helpers behind diagram sizing (no browser needed).
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { md, parseDiagramAttributes, slugify, updateFenceAttributes, updateImageAttributes } from '../src/markdown.js';
+import { md, slugify } from '../src/markdown.js';
+import { parseDiagramAttributes, updateFenceAttributes, updateImageAttributes } from '../src/source-attributes.js';
 
 test('parseDiagramAttributes keeps valid sizes and alignments only', () => {
   assert.deepEqual(parseDiagramAttributes('width=60% align=left'), { width: '60%', align: 'left' });

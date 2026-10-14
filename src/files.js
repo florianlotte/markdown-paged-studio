@@ -7,13 +7,13 @@ export const DEFAULT_FILE_NAME = 'document.md';
 export const FILE_LIMIT = 200;
 const NAME_LIMIT = 120;
 // Files are separated by one empty line, so the last block of a file never merges with the next file.
+import { lf } from './util.js';
+
 const SEPARATOR = '\n\n';
 
 // Characters a file name cannot hold on every system: control characters and the reserved punctuation.
 // eslint-disable-next-line no-control-regex
 const RESERVED = /[\0-\x1f<>:"|?*]+/g;
-
-const lf = text => text.replace(/\r\n?/g, '\n');
 
 export const lineCount = text => text.split('\n').length;
 

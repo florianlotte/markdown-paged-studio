@@ -2,6 +2,8 @@
 // `prefers-color-scheme`). A setting of the studio with its own localStorage key, like the interface
 // language: never part of the document. The effective theme is written as `data-theme` on <html>, the
 // only thing src/ui.css looks at; the rendered document keeps its white pages whatever the theme.
+import { readStored, writeStored } from './storage.js';
+
 export const THEME_KEY = 'markdown-paged-studio:theme';
 export const THEMES = ['system', 'light', 'dark'];
 
@@ -27,23 +29,14 @@ function apply() {
 export function setTheme(next) {
   if (!THEMES.includes(next) || next === theme) return;
   theme = next;
-  try {
-    localStorage.setItem(THEME_KEY, theme);
-  } catch {
-    // Storage unavailable: the theme still applies for this session.
-  }
+  writeStored(THEME_KEY, theme);
   apply();
 }
 
 // The saved theme, else the system's. The inline script of index.html already set `data-theme` before the
 // first paint; this takes over and follows the system from now on.
 export function initTheme() {
-  let stored = null;
-  try {
-    stored = localStorage.getItem(THEME_KEY);
-  } catch {
-    // Storage unavailable: follow the system.
-  }
+  const stored = readStored(THEME_KEY);
   theme = THEMES.includes(stored) ? stored : 'system';
   DARK.addEventListener('change', () => {
     if (theme === 'system') apply();

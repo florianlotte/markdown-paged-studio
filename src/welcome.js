@@ -3,6 +3,7 @@
 // panels are static markup of index.html (translated in place like the rest); this module pages through
 // them and remembers the choice in localStorage.
 import { t } from './i18n.js';
+import { readStored, removeStored, writeStored } from './storage.js';
 
 export const WELCOME_KEY = 'markdown-paged-studio:welcome';
 
@@ -12,21 +13,11 @@ const dialog = () => document.getElementById('welcomeDialog');
 const panels = () => [...dialog().querySelectorAll('.welcome-panel')];
 
 // Whether the tour should open by itself at startup.
-export function welcomeWanted() {
-  try {
-    return localStorage.getItem(WELCOME_KEY) !== 'hidden';
-  } catch {
-    return true;
-  }
-}
+export const welcomeWanted = () => readStored(WELCOME_KEY) !== 'hidden';
 
 function remember(hidden) {
-  try {
-    if (hidden) localStorage.setItem(WELCOME_KEY, 'hidden');
-    else localStorage.removeItem(WELCOME_KEY);
-  } catch {
-    // Storage unavailable: the tour comes back next time.
-  }
+  if (hidden) writeStored(WELCOME_KEY, 'hidden');
+  else removeStored(WELCOME_KEY);
 }
 
 function showPanel(index) {

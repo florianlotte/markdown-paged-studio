@@ -4,6 +4,7 @@
 // loaded on demand by the page and shared with the tests.
 import { parse, stringify } from 'yaml';
 import { lineCount, splitAssembled } from './files.js';
+import { lf } from './util.js';
 
 // First key of the front matter; only its presence makes the studio read the block as its own project.
 export const MARKER_KEY = 'markdown-paged-studio';
@@ -24,8 +25,6 @@ const STRINGIFY_OPTIONS = {
 const PARSE_OPTIONS = { version: '1.2', uniqueKeys: true, maxAliasCount: 10 };
 
 const FENCE = /^---[ \t]*$/;
-
-const lf = text => text.replace(/\r\n?/g, '\n');
 
 // The Markdown file: `json` is the project (the content of a project file), `markdown` the document. The
 // body starts right after the closing fence, so a document that itself opens with `---` survives unchanged.

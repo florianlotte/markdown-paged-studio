@@ -2,7 +2,8 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { findImage, imageKey, imageName, isExternalSource, replaceImages, sanitizeImages } from '../src/images.js';
-import { md, updateImageAttributes } from '../src/markdown.js';
+import { md } from '../src/markdown.js';
+import { updateImageAttributes } from '../src/source-attributes.js';
 
 const PNG = 'data:image/png;base64,iVBORw0KGgo=';
 const SVG = "data:image/svg+xml,%3csvg%20xmlns='http://www.w3.org/2000/svg'/%3e";

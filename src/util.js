@@ -13,3 +13,6 @@ export function lazy(loader) {
 }
 
 export const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+
+// Line endings as the studio keeps them: LF only, whatever the file brought.
+export const lf = text => text.replace(/\r\n?/g, '\n');

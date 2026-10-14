@@ -30,9 +30,15 @@ flowchart LR
 index.html          entry point and the studio markup
 vite.config.js      build-time constants: version and commit shown in the sidebar footer
 src/main.js         wires the modules: restore, UI, view, first render
-src/config.js       defaults (built-in and local/), state, validation, autosave
+src/config.js       defaults (built-in and local/), state, autosave
+src/schema.js       the keys of a document, their kinds and values, sanitizeConfig() and mergeConfig() (pure helpers)
+src/storage.js      guarded localStorage access (absent, disabled or full)
 src/prettify.js     the Prettify button: Prettier's Markdown formatter, loaded on demand, formula blocks and front matter kept out of its way
-src/markdown.js     markdown-it rules: images, anchors, table of contents, page breaks, formulas, alerts, numbering; Mermaid, highlighting
+src/markdown.js     markdown-it rules: images, anchors, table of contents, page breaks, formulas, alerts, numbering
+src/source-attributes.js the width, alignment, caption and label written on a fence line or after an image, parsed and rewritten (pure helpers)
+src/fragment.js     the rendered HTML as an inert template for the passes that edit it
+src/diagrams.js     Mermaid, loaded on demand: the diagram placeholders become inline SVG
+src/code-highlight.js highlight.js, loaded on demand: the colours of the code blocks
 src/diagram-labels.js HTML tags in Mermaid labels: bold and italic kept, the other tags dropped
 src/crossref.js     labels, references and numbering (pure helpers)
 src/math-core.js    formulas: KaTeX output and the font faces a document needs (pure helpers)
@@ -53,7 +59,12 @@ src/view.js         workspace: Edit, Split or View, splitter, layout and zoom of
 src/welcome.js      the welcome tour: panels of index.html paged through, "Don't show this again" remembered
 src/shortcuts.js    keyboard shortcuts: their spelling per platform, the panel that lists them
 src/tooltip.js      tooltips of the chrome, on hover and on keyboard focus, with the shortcut
-src/ui.js           form, tabs, files, images, Insert menu, links of the preview, export and print, banner and toast
+src/ui.js           wiring: editor bar and files, Insert and ⋯ menus, desktop commands, storage notices, footer, links of the preview
+src/form.js         the settings form bound to the state
+src/exports.js      exports and imports of the document, the print window, the lock while a PDF is written
+src/image-library.js the image library of the sidebar and the references it inserts
+src/notices.js      the notice banner and the toast
+src/menu.js         dropdown menus and the keyboard of every menu
 src/settings.js     settings sidebar: folding groups, date helpers, language by name, margin presets, logo zone
 src/pdf-capability.js can this browser draw the pages of a PDF
 src/pdf-render.js   the PDF drawn by the browser: page images, text layer, links

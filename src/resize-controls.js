@@ -3,7 +3,12 @@
 // rewrites the attributes in the Markdown source (```mermaid width=60% or ![Alt](photo.png){width=60%}).
 import { clamp as clampNumber } from './util.js';
 import { t } from './i18n.js';
-import { DIAGRAM_WIDTH_MAX, DIAGRAM_WIDTH_MIN, updateFenceAttributes, updateImageAttributes } from './markdown.js';
+import {
+  DIAGRAM_WIDTH_MAX,
+  DIAGRAM_WIDTH_MIN,
+  updateFenceAttributes,
+  updateImageAttributes,
+} from './source-attributes.js';
 
 // How to place the tools of each resizable element again: their position depends on the zoom of the preview
 // and on the room in the page, which change without a render (zoom buttons, Ctrl + wheel, the splitter).

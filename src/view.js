@@ -6,6 +6,7 @@ import { t } from './i18n.js';
 import { placeResizables } from './resize-controls.js';
 import { IS_MAC } from './shortcuts.js';
 import { clamp } from './util.js';
+import { readStoredJson, writeStoredJson } from './storage.js';
 
 const VIEW_KEY = 'markdown-paged-studio:view';
 const ZOOM_MIN = 0.25;
@@ -35,31 +36,24 @@ const view = {
 const clampWidth = width => clamp(Math.round(width * 1000) / 1000, EDITOR_WIDTH_MIN, EDITOR_WIDTH_MAX);
 
 function loadView() {
-  try {
-    const stored = JSON.parse(localStorage.getItem(VIEW_KEY) ?? '{}');
-    if (MODES.includes(stored.mode)) view.mode = stored.mode;
-    const editorWidth = Number(stored.editorWidth);
-    if (Number.isFinite(editorWidth)) view.editorWidth = clampWidth(editorWidth);
-    if (typeof stored.sync === 'boolean') view.sync = stored.sync;
-    if (stored.layout === 'single' || stored.layout === 'spread') view.layout = stored.layout;
-    const zoom = Number(stored.zoom);
-    if (Number.isFinite(zoom)) view.zoom = clamp(zoom, ZOOM_MIN, ZOOM_MAX);
-    if (typeof stored.fit === 'boolean') view.fit = stored.fit;
-    if (typeof stored.sidebar === 'boolean') view.sidebar = stored.sidebar;
-  } catch {
-    // Storage unavailable or corrupt: keep the defaults.
-  }
+  // Storage unavailable or corrupt: the defaults stay.
+  const stored = readStoredJson(VIEW_KEY);
+  if (MODES.includes(stored.mode)) view.mode = stored.mode;
+  const editorWidth = Number(stored.editorWidth);
+  if (Number.isFinite(editorWidth)) view.editorWidth = clampWidth(editorWidth);
+  if (typeof stored.sync === 'boolean') view.sync = stored.sync;
+  if (stored.layout === 'single' || stored.layout === 'spread') view.layout = stored.layout;
+  const zoom = Number(stored.zoom);
+  if (Number.isFinite(zoom)) view.zoom = clamp(zoom, ZOOM_MIN, ZOOM_MAX);
+  if (typeof stored.fit === 'boolean') view.fit = stored.fit;
+  if (typeof stored.sidebar === 'boolean') view.sidebar = stored.sidebar;
 }
 
 let saveViewTimer = null;
 function saveViewNow() {
   clearTimeout(saveViewTimer);
   saveViewTimer = null;
-  try {
-    localStorage.setItem(VIEW_KEY, JSON.stringify(view));
-  } catch {
-    // Storage unavailable: the view still applies for this session.
-  }
+  writeStoredJson(VIEW_KEY, view);
 }
 
 // Debounced: in fit mode the ResizeObserver calls applyView() on every frame of a window resize.

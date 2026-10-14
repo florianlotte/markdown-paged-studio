@@ -244,7 +244,6 @@ Recent Chromium-based browsers (Chrome, Edge, Brave, Arc) are the reference for 
 Possible improvements, not scheduled:
 
 - The open item of the [UX review](docs/ux-review.md): a CodeMirror editor for the custom CSS.
-- Splitting `src/markdown.js` and `src/ui.js` into smaller modules.
 - An installable web app that works offline; `<u>` in Mermaid labels; an outline of the headings with a search panel; more writing comfort.
 
 ## Contributing

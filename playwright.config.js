@@ -4,6 +4,8 @@ import { defineConfig } from '@playwright/test';
 const PORT = Number(process.env.PORT) || 5173;
 
 export default defineConfig({
+  // A stray test.only must not pass CI with the rest of the suite skipped.
+  forbidOnly: Boolean(process.env.CI),
   testDir: 'tests',
   testIgnore: ['**/desktop.spec.js', '**/*.test.mjs'],
   timeout: 60_000,

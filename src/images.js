@@ -95,7 +95,7 @@ export function onImagesChange(listener) {
   return () => listeners.delete(listener);
 }
 
-function notify(reason = 'library') {
+function tell(reason = 'library') {
   for (const listener of listeners) listener(reason);
 }
 
@@ -191,7 +191,7 @@ export function setBuiltinImages(files) {
 export async function loadImages() {
   const stored = (await persist(store => store.getAll(), 'readonly')) ?? [];
   resetLibrary(sanitizeImages(stored).map((image, index) => ({ ...stored[index], ...image })));
-  notify();
+  tell();
 }
 
 // Replaces the uploaded images (config import, automation). `persist: false` keeps them in memory only.
@@ -203,7 +203,7 @@ export async function replaceImages(entries, { persist: save = true } = {}) {
       for (const image of entries) store.put(image);
     });
   }
-  notify();
+  tell();
 }
 
 export async function removeImage(key) {
@@ -214,7 +214,7 @@ export async function removeImage(key) {
   const fallback = builtin.find(candidate => candidate.key === key);
   if (fallback) library.set(key, fallback);
   await persist(store => store.delete(key));
-  notify();
+  tell();
 }
 
 export async function clearImages() {
@@ -226,7 +226,7 @@ export function setMissingImages(names) {
   const next = [...new Set(names)].sort();
   if (next.join('\n') === missing.join('\n')) return;
   missing = next;
-  notify('missing');
+  tell('missing');
 }
 
 // ---- Upload
@@ -291,7 +291,7 @@ export async function addImageFiles(files, { rename } = {}) {
     await persist(store => {
       for (const image of added) store.put(image);
     });
-    notify();
+    tell();
   }
   return results;
 }

@@ -7,6 +7,16 @@ All notable changes to Markdown Paged Studio are listed here, newest first. The 
 
 ## [Unreleased]
 
+## [1.29.0] - 2026-10-14
+
+### Changed
+
+- The code of the studio is split into smaller modules (the form, the exports, the image library, the
+  notices and the menus apart from `ui.js`; the source attributes, the diagrams, the code colours and the
+  schema apart from `markdown.js` and `config.js`), with one keyboard handler for every menu and one guarded
+  access to the browser storage. Every button of the markup says it is a button. Unit tests cover the schema,
+  the translations and the shortcuts, and a stray `test.only` fails the CI.
+
 ## [1.28.0] - 2026-10-14
 
 ### Added
@@ -583,7 +593,8 @@ All notable changes to Markdown Paged Studio are listed here, newest first. The 
 - Portable desktop app for Windows, Linux and macOS with direct PDF export.
 - Docker image, Playwright integration tests and CI.
 
-[Unreleased]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.28.0...HEAD
+[Unreleased]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.29.0...HEAD
+[1.29.0]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.28.0...v1.29.0
 [1.28.0]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.27.0...v1.28.0
 [1.27.0]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.26.0...v1.27.0
 [1.26.0]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.25.0...v1.26.0

@@ -6,6 +6,8 @@
 // `alt` attribute of the page whose English text has a translation. Text set from JavaScript goes through
 // `t()`; what depends on it is rebuilt by the listeners of `onLanguageChange()`.
 
+import { readStored, writeStored } from './storage.js';
+
 export const LANGUAGE_KEY = 'markdown-paged-studio:language';
 export const LANGUAGES = { en: 'English', fr: 'Français' };
 
@@ -434,6 +436,8 @@ export function onLanguageChange(listener) {
 }
 
 function apply() {
+  // Outside a browser (the unit tests) there is no markup to translate: t() alone follows the language.
+  if (typeof document === 'undefined') return;
   document.documentElement.lang = language;
   translateDom();
 }
@@ -441,23 +445,14 @@ function apply() {
 export function setLanguage(next) {
   if (!(next in LANGUAGES) || next === language) return;
   language = next;
-  try {
-    localStorage.setItem(LANGUAGE_KEY, language);
-  } catch {
-    // Storage unavailable: the language still applies for this session.
-  }
+  writeStored(LANGUAGE_KEY, language);
   apply();
   for (const listener of listeners) listener(language);
 }
 
 // The saved language, else the one of the browser when it is available, else English.
 export function initLanguage() {
-  let stored = null;
-  try {
-    stored = localStorage.getItem(LANGUAGE_KEY);
-  } catch {
-    // Storage unavailable: follow the browser.
-  }
+  const stored = readStored(LANGUAGE_KEY);
   const preferred = String(navigator.language ?? '')
     .slice(0, 2)
     .toLowerCase();
