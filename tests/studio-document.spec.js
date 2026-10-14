@@ -281,8 +281,10 @@ test('the document language drives lang attributes and typographic quotes', asyn
   await openFreshStudio(page);
   await expect(page.locator('#preview .document-content').first()).toHaveAttribute('lang', 'en');
 
-  await page.locator('#tabPage').click();
-  await page.locator('#language').fill('fr');
+  // The language is chosen by its name; the option shows the tag too.
+  await expect(page.locator('#language option[value="fr"]')).toHaveText('French (fr)');
+  await expect(page.locator('#languageTagField')).toBeHidden();
+  await page.locator('#language').selectOption('fr');
   await appendMarkdown(page, '\n\nIl a dit "bonjour".\n');
   await expect(page.locator('#preview .document-content').first()).toHaveAttribute('lang', 'fr');
   await expect(page.locator('#preview .cover-page')).toHaveAttribute('lang', 'fr');
@@ -291,12 +293,53 @@ test('the document language drives lang attributes and typographic quotes', asyn
   const [download] = await Promise.all([page.waitForEvent('download'), exportVia(page, 'exportHtml')]);
   expect(readFileSync(await download.path(), 'utf8')).toContain('<html lang="fr">');
 
+  // Any other tag is typed in the field that "Other…" shows, and comes back there after a reload.
+  await page.locator('#language').selectOption('other');
+  await expect(page.locator('#languageTagField')).toBeVisible();
+  await expect(page.locator('#languageTag')).toBeFocused();
+  await page.locator('#languageTag').fill('pt-BR');
+  await expect(page.locator('#preview .document-content').first()).toHaveAttribute('lang', 'pt-BR');
+  await page.reload();
+  await expect(status(page)).toHaveText(STATUS_DONE);
+  await expect(page.locator('#language')).toHaveValue('other');
+  await expect(page.locator('#languageTag')).toHaveValue('pt-BR');
+
   // An invalid tag falls back to "en" in the document and is dropped from the saved configuration.
-  await page.locator('#language').fill('not a tag');
+  await page.locator('#languageTag').fill('not a tag');
   await expect(page.locator('#preview .document-content').first()).toHaveAttribute('lang', 'en');
   await page.reload();
   await expect(status(page)).toHaveText(STATUS_DONE);
   await expect(page.locator('#language')).toHaveValue('en');
+  await expect(page.locator('#languageTagField')).toBeHidden();
+});
+
+test('Today and the date picker write the date the way the document language writes it', async ({ page }) => {
+  await openFreshStudio(page);
+  const date = page.locator('#date');
+  await date.fill('Draft');
+  await expect(pages(page).nth(0).locator('.cover-meta')).toContainText('Draft');
+  await page.locator('#dateToday').click();
+  const today = new Intl.DateTimeFormat('en', { dateStyle: 'long' }).format(new Date());
+  await expect(date).toHaveValue(today);
+  await expect(pages(page).nth(0).locator('.cover-meta')).toContainText(today);
+  // The picker of the browser cannot be driven here: its field gets the chosen day.
+  await page.locator('#datePicker').evaluate(picker => {
+    picker.value = '2026-03-05';
+    picker.dispatchEvent(new Event('change'));
+  });
+  await expect(date).toHaveValue('March 5, 2026');
+  await page.locator('#language').selectOption('fr');
+  await page.locator('#datePicker').evaluate(picker => {
+    picker.value = '2026-03-05';
+    picker.dispatchEvent(new Event('change'));
+  });
+  await expect(date).toHaveValue('5 mars 2026');
+  await expect(pages(page).nth(0).locator('.cover-meta')).toContainText('5 mars 2026');
+  // The picker is opened by its button, from the field laid under it; the choice is saved with the document.
+  await expect(page.locator('#datePick')).toBeVisible();
+  await page.reload();
+  await expect(status(page)).toHaveText(STATUS_DONE);
+  await expect(date).toHaveValue('5 mars 2026');
 });
 
 test('the cover page matches the selected paper height', async ({ page }) => {
@@ -358,10 +401,18 @@ test('the document font is bundled: loaded for the preview, inlined in the expor
 
 test('the logo is scaled down, saved outside localStorage and restored', async ({ page }) => {
   await openFreshStudio(page);
+  // Without a logo, a zone to drop or choose one; with it, a thumbnail with Replace and Remove.
+  await expect(page.locator('#logoZone')).toBeVisible();
+  await expect(page.locator('#logoCard')).toBeHidden();
+  const [chooser] = await Promise.all([page.waitForEvent('filechooser'), page.locator('#logoZone').click()]);
+  expect(chooser.isMultiple()).toBe(false);
   await page.locator('#logo').setInputFiles({ name: 'brand.png', mimeType: 'image/png', buffer: png(3000, 600) });
   const logo = page.locator('#preview .cover-logo');
   await expect(logo).toHaveCount(1);
   await expect.poll(() => logo.evaluate(el => [el.naturalWidth, el.naturalHeight])).toEqual([1200, 240]);
+  await expect(page.locator('#logoZone')).toBeHidden();
+  await expect(page.locator('#logoCard')).toBeVisible();
+  await expect.poll(() => page.locator('#logoPreview').evaluate(el => el.naturalWidth)).toBe(1200);
 
   const stored = () => page.evaluate(() => JSON.parse(localStorage.getItem('markdown-paged-studio:document')));
   await expect.poll(async () => (await stored())?.title).toBe('Architecture Report');
@@ -375,11 +426,32 @@ test('the logo is scaled down, saved outside localStorage and restored', async (
   const [download] = await Promise.all([page.waitForEvent('download'), exportVia(page, 'exportProject')]);
   expect(JSON.parse(readFileSync(await download.path(), 'utf8')).logoDataUrl).toMatch(/^data:image\/png;base64,/);
 
+  // The restored logo shows in the sidebar too.
+  await expect(page.locator('#logoCard')).toBeVisible();
   await page.locator('#clearLogo').click();
   await expect(logo).toHaveCount(0);
+  await expect(page.locator('#logoZone')).toBeVisible();
   await page.reload();
   await expect(status(page)).toHaveText(STATUS_DONE);
   await expect(logo).toHaveCount(0);
+  await expect(page.locator('#logoZone')).toBeVisible();
+
+  // A file dropped on the zone becomes the logo; a text drop is ignored.
+  const transfer = await page.evaluateHandle(
+    bytes => {
+      const data = new DataTransfer();
+      data.items.add(new File([new Uint8Array(bytes)], 'dropped.png', { type: 'image/png' }));
+      return data;
+    },
+    Array.from(png(400, 100)),
+  );
+  await page.locator('#logoZone').dispatchEvent('dragover', { dataTransfer: transfer });
+  await expect(page.locator('#logoZone')).toHaveClass(/is-over/);
+  await page.locator('#logoZone').dispatchEvent('drop', { dataTransfer: transfer });
+  await expect(page.locator('#logoZone')).not.toHaveClass(/is-over/);
+  await expect(logo).toHaveCount(1);
+  await expect.poll(() => logo.evaluate(el => el.naturalWidth)).toBe(400);
+  await expect(page.locator('#logoCard')).toBeVisible();
 });
 
 test('a logo saved in localStorage by an older version is moved to IndexedDB', async ({ page }) => {

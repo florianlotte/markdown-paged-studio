@@ -16,11 +16,11 @@ Under 1100 px the toolbar wrapped onto two, then three rows, and under 1000 px t
 
 Done: under 1100 px the view controls take a row of their own under the title and the actions; the actions never stack. Export and the menus stay in reach at every width.
 
-### 2. Settings grouped by technique, not by intent — open
+### 2. Settings grouped by technique, not by intent — done
 
 In **Design**, three numbering fields sit between "Header title" and "Header name". The document language is under **Page**. The image library sits under the logo, out of sight without scrolling.
 
-Proposed: group by task. Document (title, author, date, language), Cover (switch, template, accent, logo), Headers and footers, Numbering, Page setup (size, margins, mirror), Style (code theme, CSS), Images. Four tabs, or three tabs with collapsible sections and a counter ("Images: 3, 1 missing").
+Done: the three tabs hold groups by task, each one folding and remembered: Document (title, subtitle, author, date, language), Cover (switch, template, accent, logo) and Images (with the count of the library and of the missing names, "3 · 1 missing") under Content; Headers and footers, Numbering, Code and stylesheet under Design; Paper and Margins under Page.
 
 ### 3. Reset next to Export — done
 
@@ -46,11 +46,11 @@ The autosave in the browser was silent. Whoever opens another browser or a priva
 
 Done: the row of the file tabs says "Saved in this browser · just now" (then minutes or hours ago) after each autosave, "Saving…" meanwhile, and "Not saved: the browser storage is full or disabled" in red when a save fails; its tooltip explains that the document lives in this browser only and points to **PDF with project**. The first visit opens the welcome tour, whose "Save and export" panel says the same and points to **PDF with project**.
 
-### 7. Silent empty state — open
+### 7. Silent empty state — done
 
 An empty document shows a white page with its header and an editor without a prompt.
 
-Proposed: a placeholder in the editor, and an **Insert** menu in place of "Page break / Table of contents" (table, figure, formula, diagram, alert, footnote, page break, table of contents).
+Done: an empty file shows a prompt that names the **Insert** menu, which replaces the two buttons and writes an example of a table, an image (chosen files, added to the library and referenced), a diagram, a formula, an alert, a footnote, a page break or a table of contents at the cursor. Still open: the white page of an empty document says nothing.
 
 ### 8. File tabs overflow without a signal — done
 
@@ -58,14 +58,14 @@ With six files the first tab was cut off on the left, with no shadow and no hori
 
 Done: a shadow on the side where tabs are hidden, the wheel scrolls the strip sideways, and a list button, shown only when tabs are hidden, offers every file with the current one checked.
 
-### 9. Uneven forms — partly done
+### 9. Uneven forms — done, except the CSS editor
 
-- Logo: a native file input ("Choose File" in the language of the browser, not translated, unsightly in the dark theme); **Remove logo** shown without a logo. Proposed: a drop zone with a thumbnail, and **Replace / Remove** only when a logo exists.
-- Date: free text, no picker, no **Today**.
-- Language: the raw code (`en`) rather than the name.
-- Margins: four fields without presets (Narrow, Normal, Wide) nor "same on all sides".
+- Logo: a native file input ("Choose File" in the language of the browser, not translated, unsightly in the dark theme); **Remove logo** shown without a logo. Done: a drop zone (drop a file, or click to choose one), then a thumbnail with **Replace** and **Remove**.
+- Date: free text, no picker, no **Today**. Done: a **Today** button and a date picker, both writing the date the way the document language writes it; the field stays free text.
+- Language: the raw code (`en`) rather than the name. Done: a list of languages by name ("French (fr)"), and a tag field under "Other…" for any other BCP 47 tag.
+- Margins: four fields without presets (Narrow, Normal, Wide) nor "same on all sides". Done: a preset select (Custom when the fields match none) and a "Same on all sides" box that makes the top field rule.
 - Custom CSS: a plain textarea without colours or line numbers at the bottom of a scrolling panel, its **Import .css / Default CSS** buttons out of sight. Done: the buttons sit above the field. Proposed: a CodeMirror CSS editor.
-- Long checkbox labels ("Number figures and tables (Figure 1, Table 1)"): the example belongs in a hint under the field.
+- Long checkbox labels ("Number figures and tables (Figure 1, Table 1)"): the example belongs in a hint under the field. Done, for that box and for the mirrored margins.
 
 ### 10. Contrast and focus — done
 
@@ -89,5 +89,5 @@ The card "Pagination: computed by Paged.js" was jargon without an action: replac
 | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------- | ----- |
 | Quick fixes        | Responsive toolbar (1), Reset in a menu with Undo (3), stable page count and toasts (5), CSS buttons above the field (9), focus at 3:1 and reduced motion (10), Pagination card (12) | 1 to 2 days | done  |
 | Discoverability    | Context menu of the file tabs, tooltips on focus with the shortcuts, Shortcuts panel, autosave indicator, overflow shadows (4, 6, 8)                                                 | 2 to 3 days | done  |
-| Settings           | Grouping by intent, logo drop zone, date picker, margin presets, Insert menu (2, 7, 9)                                                                                               | 3 to 5 days | open  |
+| Settings           | Grouping by intent, logo drop zone, date picker, margin presets, Insert menu (2, 7, 9)                                                                                               | 3 to 5 days | done  |
 | Phones and preview | Reduced bar, tools on tap, banner without layout shift (10, 11)                                                                                                                      | 2 days      | open  |

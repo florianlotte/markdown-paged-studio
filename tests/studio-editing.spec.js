@@ -10,6 +10,7 @@ import {
   expectNoMarkdown,
   exportVia,
   focusEditor,
+  insertVia,
   openDiagramDocument,
   openDocument,
   openFreshStudio,
@@ -150,10 +151,10 @@ test('what the insert buttons and pasted images write can be undone in the edito
   await page.keyboard.type('Typed.');
   await expectMarkdown(page, /Typed\.$/);
 
-  await page.locator('#insertPageBreak').click();
+  await insertVia(page, 'insertPageBreak');
   await expectMarkdown(page, /Typed\.\n\n\\newpage\n$/);
   // The cursor sits after the inserted block: the next insertion follows it.
-  await page.locator('#insertToc').click();
+  await insertVia(page, 'insertToc');
   await expectMarkdown(page, /\\newpage\n\n\[\[toc\]\]\n$/);
   await page.locator('#imageFiles').setInputFiles({ name: 'plan.png', mimeType: 'image/png', buffer: png(30, 20) });
   await page.locator('#imageList button', { hasText: 'Insert' }).click();
@@ -189,6 +190,75 @@ test('what the insert buttons and pasted images write can be undone in the edito
   await expect(editor).toBeVisible();
   await expectMarkdown(page, /\\newpage\n\n\[\[toc\]\]\n$/);
   await expect(page.locator('#preview .toc')).toHaveCount(2);
+});
+
+test('the Insert menu writes an example of each syntax at the cursor, and an empty file shows a prompt', async ({
+  page,
+}) => {
+  await openFreshStudio(page);
+  await setMarkdown(page, '');
+  // The prompt of an empty file names the menu.
+  await expect(page.locator('#markdown .cm-placeholder')).toHaveText(/Write your Markdown here.*Insert menu/);
+  await expect(page.locator('#insertOptions')).toBeHidden();
+  await page.locator('#insertMenu').click();
+  await expect(page.locator('#insertOptions')).toBeVisible();
+  await expect(page.locator('#insertOptions [role="menuitem"] strong')).toHaveText([
+    'Table',
+    'Image…',
+    'Diagram',
+    'Formula',
+    'Alert',
+    'Footnote',
+    'Page break',
+    'Table of contents',
+  ]);
+  await page.locator('#insertTable').click();
+  await expect(page.locator('#insertOptions')).toBeHidden();
+  await expect(page.locator('#markdown .cm-placeholder')).toHaveCount(0);
+  await expectMarkdown(page, /^\| Column \| Column \|\n\| --- \| --- \|\n\| Text \| Text \|\n\nTable: Caption\n$/);
+  await expect(page.locator('#preview .document-content table caption')).toHaveText('Caption');
+
+  await insertVia(page, 'insertDiagram');
+  await expectMarkdown(page, /```mermaid caption="Caption"\nflowchart LR\n {2}A\[Start\] --> B\[End\]\n```\n$/);
+  await insertVia(page, 'insertFormula');
+  await expectMarkdown(page, /\$\$\nE = mc\^2\n\$\$\n$/);
+  await insertVia(page, 'insertAlert');
+  await expectMarkdown(page, /> \[!NOTE\]\n> Text of the note\.\n$/);
+  // A footnote takes the first free number of the file.
+  await insertVia(page, 'insertFootnote');
+  await expectMarkdown(page, /Text with a call\.\[\^1\]\n\n\[\^1\]: The note\.\n$/);
+  await insertVia(page, 'insertFootnote');
+  await expectMarkdown(page, /\[\^1\]: The note\.\n\nText with a call\.\[\^2\]\n\n\[\^2\]: The note\.\n$/);
+  await expect(page.locator('#preview .mermaid-diagram')).toHaveCount(1);
+  await expect(page.locator('#preview .math-block')).toHaveCount(1);
+  await expect(page.locator('#preview .alert-note')).toHaveCount(1);
+  await expect(page.locator('#preview span.footnote')).toHaveCount(2);
+
+  // Image…: the chosen files go to the library and their references to the cursor.
+  await page.locator('#insertMenu').click();
+  const [chooser] = await Promise.all([page.waitForEvent('filechooser'), page.locator('#insertImage').click()]);
+  await chooser.setFiles({ name: 'plan.png', mimeType: 'image/png', buffer: png(30, 20) });
+  await expectMarkdown(page, /!\[plan\]\(plan\.png\)\n$/);
+  await expect(page.locator('#preview .document-image')).toHaveCount(1);
+  // Add images of the sidebar does not insert anything.
+  await page.locator('#imageFiles').setInputFiles({ name: 'map.png', mimeType: 'image/png', buffer: png(30, 20) });
+  await expect(page.locator('#imageList li')).toHaveCount(2);
+  await expectMarkdown(page, /!\[plan\]\(plan\.png\)\n$/);
+
+  // In the middle of the text, the block gets a blank line on both sides.
+  await setMarkdown(page, 'Before\nAfter\n');
+  await page.evaluate(() => window.studio.editor.select(7));
+  await insertVia(page, 'insertPageBreak');
+  await expectMarkdown(page, /^Before\n\n\\newpage\n\nAfter\n$/);
+
+  // The menu follows the keyboard: arrows move, Escape closes and gives the focus back.
+  await page.locator('#insertMenu').click();
+  await expect(page.locator('#insertTable')).toBeFocused();
+  await page.keyboard.press('ArrowUp');
+  await expect(page.locator('#insertToc')).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#insertOptions')).toBeHidden();
+  await expect(page.locator('#insertMenu')).toBeFocused();
 });
 
 test('the editor and the preview scroll together, and a double-click on a block shows its source', async ({ page }) => {

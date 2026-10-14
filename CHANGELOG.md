@@ -7,6 +7,26 @@ All notable changes to Markdown Paged Studio are listed here, newest first. The 
 
 ## [Unreleased]
 
+## [1.27.0] - 2026-10-14
+
+### Added
+
+- An **Insert** menu above the editor writes an example of a table, an image (chosen files, added to the
+  library), a diagram, a formula, an alert, a footnote, a page break or a table of contents at the cursor; an
+  empty file shows a prompt that names it.
+- The date has a **Today** button and a date picker, both writing the date the way the document language
+  writes it.
+- The document language is chosen by its name; any other BCP 47 tag is typed under "Other…".
+- Margin presets (Narrow, Normal, Wide, or Custom) and a "Same on all sides" box.
+- The logo is dropped on a zone or chosen from it; once set, a thumbnail with **Replace** and **Remove**.
+
+### Changed
+
+- The settings are grouped by intent, in groups that fold and stay folded: Document (title, author, date,
+  language), Cover (switch, template, accent, logo) and Images (with the count of the library and of the
+  missing names) under Content; Headers and footers, Numbering, Code and stylesheet under Design; Paper and
+  Margins under Page. The examples of the long check box labels moved to a hint under the field.
+
 ## [1.26.0] - 2026-10-14
 
 ### Added
@@ -545,7 +565,8 @@ All notable changes to Markdown Paged Studio are listed here, newest first. The 
 - Portable desktop app for Windows, Linux and macOS with direct PDF export.
 - Docker image, Playwright integration tests and CI.
 
-[Unreleased]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.26.0...HEAD
+[Unreleased]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.27.0...HEAD
+[1.27.0]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.26.0...v1.27.0
 [1.26.0]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.25.0...v1.26.0
 [1.25.0]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.24.0...v1.25.0
 [1.24.0]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.23.0...v1.24.0

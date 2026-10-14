@@ -18,10 +18,8 @@ import {
   exportImages,
   findImage,
   listImages,
-  MAX_LOGO_WIDTH,
   missingImages,
   onImagesChange,
-  prepareImage,
   removeImage,
   replaceImages,
   sanitizeImages,
@@ -37,11 +35,13 @@ import { fileStem } from './files.js';
 import { insertBlock, writeFile } from './editor.js';
 import { decorateMenus, initShortcuts, showShortcuts } from './shortcuts.js';
 import { initTooltips } from './tooltip.js';
+import { initSettings, syncSettings } from './settings.js';
 import { initWelcome, showWelcome } from './welcome.js';
 
-// Every state key has a form control with the same id, except the logo (a file input) and the text of the
-// document (the files and the editor, see chapters.js).
-const ids = Object.keys(state).filter(k => !['logoDataUrl', 'markdown', 'files'].includes(k));
+// Every state key has a form control with the same id, except the logo (a file input, see settings.js), the
+// language (chosen by name, or typed as a tag, see settings.js) and the text of the document (the files and
+// the editor, see chapters.js).
+const ids = Object.keys(state).filter(k => !['logoDataUrl', 'language', 'markdown', 'files'].includes(k));
 
 export function syncInputs() {
   for (const key of ids) {
@@ -51,6 +51,7 @@ export function syncInputs() {
     else el.value = state[key];
   }
   syncRunningHeaderLevel();
+  syncSettings();
 }
 
 // The level of the running header only matters while the running header is on.
@@ -242,31 +243,37 @@ function download(name, content, type) {
   setTimeout(() => URL.revokeObjectURL(url), 500);
 }
 
+// What the Insert menu writes at the cursor: a small example of each syntax, to be edited.
+const INSERTS = {
+  insertTable: '| Column | Column |\n| --- | --- |\n| Text | Text |\n\nTable: Caption',
+  insertDiagram: '```mermaid caption="Caption"\nflowchart LR\n  A[Start] --> B[End]\n```',
+  insertFormula: '$$\nE = mc^2\n$$',
+  insertAlert: '> [!NOTE]\n> Text of the note.',
+  insertPageBreak: '\\newpage',
+  insertToc: '[[toc]]',
+};
+
+// A footnote takes the first number the file does not use yet.
+function footnoteBlock() {
+  const used = [...activeFile().markdown.matchAll(/\[\^(\d+)\]/g)].map(match => Number(match[1]));
+  const number = Math.max(0, ...used) + 1;
+  return `Text with a call.[^${number}]\n\n[^${number}]: The note.`;
+}
+
+// Whether the next images chosen through #imageFiles are referenced at the cursor (Insert → Image…).
+let insertChosenImages = false;
+
+function bindInsertMenu() {
+  const actions = Object.fromEntries(Object.entries(INSERTS).map(([id, text]) => [id, () => insertIntoEditor(text)]));
+  actions.insertFootnote = () => insertIntoEditor(footnoteBlock());
+  actions.insertImage = () => {
+    insertChosenImages = true;
+    document.getElementById('imageFiles').click();
+  };
+  bindMenu('insertMenu', 'insertOptions', actions);
+}
+
 function bindFiles() {
-  document.getElementById('logo').addEventListener('change', async e => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    try {
-      // Like the images of the document, a large logo is scaled down: it prints at most 55 mm wide.
-      const { dataUrl } = await prepareImage(file, MAX_LOGO_WIDTH);
-      state.logoDataUrl = sanitizeConfig({ logoDataUrl: dataUrl }).logoDataUrl ?? '';
-      scheduleRender();
-    } catch (error) {
-      console.error(error);
-      e.target.value = '';
-      notify(t('The logo could not be read: {error}', { error: error?.message || error }));
-    }
-  });
-
-  document.getElementById('clearLogo').addEventListener('click', () => {
-    state.logoDataUrl = '';
-    document.getElementById('logo').value = '';
-    scheduleRender();
-  });
-
-  document.getElementById('insertPageBreak').addEventListener('click', () => insertIntoEditor('\\newpage'));
-  document.getElementById('insertToc').addEventListener('click', () => insertIntoEditor('[[toc]]'));
-
   document
     .getElementById('loadMarkdown')
     .addEventListener('click', () => document.getElementById('markdownFile').click());
@@ -867,7 +874,9 @@ function bindImages() {
   input.addEventListener(
     'change',
     guarded(async () => {
-      await addImages(input.files);
+      const insert = insertChosenImages;
+      insertChosenImages = false;
+      await addImages(input.files, { insert });
       input.value = '';
     }, 'Images could not be added: {error}'),
   );
@@ -954,6 +963,8 @@ export function initUi() {
   bindInputs();
   bindTabs();
   bindFiles();
+  bindInsertMenu();
   bindPdf();
   bindImages();
+  initSettings({ notify });
 }

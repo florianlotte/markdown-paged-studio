@@ -69,7 +69,7 @@ Node.js 20.19+ or 22.12+ is required by Vite 8.
 
 ## Usage
 
-The Markdown editor sits beside the paged preview (**Split**) or alone (**Edit**); **View** shows the preview alone. The bar above the editor inserts a page break or a table of contents, formats the file (**Prettify**), replaces or downloads it, and switches the scroll synchronisation; the row of the file tabs says when the document was last saved in the browser. A right-click on a file tab (a long press, or Shift+F10) offers Rename, Move, Download and Remove. The sidebar holds the settings: **Content** (cover fields, images), **Design** (header, footer, numbering, code theme, stylesheet) and **Page** (paper size, margins, document language). The ⋯ menu of the toolbar shows the welcome tour again (six panels on how the studio works, opened on the first visit until you tick "Don't show this again"), lists the keyboard shortcuts (also `?`) and resets the document, with ten seconds to undo. The [writing guide](docs/writing.md) describes everything you can write:
+The Markdown editor sits beside the paged preview (**Split**) or alone (**Edit**); **View** shows the preview alone. The **Insert** menu above the editor writes an example of a table, an image, a diagram, a formula, an alert, a footnote, a page break or a table of contents at the cursor (an empty file says so); the bar also formats the file (**Prettify**), replaces or downloads it, and switches the scroll synchronisation; the row of the file tabs says when the document was last saved in the browser. A right-click on a file tab (a long press, or Shift+F10) offers Rename, Move, Download and Remove. The sidebar holds the settings in groups that fold: **Content** (the document fields with a date picker and the language chosen by name, the cover with a drop zone for the logo, the images with their count), **Design** (headers and footers, numbering, code theme and stylesheet) and **Page** (paper size, margins with presets and "same on all sides"). The ⋯ menu of the toolbar shows the welcome tour again (six panels on how the studio works, opened on the first visit until you tick "Don't show this again"), lists the keyboard shortcuts (also `?`) and resets the document, with ten seconds to undo. The [writing guide](docs/writing.md) describes everything you can write:
 
 ![The welcome tour over the studio: its first panel, the Previous and Next arrows and the "Don't show this again" box](docs/screenshots/welcome.png)
 
@@ -167,7 +167,7 @@ The footer of the sidebar shows which build is running, for example `v1.13.1 · 
 
 ### Interface language
 
-The studio speaks English and French. It follows the language of the browser and the selector at the top of the sidebar, next to the logo, changes it; the choice is remembered on that device. It is a setting of the studio, not of the document: the language of the document, which drives hyphenation and quotes, is set in the **Page** tab.
+The studio speaks English and French. It follows the language of the browser and the selector at the top of the sidebar, next to the logo, changes it; the choice is remembered on that device. It is a setting of the studio, not of the document: the language of the document, which drives hyphenation and quotes, is chosen by name in the **Content** tab (or typed as a BCP 47 tag under "Other…").
 
 ![The studio in French](docs/screenshots/french.png)
 
@@ -243,7 +243,7 @@ Recent Chromium-based browsers (Chrome, Edge, Brave, Arc) are the reference for 
 
 Possible improvements, not scheduled:
 
-- The open items of the [UX review](docs/ux-review.md): settings grouped by intent, an empty-state prompt and an Insert menu, a logo drop zone, a date picker and margin presets, a reduced toolbar and tools on tap on phones.
+- The open items of the [UX review](docs/ux-review.md): a reduced toolbar and tools on tap on phones, a CodeMirror editor for the custom CSS.
 - Accessibility: a sidebar drawer that keeps the focus on phones; a banner that does not shift the layout.
 - Splitting `src/markdown.js` and `src/ui.js` into smaller modules; a non-blocking confirmation when a file is removed.
 - An installable web app that works offline; `<u>` in Mermaid labels; an outline of the headings with a search panel; more writing comfort.

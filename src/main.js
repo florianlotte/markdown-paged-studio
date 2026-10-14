@@ -10,6 +10,7 @@ import { initTheme } from './theme.js';
 import { initUi } from './ui.js';
 import { flushView, initView } from './view.js';
 import { showWelcome, welcomeWanted } from './welcome.js';
+import { syncLogo } from './settings.js';
 
 initTheme();
 initLanguage();
@@ -28,6 +29,8 @@ setBuiltinImages(LOCAL_IMAGES);
 if (!AUTOMATION) {
   // Images and logo first, so the first render already shows them; then every change of the library re-renders.
   Promise.allSettled([loadImages(), restoreLogo()]).then(() => {
+    // The logo zone of the sidebar shows the restored logo.
+    syncLogo();
     onImagesChange(reason => {
       if (reason === 'library') scheduleRender();
     });

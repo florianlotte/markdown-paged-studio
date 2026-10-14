@@ -2,7 +2,16 @@
 // order of the document) and the link between the files, the editor and the assembled Markdown that is
 // rendered. `state.files` is the source; `state.markdown` is kept equal to their assembly after every change.
 import { state } from './config.js';
-import { currentFile, focusEditor, goToLine, initEditor, openFile, setEditorPhrases, writeFile } from './editor.js';
+import {
+  currentFile,
+  focusEditor,
+  goToLine,
+  initEditor,
+  openFile,
+  setEditorPhrases,
+  setEditorPlaceholder,
+  writeFile,
+} from './editor.js';
 import { applyAssembledEdit, assembleFiles, DEFAULT_FILE_NAME, fileName, fileOffsets, locateLine } from './files.js';
 import { onLanguageChange, t } from './i18n.js';
 import { keys } from './shortcuts.js';
@@ -21,6 +30,9 @@ function commit() {
   state.markdown = assembleFiles(state.files);
   documentChanged();
 }
+
+// Shown in an empty file.
+const PLACEHOLDER = 'Write your Markdown here. The Insert menu above adds a table, a diagram, a formula, an alert…';
 
 function searchPhrases() {
   const keys = [
@@ -441,8 +453,10 @@ export function initChapters(host, { onChange, onScroll, onImageFiles, onDownloa
   bindOverflow();
   initEditor(host, { onChange: commit, onScroll, onImageFiles });
   setEditorPhrases(searchPhrases());
+  setEditorPlaceholder(t(PLACEHOLDER));
   onLanguageChange(() => {
     setEditorPhrases(searchPhrases());
+    setEditorPlaceholder(t(PLACEHOLDER));
     drawTabs();
   });
   syncChapters();

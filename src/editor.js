@@ -14,6 +14,7 @@ import {
   highlightActiveLineGutter,
   keymap,
   lineNumbers,
+  placeholder,
 } from '@codemirror/view';
 import { tags } from '@lezer/highlight';
 
@@ -25,6 +26,8 @@ const scrolls = new WeakMap(); // file -> scrollTop
 
 // Texts of the search panel, translated in place when the language changes (see setEditorPhrases).
 const phrases = {};
+// The text shown in an empty file (see setEditorPlaceholder).
+let placeholderText = '';
 
 // Colours come from the tokens of src/ui.css, so the editor follows the light or dark theme of the studio
 // without a theme of its own.
@@ -46,6 +49,7 @@ const theme = EditorView.theme({
   },
   '.cm-lineNumbers .cm-gutterElement': { padding: '0 8px 0 10px', minWidth: '28px' },
   '.cm-activeLine': { backgroundColor: 'var(--code-active-line)' },
+  '.cm-placeholder': { color: 'var(--text-faint)', fontStyle: 'italic' },
   '.cm-activeLineGutter': { backgroundColor: 'var(--code-active-gutter)', color: 'var(--text-soft)' },
   // As specific as the rule of the base theme for the focused editor, which would otherwise win. The
   // selection is drawn in a layer behind the lines: the background of the active line stays translucent.
@@ -90,6 +94,11 @@ const extensions = [
   search({ top: true }),
   highlightSelectionMatches(),
   EditorState.phrases.of(phrases),
+  placeholder(() => {
+    const node = document.createElement('span');
+    node.textContent = placeholderText;
+    return node;
+  }),
   EditorView.contentAttributes.of({ 'aria-label': 'Markdown', spellcheck: 'false' }),
   // Ctrl+Shift+Z redoes on every system, as in a plain text field (CodeMirror binds it on some only).
   keymap.of([
@@ -193,8 +202,11 @@ export function insertBlock(text) {
   const before = view.state.sliceDoc(0, from);
   const lead = before && !before.endsWith('\n\n') ? (before.endsWith('\n') ? '\n' : '\n\n') : '';
   const block = `${lead}${text}\n`;
+  // Text that follows on the next line gets a blank line between, so the block does not run into it.
+  const after = view.state.sliceDoc(to);
+  const tail = after && !after.startsWith('\n') ? '\n' : '';
   view.dispatch({
-    changes: { from, to, insert: block },
+    changes: { from, to, insert: block + tail },
     selection: EditorSelection.cursor(from + block.length),
     userEvent: 'input.studio',
     scrollIntoView: true,
@@ -247,4 +259,10 @@ export const editorLineCount = () => view.state.doc.lines;
 export function setEditorPhrases(table) {
   for (const key of Object.keys(phrases)) delete phrases[key];
   Object.assign(phrases, table);
+}
+
+// The prompt of an empty file; one already shown is rewritten in place.
+export function setEditorPlaceholder(text) {
+  placeholderText = text;
+  for (const node of view?.dom.querySelectorAll('.cm-placeholder > span') ?? []) node.textContent = text;
 }

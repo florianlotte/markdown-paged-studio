@@ -2,6 +2,7 @@
 // sidebar, tabs, phone layout.
 import { test, expect } from '@playwright/test';
 import { readFileSync } from 'node:fs';
+import { png } from './helpers/png.mjs';
 import {
   STATUS_DONE,
   WELCOME_KEY,
@@ -10,6 +11,7 @@ import {
   focusEditor,
   openFreshStudio,
   pages,
+  setMarkdown,
   status,
 } from './helpers/studio.mjs';
 
@@ -165,6 +167,45 @@ test('sidebar tabs follow the ARIA tabs pattern with keyboard navigation', async
   await expect(page.locator('#panel-content')).toBeVisible();
   await contentTab.press('End');
   await expect(page.locator('#tabPage')).toBeFocused();
+});
+
+test('the settings are grouped by intent, a group folds and stays folded, and Images counts its files', async ({
+  page,
+}) => {
+  await openFreshStudio(page);
+  await expect(page.locator('#panel-content summary')).toHaveText(['Document', 'Cover', 'Images']);
+  await expect(page.locator('#panel-design summary')).toHaveText([
+    'Headers and footers',
+    'Numbering',
+    'Code and stylesheet',
+  ]);
+  await expect(page.locator('#panel-page summary')).toHaveText(['Paper', 'Margins']);
+  // The document language sits with the document fields, not with the paper.
+  await expect(page.locator('details[data-group="document"] #language')).toBeVisible();
+  const images = page.locator('details[data-group="images"]');
+  await expect(images).toHaveAttribute('open', '');
+  await expect(page.locator('#imagesCount')).toHaveText('');
+  await images.locator('summary').click();
+  await expect(images).not.toHaveAttribute('open', '');
+  await expect(page.locator('#addImages')).toBeHidden();
+  await expect
+    .poll(() => page.evaluate(() => localStorage.getItem('markdown-paged-studio:settings')))
+    .toBe('{"closed":["images"]}');
+  await page.reload();
+  await expect(status(page)).toHaveText(STATUS_DONE);
+  await expect(images).not.toHaveAttribute('open', '');
+  await expect(page.locator('details[data-group="document"]')).toHaveAttribute('open', '');
+  await images.locator('summary').click();
+  await expect(page.locator('#addImages')).toBeVisible();
+
+  // The counter: files in the library, and names of the document that are not there.
+  await page.locator('#imageFiles').setInputFiles({ name: 'plan.png', mimeType: 'image/png', buffer: png(30, 20) });
+  await expect(page.locator('#imagesCount')).toHaveText('1');
+  await setMarkdown(page, '# Pictures\n\n![Plan](plan.png)\n\n![Map](map.png)\n');
+  await expect(page.locator('#imagesCount')).toHaveText('1 · 1 missing');
+  await expect(page.locator('#imagesCount')).toHaveClass(/is-warning/);
+  await page.locator('#imageFiles').setInputFiles({ name: 'map.png', mimeType: 'image/png', buffer: png(30, 20) });
+  await expect(page.locator('#imagesCount')).toHaveText('2');
 });
 
 test('the sidebar header stays fixed while the settings scroll in a short window', async ({ page }) => {

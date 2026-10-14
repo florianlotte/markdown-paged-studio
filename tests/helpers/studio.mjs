@@ -173,3 +173,15 @@ export async function exportVia(page, id) {
   await page.locator('#exportMenu').click();
   await page.locator(`#${id}`).click();
 }
+
+// An entry of the Insert menu of the editor bar.
+export async function insertVia(page, id) {
+  await page.locator('#insertMenu').click();
+  await page.locator(`#${id}`).click();
+}
+
+// The four margins of the project, in mm: top, right, bottom, left.
+export async function margins(page) {
+  const project = JSON.parse(await page.evaluate(() => window.studio.source()));
+  return [project.marginTop, project.marginRight, project.marginBottom, project.marginLeft];
+}

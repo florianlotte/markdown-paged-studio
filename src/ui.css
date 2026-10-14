@@ -345,6 +345,176 @@ textarea:focus {
   padding: 5px 9px;
   font-size: 12px;
 }
+/* Anything hidden in the sidebar stays hidden, whatever its display rule (labels, buttons, zones). */
+.sidebar-body [hidden] {
+  display: none;
+}
+/* The settings in groups by intent: a foldable title each, remembered in localStorage (settings.js). */
+.group {
+  padding: 2px 0 4px;
+  border-bottom: 1px solid var(--border-faint);
+}
+.group:last-child {
+  border-bottom: 0;
+}
+.group > summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 0;
+  margin-bottom: 6px;
+  cursor: pointer;
+  list-style: none;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text-strong);
+  user-select: none;
+}
+.group > summary::-webkit-details-marker {
+  display: none;
+}
+.group > summary::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-right: 1.6px solid var(--text-faint);
+  border-bottom: 1.6px solid var(--text-faint);
+  transform: rotate(45deg);
+  margin: -3px 2px 0 1px;
+  transition: transform 0.15s;
+}
+.group:not([open]) > summary::before {
+  transform: rotate(-45deg);
+  margin-top: 0;
+}
+.group:not([open]) > summary {
+  margin-bottom: 0;
+}
+.group > summary:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+/* The counter next to the title of the images: how many in the library, how many names are missing. */
+.group-count {
+  margin-left: auto;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-faint);
+}
+.group-count.is-warning {
+  color: var(--danger-text);
+}
+/* A field whose label is not the parent of its control (a row of buttons beside it, a zone instead). */
+.field {
+  margin-bottom: 13px;
+}
+.field > label,
+.field-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 650;
+  color: var(--text-soft);
+  margin: 0;
+}
+.field-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 5px;
+}
+.field-row input {
+  flex: 1;
+  min-width: 0;
+  margin-top: 0;
+}
+.field-row button {
+  flex-shrink: 0;
+  padding: 8px 10px;
+  font-size: 12px;
+}
+.field-row button.icon-only {
+  width: 36px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 37px;
+}
+/* The picker of the browser is anchored on its button: the date field sits over it, invisible. */
+.date-pick {
+  position: relative;
+  display: inline-flex;
+}
+.date-pick input[type='date'] {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+/* A check box aligned with the fields of its row. */
+.grid2 .check-field {
+  align-self: end;
+  min-height: 37px;
+}
+/* The logo: a zone to drop or choose a file while there is none, the thumbnail with its actions once there is. */
+.drop-zone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  margin-top: 5px;
+  padding: 14px 10px;
+  border: 1.5px dashed var(--border);
+  border-radius: 10px;
+  background: var(--surface-2);
+  color: var(--text-soft);
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+  cursor: pointer;
+}
+.drop-zone:hover,
+.drop-zone.is-over {
+  border-color: var(--focus);
+  color: var(--text);
+  filter: none;
+}
+.drop-zone.is-over {
+  background: var(--surface);
+}
+.logo-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 5px;
+  padding: 8px;
+  border: 1px solid var(--border-faint);
+  border-radius: 10px;
+  background: var(--surface-2);
+}
+.logo-thumb {
+  width: 64px;
+  height: 48px;
+  flex-shrink: 0;
+  object-fit: contain;
+  border-radius: 6px;
+  background: #fff;
+  border: 1px solid var(--border-faint);
+}
+.logo-card .row-actions {
+  margin: 0;
+}
+.logo-card .row-actions button {
+  padding: 6px 10px;
+  font-size: 12px;
+}
 button {
   border: 1px solid transparent;
   border-radius: 8px;
@@ -517,7 +687,8 @@ button:hover {
 .menu[hidden] {
   display: none;
 }
-.toolbar-actions .menu button {
+.toolbar-actions .menu button,
+.insert-menu .menu button {
   display: grid;
   grid-template-columns: 1fr auto;
   gap: 2px 12px;
@@ -836,12 +1007,30 @@ kbd {
   margin-left: auto;
   flex-shrink: 0;
 }
-.toolbar-actions .menu button > span {
+.toolbar-actions .menu button > span,
+.insert-menu .menu button > span {
   grid-column: 1;
 }
-.toolbar-actions .menu kbd.shortcut {
+.toolbar-actions .menu kbd.shortcut,
+.insert-menu .menu kbd.shortcut {
   grid-column: 2;
   grid-row: 1;
+}
+/* The Insert menu of the editor bar: its entries keep the size of the toolbar menus, not of the bar. */
+.insert-menu .menu {
+  left: 0;
+  right: auto;
+  min-width: 300px;
+}
+.insert-menu .menu button {
+  padding: 8px 10px;
+  font-size: 13px;
+  white-space: normal;
+}
+.insert-menu .menu-arrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
 }
 /* The popup menu of the file tabs: placed where it was asked for, one line per entry. */
 .file-menu {
@@ -1534,19 +1723,6 @@ kbd {
 }
 
 /* Image library of the document (Content tab). */
-.images {
-  margin-top: 4px;
-  padding-top: 14px;
-  border-top: 1px solid var(--border-faint);
-}
-.images-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  font-size: 12px;
-  color: var(--text-soft);
-}
 .images-hint,
 .images-status,
 .field-hint {

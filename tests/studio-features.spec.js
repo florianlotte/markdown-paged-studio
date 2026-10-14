@@ -7,6 +7,8 @@ import {
   DIAGRAM,
   expectMarkdown,
   exportVia,
+  insertVia,
+  margins,
   marginBoxContent,
   openDocument,
   openFreshStudio,
@@ -90,9 +92,9 @@ test('page breaks split the document and the table of contents shows the page nu
 
   // The buttons write the markers at the cursor.
   await cursorToEnd(page);
-  await page.locator('#insertPageBreak').click();
+  await insertVia(page, 'insertPageBreak');
   await expectMarkdown(page, /Text\.\n\n\\newpage\n$/);
-  await page.locator('#insertToc').click();
+  await insertVia(page, 'insertToc');
   await expectMarkdown(page, /\\newpage\n\n\[\[toc\]\]\n$/);
 });
 
@@ -417,8 +419,7 @@ test('formulas are drawn by KaTeX with their fonts, alerts are titled in the lan
   await expect(alert).toHaveCSS('border-left-color', 'rgb(154, 103, 0)');
   await expect(page.locator('#preview blockquote')).toHaveText('An ordinary quote.');
   await expect(page.locator('#preview dl dt')).toHaveText('Term');
-  await page.getByRole('tab', { name: 'Page' }).click();
-  await page.locator('#language').fill('fr');
+  await page.locator('#language').selectOption('fr');
   await expect(alert.locator('.alert-title')).toHaveText('Avertissement');
 
   // The export carries the rules of KaTeX and exactly these faces, and lays the formulas out by itself.
@@ -531,6 +532,45 @@ test('a margin typed beyond its limits is clamped like an imported one', async (
   // The pages are laid out with the clamped margins.
   await expect(page.locator('#preview')).not.toHaveClass(/is-stale/);
   await expect(pages(page).first()).toBeVisible();
+});
+
+test('margin presets fill the four fields, and "same on all sides" makes the top one rule', async ({ page }) => {
+  await openFreshStudio(page);
+  await page.getByRole('tab', { name: 'Page' }).click();
+  const preset = page.locator('#marginPreset');
+  // The sample document uses the Normal preset.
+  await expect(preset).toHaveValue('normal');
+  await preset.selectOption('narrow');
+  expect(await margins(page)).toEqual([12, 12, 12, 12]);
+  await expect(page.locator('#marginLeft')).toHaveValue('12');
+  await preset.selectOption('wide');
+  expect(await margins(page)).toEqual([30, 25, 30, 25]);
+  // A field edited by hand turns the preset into Custom; back to a known set, the preset shows again.
+  await page.locator('#marginTop').fill('31');
+  await expect(preset).toHaveValue('custom');
+  await page.locator('#marginTop').fill('30');
+  await expect(preset).toHaveValue('wide');
+
+  const linked = page.locator('#marginsLinked');
+  await linked.check();
+  expect(await margins(page)).toEqual([30, 30, 30, 30]);
+  await expect(page.locator('#marginRight')).toBeDisabled();
+  await expect(page.locator('#marginBottom')).toBeDisabled();
+  await expect(page.locator('#marginLeft')).toBeDisabled();
+  await page.locator('#marginTop').fill('15');
+  expect(await margins(page)).toEqual([15, 15, 15, 15]);
+  await expect(page.locator('#marginLeft')).toHaveValue('15');
+  await expect(preset).toHaveValue('custom');
+  await linked.uncheck();
+  await expect(page.locator('#marginRight')).toBeEnabled();
+  await page.locator('#marginRight').fill('20');
+  expect(await margins(page)).toEqual([15, 20, 15, 15]);
+  // The pages follow: 210 mm of A4 less 15 and 20 mm of margins.
+  await expect(page.locator('#preview')).not.toHaveClass(/is-stale/);
+  const content = pages(page).nth(1).locator('.pagedjs_page_content');
+  await expect
+    .poll(() => content.evaluate(el => Math.round((parseFloat(getComputedStyle(el).width) * 25.4) / 96)))
+    .toBe(175);
 });
 
 test('the custom CSS is applied to the document, loaded from a file and restored', async ({ page }) => {

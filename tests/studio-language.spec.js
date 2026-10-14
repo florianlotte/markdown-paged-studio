@@ -64,7 +64,9 @@ test('the interface switches to French and back, and remembers the choice', asyn
   await expect(page.locator('.view-controls .segmented').first()).toHaveAttribute('aria-label', 'Mode d’affichage');
   await expect(page.locator('.mode-label')).toHaveText(['Édition', 'Côte à côte', 'Aperçu']);
   await expect(page.locator('#modeSplit')).toHaveAttribute('title', 'Éditeur et aperçu côte à côte');
-  await expect(page.locator('#insertPageBreak')).toHaveText('Saut de page');
+  await expect(page.locator('#insertMenu')).toHaveText(/^\s*Insérer\s*$/);
+  await expect(page.locator('#insertPageBreak strong')).toHaveText('Saut de page');
+  await expect(page.locator('#insertFootnote span')).toHaveText('Un appel dans le texte et sa note au bas de la page');
   await expect(page.locator('#loadMarkdown')).toHaveAttribute('title', 'Remplacer ce fichier par un fichier Markdown');
   await expect(page.locator('#addFile')).toHaveAttribute('aria-label', 'Nouveau fichier');
   await expect(page.locator('#fileTabs')).toHaveAttribute('aria-label', 'Fichiers du document');
@@ -121,6 +123,24 @@ test('the interface switches to French and back, and remembers the choice', asyn
     'Bandeau de couleur',
     'Minimal',
   ]);
+  // The groups of the settings, the date helpers, the languages by name and the margin presets.
+  await expect(page.locator('#panel-content summary').nth(0)).toHaveText('Document');
+  await expect(page.locator('#panel-content summary').nth(1)).toHaveText('Couverture');
+  await expect(page.locator('#imagesTitle')).toHaveText('Images');
+  await expect(page.locator('#panel-design summary')).toHaveText([
+    'En-têtes et pieds de page',
+    'Numérotation',
+    'Code et feuille de style',
+  ]);
+  await expect(page.locator('#panel-page summary')).toHaveText(['Papier', 'Marges']);
+  await expect(page.locator('#dateToday')).toHaveText("Aujourd'hui");
+  await expect(page.locator('#datePick')).toHaveAttribute('aria-label', 'Choisir une date');
+  await expect(page.locator('#language option[value="fr"]')).toHaveText('Français (fr)');
+  await expect(page.locator('#language option[value="de"]')).toHaveText('Allemand (de)');
+  await expect(page.locator('#language option[value="other"]')).toHaveText('Autre…');
+  await expect(page.locator('#logoZone')).toHaveText('Déposez un logo ici, ou choisissez un fichier');
+  await expect(page.locator('#marginPreset option')).toHaveText(['Étroites', 'Normales', 'Larges', 'Personnalisées']);
+  await expect(page.locator('#markdown .cm-placeholder')).toHaveCount(0);
   // Read once the render has caught up with the changes above, not while the previous count still shows.
   await expect(page.locator('#preview')).not.toHaveClass(/is-stale|is-rendering/);
   await expect(status(page)).toHaveText('3 pages');

@@ -13,11 +13,11 @@ The bar above the editor:
 - replaces the current file with an existing `.md` file, or downloads it (named after the title, like the PDF, when it is the only file);
 - switches the scroll synchronisation: while it is on, the pane you scroll takes the other one to the same part of the document.
 
-The sidebar holds the settings: the **Content** tab the cover fields and the images, the **Design** tab the header, footer, numbering, code theme and stylesheet, the **Page** tab the paper size, margins and document language.
+The sidebar holds the settings in groups that fold: the **Content** tab the document fields (with a date picker and the language by name), the cover and its logo, and the images; the **Design** tab the headers and footers, the numbering, the code theme and the stylesheet; the **Page** tab the paper size and the margins, with presets.
 
 The parser is [markdown-it](https://github.com/markdown-it/markdown-it): all of [CommonMark](https://commonmark.org) and of GitHub Flavored Markdown (tables, strikethrough, task lists, automatic links), plus footnotes and typographic replacements. Raw HTML inside Markdown is intentionally shown as text. [Markdown support](markdown-support.md) lists what is understood, the four deliberate differences with the specification, what is not supported (abbreviations, emoji shortcodes), and the conformance measured on the official examples.
 
-Whatever the studio writes into the editor for you (the insert buttons, a pasted image, a size set from the preview) is an ordinary edit: Ctrl+Z undoes it like something you typed, and Ctrl+Y or Ctrl+Shift+Z redoes it.
+Whatever the studio writes into the editor for you (the Insert menu, a pasted image, a size set from the preview) is an ordinary edit: Ctrl+Z undoes it like something you typed, and Ctrl+Y or Ctrl+Shift+Z redoes it.
 
 ## Several files
 
@@ -114,7 +114,7 @@ Give an element a label and refer to it by that label: the studio writes the num
 | `- [ ] to do`, `- [x] done`     | A task list with check boxes                                                                           |
 | ` ```js ` … ` ``` `             | A code block highlighted for its language (about 35 common languages); unknown ones stay plain         |
 
-The **Page break** and **Table of contents** buttons above the editor write the markers at the cursor. The table lists what comes after it: a heading placed above it, such as "Contents", is not part of it. Clicking an entry in the preview scrolls to its page.
+The **Insert** menu above the editor writes the markers at the cursor (with examples of a table, an image, a diagram, a formula, an alert and a footnote). The table lists what comes after it: a heading placed above it, such as "Contents", is not part of it. Clicking an entry in the preview scrolls to its page.
 
 Every heading gets an anchor named after its text, the way GitHub does: `[see the details](#details)` links to the heading "Details", in the preview and in the exports. Two headings with the same text are told apart with a number (`#details-2`).
 
@@ -175,6 +175,6 @@ Good to know:
 
 ## Page setup
 
-The **Page** tab selects the paper size, the four margins in millimetres, and the document language as a BCP 47 tag (`en`, `fr`, `pt-BR`…). The language sets `lang` on the rendered document and on the exported file, which drives hyphenation (`hyphens: auto` in the sample CSS), the typographic quotes produced by the Markdown parser (« » in French, „ “ in German…), the titles of the alerts and the words of the numbering (Figure, Tableau, Abbildung…). The cover page ignores margins and headers.
+The **Page** tab selects the paper size and the four margins in millimetres (Narrow, Normal and Wide presets, or the same value on all sides). The document language is chosen by name in the **Content** tab, or typed as a BCP 47 tag (`pt-BR`, `zh-Hant`…) under "Other…". The language sets `lang` on the rendered document and on the exported file, which drives hyphenation (`hyphens: auto` in the sample CSS), the typographic quotes produced by the Markdown parser (« » in French, „ “ in German…), the titles of the alerts and the words of the numbering (Figure, Tableau, Abbildung…). The cover page ignores margins and headers.
 
-**Facing pages** mirrors the left and right margins on left-hand pages, for double-sided printing: the left margin is then the inner one, the page number stays on the outer edge, and the two-page view of the preview pairs the pages as in the bound document.
+**Mirror margins on facing pages** swaps the left and right margins on left-hand pages, for double-sided printing: the left margin is then the inner one, the page number stays on the outer edge, and the two-page view of the preview pairs the pages as in the bound document.

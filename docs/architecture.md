@@ -53,7 +53,8 @@ src/view.js         workspace: Edit, Split or View, splitter, layout and zoom of
 src/welcome.js      the welcome tour: panels of index.html paged through, "Don't show this again" remembered
 src/shortcuts.js    keyboard shortcuts: their spelling per platform, the panel that lists them
 src/tooltip.js      tooltips of the chrome, on hover and on keyboard focus, with the shortcut
-src/ui.js           form, tabs, files, images, links of the preview, export and print, banner and toast
+src/ui.js           form, tabs, files, images, Insert menu, links of the preview, export and print, banner and toast
+src/settings.js     settings sidebar: folding groups, date helpers, language by name, margin presets, logo zone
 src/pdf-capability.js can this browser draw the pages of a PDF
 src/pdf-render.js   the PDF drawn by the browser: page images, text layer, links
 src/pdf-sources.js  the sources of the document as PDF attachments: attach, read back

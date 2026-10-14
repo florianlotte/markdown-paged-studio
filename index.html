@@ -117,29 +117,106 @@
               aria-labelledby="tabContent"
               data-panel="content"
             >
-              <label>Title<input id="title" /></label>
-              <label>Subtitle<input id="subtitle" /></label>
-              <label>Author<input id="author" /></label>
-              <label>Date<input id="date" /></label>
-              <label class="check"><input id="cover" type="checkbox" /> Show cover page</label>
-              <div class="grid2">
+              <details class="group" data-group="document" open>
+                <summary>Document</summary>
+                <label>Title<input id="title" /></label>
+                <label>Subtitle<input id="subtitle" /></label>
+                <label>Author<input id="author" /></label>
+                <div class="field">
+                  <label for="date">Date</label>
+                  <div class="field-row">
+                    <input id="date" />
+                    <button id="dateToday" class="secondary" type="button" title="Write today's date">Today</button>
+                    <span class="date-pick">
+                      <button
+                        id="datePick"
+                        class="secondary icon-only"
+                        type="button"
+                        aria-label="Pick a date"
+                        title="Pick a date"
+                      >
+                        <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true" focusable="false">
+                          <rect
+                            x="3"
+                            y="4.5"
+                            width="14"
+                            height="12"
+                            rx="2"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="1.5"
+                          />
+                          <path
+                            d="M3 8.5h14M7 3v3M13 3v3"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="1.5"
+                            stroke-linecap="round"
+                          />
+                        </svg>
+                      </button>
+                      <input id="datePicker" type="date" tabindex="-1" aria-hidden="true" />
+                    </span>
+                  </div>
+                </div>
                 <label
-                  >Cover template
-                  <select id="coverTemplate">
-                    <option value="classic">Classic</option>
-                    <option value="centered">Centered</option>
-                    <option value="band">Colour band</option>
-                    <option value="minimal">Minimal</option>
-                  </select>
+                  >Document language
+                  <select id="language"></select>
                 </label>
-                <label>Accent colour<input id="accentColor" type="color" /></label>
-              </div>
-              <label>Logo<input id="logo" type="file" accept="image/*" /></label>
-              <button id="clearLogo" class="secondary">Remove logo</button>
+                <label id="languageTagField" hidden
+                  >Language tag
+                  <input id="languageTag" placeholder="pt-BR" spellcheck="false" autocomplete="off" />
+                </label>
+                <p class="field-hint">Drives the hyphenation and the quotes of the document.</p>
+              </details>
 
-              <section class="images" aria-labelledby="imagesTitle">
-                <div class="images-header">
-                  <strong id="imagesTitle">Images</strong>
+              <details class="group" data-group="cover" open>
+                <summary>Cover</summary>
+                <label class="check"><input id="cover" type="checkbox" /> Show cover page</label>
+                <div class="grid2">
+                  <label
+                    >Cover template
+                    <select id="coverTemplate">
+                      <option value="classic">Classic</option>
+                      <option value="centered">Centered</option>
+                      <option value="band">Colour band</option>
+                      <option value="minimal">Minimal</option>
+                    </select>
+                  </label>
+                  <label>Accent colour<input id="accentColor" type="color" /></label>
+                </div>
+                <div class="field">
+                  <span class="field-label" id="logoLabel">Logo</span>
+                  <input id="logo" type="file" accept="image/*" aria-labelledby="logoLabel" hidden />
+                  <button id="logoZone" class="drop-zone" type="button" aria-describedby="logoHint">
+                    <svg viewBox="0 0 20 20" width="22" height="22" aria-hidden="true" focusable="false">
+                      <path
+                        d="M10 13V4M10 4 6.5 7.5M10 4l3.5 3.5M4 13v2.5h12V13"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.6"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                    </svg>
+                    <span>Drop a logo here, or choose a file</span>
+                  </button>
+                  <div id="logoCard" class="logo-card" hidden>
+                    <img id="logoPreview" class="logo-thumb" alt="Current logo" />
+                    <div class="row-actions">
+                      <button id="replaceLogo" class="secondary" type="button">Replace</button>
+                      <button id="clearLogo" class="secondary" type="button">Remove</button>
+                    </div>
+                  </div>
+                  <p class="field-hint" id="logoHint">PNG, JPEG or SVG; shown on the cover page, up to 55 mm wide.</p>
+                </div>
+              </details>
+
+              <details class="group" data-group="images" open>
+                <summary>
+                  <span id="imagesTitle">Images</span><span id="imagesCount" class="group-count"></span>
+                </summary>
+                <div class="row-actions">
                   <button id="addImages" class="secondary" type="button">Add images</button>
                   <input id="imageFiles" type="file" accept="image/*" multiple hidden />
                 </div>
@@ -149,88 +226,105 @@
                 </p>
                 <p id="imagesStatus" class="images-status" role="status" hidden></p>
                 <ul id="imageList" class="image-list"></ul>
-              </section>
+              </details>
             </div>
 
             <div class="panel" role="tabpanel" id="panel-design" aria-labelledby="tabDesign" data-panel="design">
-              <label>Header title<input id="headerTitle" /></label>
-              <label class="check"
-                ><input id="runningHeader" type="checkbox" /> Use the current heading as header title</label
-              >
-              <label
-                >Running header level
-                <select id="runningHeaderLevel">
-                  <option value="h1">Level 1 (chapters)</option>
-                  <option value="h2">Level 2 (sections)</option>
-                  <option value="h3">Level 3</option>
-                </select>
-              </label>
-              <label
-                >Heading numbering
-                <select id="numberHeadings">
-                  <option value="none">None</option>
-                  <option value="h1">From level 1 (1, 1.1, 1.1.1)</option>
-                  <option value="h2">From level 2 (level 1 is the title)</option>
-                </select>
-              </label>
-              <label class="check"
-                ><input id="numberFigures" type="checkbox" /> Number figures and tables (Figure 1, Table 1)</label
-              >
-              <label>Header name<input id="headerName" /></label>
-              <label>Footer text<input id="footerText" /></label>
-              <label
-                >Code highlighting
-                <select id="codeTheme">
-                  <option value="light">Light</option>
-                  <option value="dark">Dark</option>
-                  <option value="none">None</option>
-                </select>
-              </label>
-              <div class="field-header">
-                <label for="customCss">Custom CSS</label>
-                <div class="row-actions">
-                  <button id="loadCss" class="secondary">Import .css</button>
-                  <input id="cssFile" type="file" accept=".css,text/css" hidden />
-                  <button id="resetCss" class="secondary">Default CSS</button>
+              <details class="group" data-group="headers" open>
+                <summary>Headers and footers</summary>
+                <label>Header title<input id="headerTitle" /></label>
+                <label class="check"
+                  ><input id="runningHeader" type="checkbox" /> Use the current heading as header title</label
+                >
+                <label
+                  >Running header level
+                  <select id="runningHeaderLevel">
+                    <option value="h1">Level 1 (chapters)</option>
+                    <option value="h2">Level 2 (sections)</option>
+                    <option value="h3">Level 3</option>
+                  </select>
+                </label>
+                <label>Header name<input id="headerName" /></label>
+                <label>Footer text<input id="footerText" /></label>
+              </details>
+
+              <details class="group" data-group="numbering" open>
+                <summary>Numbering</summary>
+                <label
+                  >Heading numbering
+                  <select id="numberHeadings">
+                    <option value="none">None</option>
+                    <option value="h1">From level 1 (1, 1.1, 1.1.1)</option>
+                    <option value="h2">From level 2 (level 1 is the title)</option>
+                  </select>
+                </label>
+                <label class="check"><input id="numberFigures" type="checkbox" /> Number figures and tables</label>
+                <p class="field-hint">Figure 1, Table 1, and the references written with @fig: and @tab:.</p>
+              </details>
+
+              <details class="group" data-group="style" open>
+                <summary>Code and stylesheet</summary>
+                <label
+                  >Code highlighting
+                  <select id="codeTheme">
+                    <option value="light">Light</option>
+                    <option value="dark">Dark</option>
+                    <option value="none">None</option>
+                  </select>
+                </label>
+                <div class="field-header">
+                  <label for="customCss">Custom CSS</label>
+                  <div class="row-actions">
+                    <button id="loadCss" class="secondary">Import .css</button>
+                    <input id="cssFile" type="file" accept=".css,text/css" hidden />
+                    <button id="resetCss" class="secondary">Default CSS</button>
+                  </div>
                 </div>
-              </div>
-              <textarea id="customCss" class="editor css-editor" spellcheck="false"></textarea>
+                <textarea id="customCss" class="editor css-editor" spellcheck="false"></textarea>
+              </details>
             </div>
 
             <div class="panel" role="tabpanel" id="panel-page" aria-labelledby="tabPage" data-panel="page">
-              <label
-                >Page size
-                <select id="pageSize">
-                  <option value="A4">A4</option>
-                  <option value="Letter">Letter</option>
-                  <option value="A5">A5</option>
-                </select>
-              </label>
-              <label
-                >Language (hyphenation and quotes)
-                <input id="language" list="languageList" placeholder="en" spellcheck="false" autocomplete="off" />
-              </label>
-              <datalist id="languageList" data-no-i18n>
-                <option value="en">English</option>
-                <option value="fr">Français</option>
-                <option value="de">Deutsch</option>
-                <option value="es">Español</option>
-                <option value="it">Italiano</option>
-                <option value="pt">Português</option>
-                <option value="nl">Nederlands</option>
-              </datalist>
-              <div class="grid2">
-                <label>Top (mm)<input id="marginTop" type="number" min="0" max="80" /></label>
-                <label>Right (mm)<input id="marginRight" type="number" min="0" max="80" /></label>
-                <label>Bottom (mm)<input id="marginBottom" type="number" min="0" max="80" /></label>
-                <label>Left (mm)<input id="marginLeft" type="number" min="0" max="80" /></label>
-              </div>
-              <label class="check"
-                ><input id="mirrorMargins" type="checkbox" /> Facing pages: mirror the left and right margins</label
-              >
-              <p class="field-hint">
-                The running header and the footer sit inside the top and bottom margins: keep room for them there.
-              </p>
+              <details class="group" data-group="paper" open>
+                <summary>Paper</summary>
+                <label
+                  >Page size
+                  <select id="pageSize">
+                    <option value="A4">A4</option>
+                    <option value="Letter">Letter</option>
+                    <option value="A5">A5</option>
+                  </select>
+                </label>
+              </details>
+
+              <details class="group" data-group="margins" open>
+                <summary>Margins</summary>
+                <div class="grid2">
+                  <label
+                    >Preset
+                    <select id="marginPreset">
+                      <option value="narrow">Narrow</option>
+                      <option value="normal">Normal</option>
+                      <option value="wide">Wide</option>
+                      <option value="custom">Custom</option>
+                    </select>
+                  </label>
+                  <label class="check check-field"
+                    ><input id="marginsLinked" type="checkbox" /> Same on all sides</label
+                  >
+                </div>
+                <div class="grid2">
+                  <label>Top (mm)<input id="marginTop" type="number" min="0" max="80" /></label>
+                  <label>Right (mm)<input id="marginRight" type="number" min="0" max="80" /></label>
+                  <label>Bottom (mm)<input id="marginBottom" type="number" min="0" max="80" /></label>
+                  <label>Left (mm)<input id="marginLeft" type="number" min="0" max="80" /></label>
+                </div>
+                <label class="check"><input id="mirrorMargins" type="checkbox" /> Mirror margins on facing pages</label>
+                <p class="field-hint">
+                  The left and right margins swap on even pages, for binding. The running header and the footer sit
+                  inside the top and bottom margins: keep room for them there.
+                </p>
+              </details>
             </div>
           </div>
 
@@ -564,8 +658,79 @@
                 <ul id="fileMenu" class="menu file-menu" role="menu" aria-label="File" hidden></ul>
               </div>
               <div class="editor-bar">
-                <button id="insertPageBreak" class="secondary" title="Insert \newpage at the cursor">Page break</button>
-                <button id="insertToc" class="secondary" title="Insert [[toc]] at the cursor">Table of contents</button>
+                <div class="menu-button insert-menu">
+                  <button
+                    id="insertMenu"
+                    class="secondary menu-arrow"
+                    type="button"
+                    aria-haspopup="menu"
+                    aria-expanded="false"
+                    aria-controls="insertOptions"
+                    title="Insert a block at the cursor"
+                  >
+                    Insert
+                    <svg viewBox="0 0 20 20" width="12" height="12" aria-hidden="true" focusable="false">
+                      <path
+                        d="M5 8l5 5 5-5"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                      />
+                    </svg>
+                  </button>
+                  <ul id="insertOptions" class="menu" role="menu" aria-label="Insert" hidden>
+                    <li role="none">
+                      <button id="insertTable" role="menuitem" type="button">
+                        <strong>Table</strong>
+                        <span>Two columns and a caption</span>
+                      </button>
+                    </li>
+                    <li role="none">
+                      <button id="insertImage" role="menuitem" type="button">
+                        <strong>Image…</strong>
+                        <span>Choose image files: added to the library and referenced here</span>
+                      </button>
+                    </li>
+                    <li role="none">
+                      <button id="insertDiagram" role="menuitem" type="button">
+                        <strong>Diagram</strong>
+                        <span>A Mermaid flowchart with a caption</span>
+                      </button>
+                    </li>
+                    <li role="none">
+                      <button id="insertFormula" role="menuitem" type="button">
+                        <strong>Formula</strong>
+                        <span>A displayed equation between $$ signs</span>
+                      </button>
+                    </li>
+                    <li role="none">
+                      <button id="insertAlert" role="menuitem" type="button">
+                        <strong>Alert</strong>
+                        <span>A titled box: note, tip, warning…</span>
+                      </button>
+                    </li>
+                    <li role="none">
+                      <button id="insertFootnote" role="menuitem" type="button">
+                        <strong>Footnote</strong>
+                        <span>A call in the text and its note at the foot of the page</span>
+                      </button>
+                    </li>
+                    <li role="separator" class="menu-separator"></li>
+                    <li role="none">
+                      <button id="insertPageBreak" role="menuitem" type="button">
+                        <strong>Page break</strong>
+                        <span>\newpage: what follows starts on a new page</span>
+                      </button>
+                    </li>
+                    <li role="none">
+                      <button id="insertToc" role="menuitem" type="button">
+                        <strong>Table of contents</strong>
+                        <span>[[toc]]: the headings that follow, with their page numbers</span>
+                      </button>
+                    </li>
+                  </ul>
+                </div>
                 <button
                   id="prettifyMarkdown"
                   class="secondary"
@@ -775,9 +940,9 @@
           <div>
             <h3>Set up the document</h3>
             <p>
-              Content holds the title, the cover page, the logo and the image library. Design holds the running headers,
-              the footer, the numbering, the code theme and your own CSS. Page holds the paper size, the margins and the
-              language of the document.
+              Content holds the document fields, its language, the cover page with its logo, and the image library.
+              Design holds the running headers, the footer, the numbering, the code theme and your own CSS. Page holds
+              the paper size and the margins, with presets.
             </p>
           </div>
         </section>
