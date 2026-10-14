@@ -4,6 +4,7 @@
 // so the scrollable area follows the scale.
 import { t } from './i18n.js';
 import { placeResizables } from './resize-controls.js';
+import { IS_MAC } from './shortcuts.js';
 import { clamp } from './util.js';
 
 const VIEW_KEY = 'markdown-paged-studio:view';
@@ -18,7 +19,6 @@ const EDITOR_WIDTH_MAX = 0.8;
 const EDITOR_WIDTH_STEP = 0.02;
 // Ctrl+Alt is AltGr on European keyboards (AltGr+3 types `#`), and Cmd+Shift+3/4/5 take screenshots on
 // macOS: the mode shortcuts are Ctrl+Shift+1/2/3, Cmd+Alt+1/2/3 on a Mac, matched on the physical keys.
-const IS_MAC = /Mac|iPhone|iPad/.test(navigator.platform);
 
 // On phones the settings are a drawer over the preview, closed until the user opens it.
 const NARROW = matchMedia('(max-width: 760px)');

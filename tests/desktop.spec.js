@@ -43,6 +43,11 @@ test.afterAll(async () => {
 
 test('renders the document and shows the build', async () => {
   const page = await app.firstWindow();
+  // The first launch opens the welcome tour: dismissed for good here, shown again by the Help menu below.
+  await expect(page.locator('#welcomeDialog')).toBeVisible();
+  await page.locator('#welcomeHide').check();
+  await page.locator('#closeWelcome').click();
+  await expect(page.locator('#welcomeDialog')).toBeHidden();
   await expect(page.locator('#status')).toHaveText('3 pages');
   await expect(page.locator('#preview .pagedjs_page')).toHaveCount(3);
   expect(await page.title()).toBe('Markdown Paged Studio');
@@ -228,6 +233,17 @@ test('the View menu toggles the sidebar, the Edit mode and the theme', async () 
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
   await send('theme-system');
   await expect(page.locator('#uiTheme')).toHaveValue('system');
+  // The Help menu opens the welcome tour and the panel of the shortcuts, with the entries of the desktop app.
+  await send('welcome');
+  await expect(page.locator('#welcomeDialog')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#welcomeDialog')).toBeHidden();
+  await send('shortcuts');
+  const dialog = page.locator('#shortcutsDialog');
+  await expect(dialog).toBeVisible();
+  await expect(dialog.locator('dt', { hasText: 'Import a file' })).toHaveCount(1);
+  await page.keyboard.press('Escape');
+  await expect(dialog).toBeHidden();
 });
 
 test('Print opens the print-ready document in a second window of the app', async () => {

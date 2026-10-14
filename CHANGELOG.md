@@ -7,6 +7,26 @@ All notable changes to Markdown Paged Studio are listed here, newest first. The 
 
 ## [Unreleased]
 
+## [1.26.0] - 2026-10-14
+
+### Added
+
+- A welcome tour opens on the first visit: six short panels on how the studio works, with Previous and Next
+  arrows and a "Don't show this again" box; the ⋯ menu (Welcome tour) and Help → Welcome Tour in the desktop
+  app show it again.
+- Every file tab has a menu (right-click, a long press, Shift+F10 or the Menu key): Rename, Move left, Move
+  right, Download and Remove, with their shortcuts.
+- When the tabs overflow, a shadow shows on the side where tabs are hidden, the mouse wheel scrolls the strip
+  and a list button offers every file.
+- Tooltips of the studio show on keyboard focus as well as on hover, and carry the shortcut of the control; the
+  entries of the Export and ⋯ menus show their shortcut too.
+- A **Keyboard shortcuts** panel lists everything the keyboard and the mouse can do: `?` outside a text field,
+  the ⋯ menu, or Help → Keyboard Shortcuts in the desktop app.
+- The row of the file tabs says where the document lives: "Saved in this browser · just now" after each autosave, and
+  "Not saved" in red when the browser storage is full or disabled; its tooltip points to PDF with project.
+- In the browser, Ctrl+Shift+E exports the PDF with the project and Ctrl+B hides or shows the sidebar, as the
+  desktop menus do.
+
 ## [1.25.0] - 2026-10-14
 
 ### Fixed
@@ -525,7 +545,8 @@ All notable changes to Markdown Paged Studio are listed here, newest first. The 
 - Portable desktop app for Windows, Linux and macOS with direct PDF export.
 - Docker image, Playwright integration tests and CI.
 
-[Unreleased]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.25.0...HEAD
+[Unreleased]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.26.0...HEAD
+[1.26.0]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.25.0...v1.26.0
 [1.25.0]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.24.0...v1.25.0
 [1.24.0]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.23.0...v1.24.0
 [1.23.0]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.22.4...v1.23.0

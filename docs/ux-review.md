@@ -28,11 +28,11 @@ A destructive action carried the same style as **Import…** in the primary acti
 
 Done: **Reset the document** lives in the "more" menu (⋯) of the toolbar, marked as destructive. It applies at once and a toast offers **Undo** for ten seconds, which brings the document, its settings and its images back.
 
-### 4. Hidden power — open
+### 4. Hidden power — done
 
-Renaming a tab by double-click or F2, deleting with Delete, double-click in the preview to reach the source, Ctrl + wheel, Ctrl+Z over the preview, dropping or pasting images, Ctrl+Shift+1/2/3, double-click on the splitter: nothing announces them. The 28 tooltips rely on `title`, invisible on touch screens and from the keyboard.
+Renaming a tab by double-click or F2, deleting with Delete, double-click in the preview to reach the source, Ctrl + wheel, Ctrl+Z over the preview, dropping or pasting images, Ctrl+Shift+1/2/3, double-click on the splitter: nothing announced them. The 28 tooltips relied on `title`, invisible on touch screens and from the keyboard.
 
-Proposed: a context menu on the file tabs (Rename, Delete, Download), home-made tooltips shown on focus too and carrying the shortcut ("Export · Ctrl+Shift+E"), a **Keyboard shortcuts** panel on `?`.
+Done: every file tab has a menu (right-click, long press, Shift+F10) with Rename, Move, Download and Remove and their shortcuts; the tooltips are the studio's own, shown on keyboard focus as well as on hover, with the shortcut of the control; the entries of the menus show their shortcut; a **Keyboard shortcuts** panel opens on `?`, from the ⋯ menu and from the Help menu of the desktop app; Ctrl+Shift+E and Ctrl+B work in the browser as on desktop. Still open: dropping or pasting images is only said in the hint of the image library.
 
 ### 5. One status line for everything — done
 
@@ -40,11 +40,11 @@ The small grey text "3 pages" (13 px, contrast 4.3:1) also showed "Rendering…"
 
 Done: the counter stays while a thin progress bar at the foot of the toolbar shows that the pages are being laid out again; the confirmations of the exports are a toast that goes away by itself; the errors are in the banner with their cause. Still open: a link from a render error to the faulty line.
 
-### 6. Nothing says where the document lives — open
+### 6. Nothing says where the document lives — done
 
-The autosave in the browser is silent. Whoever opens another browser or a private window loses the work without a warning.
+The autosave in the browser was silent. Whoever opens another browser or a private window lost the work without a warning.
 
-Proposed: "Saved in this browser · 2 s ago" near the file tabs, and a note on the first visit that points to **PDF with project**.
+Done: the row of the file tabs says "Saved in this browser · just now" (then minutes or hours ago) after each autosave, "Saving…" meanwhile, and "Not saved: the browser storage is full or disabled" in red when a save fails; its tooltip explains that the document lives in this browser only and points to **PDF with project**. The first visit opens the welcome tour, whose "Save and export" panel says the same and points to **PDF with project**.
 
 ### 7. Silent empty state — open
 
@@ -52,11 +52,11 @@ An empty document shows a white page with its header and an editor without a pro
 
 Proposed: a placeholder in the editor, and an **Insert** menu in place of "Page break / Table of contents" (table, figure, formula, diagram, alert, footnote, page break, table of contents).
 
-### 8. File tabs overflow without a signal — open
+### 8. File tabs overflow without a signal — done
 
-With six files the first tab is cut off on the left, with no shadow and no horizontal scroll on the wheel.
+With six files the first tab was cut off on the left, with no shadow and no horizontal scroll on the wheel.
 
-Proposed: overflow shadows, horizontal scroll on the wheel, a drop-down list of the files.
+Done: a shadow on the side where tabs are hidden, the wheel scrolls the strip sideways, and a list button, shown only when tabs are hidden, offers every file with the current one checked.
 
 ### 9. Uneven forms — partly done
 
@@ -88,6 +88,6 @@ The card "Pagination: computed by Paged.js" was jargon without an action: replac
 | Lot                | Content                                                                                                                                                                              | Effort      | State |
 | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------- | ----- |
 | Quick fixes        | Responsive toolbar (1), Reset in a menu with Undo (3), stable page count and toasts (5), CSS buttons above the field (9), focus at 3:1 and reduced motion (10), Pagination card (12) | 1 to 2 days | done  |
-| Discoverability    | Context menu of the file tabs, tooltips on focus with the shortcuts, Shortcuts panel, autosave indicator, overflow shadows (4, 6, 8)                                                 | 2 to 3 days | open  |
+| Discoverability    | Context menu of the file tabs, tooltips on focus with the shortcuts, Shortcuts panel, autosave indicator, overflow shadows (4, 6, 8)                                                 | 2 to 3 days | done  |
 | Settings           | Grouping by intent, logo drop zone, date picker, margin presets, Insert menu (2, 7, 9)                                                                                               | 3 to 5 days | open  |
 | Phones and preview | Reduced bar, tools on tap, banner without layout shift (10, 11)                                                                                                                      | 2 days      | open  |

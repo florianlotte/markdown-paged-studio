@@ -9,6 +9,7 @@ import { render, scheduleRender } from './render.js';
 import { initTheme } from './theme.js';
 import { initUi } from './ui.js';
 import { flushView, initView } from './view.js';
+import { showWelcome, welcomeWanted } from './welcome.js';
 
 initTheme();
 initLanguage();
@@ -30,6 +31,9 @@ if (!AUTOMATION) {
     onImagesChange(reason => {
       if (reason === 'library') scheduleRender();
     });
-    render();
+    // The welcome tour opens over the first pages, until the user asks not to see it again.
+    render().then(() => {
+      if (welcomeWanted()) showWelcome();
+    });
   });
 }

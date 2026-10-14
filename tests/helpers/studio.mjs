@@ -9,10 +9,15 @@ export const status = page => page.locator('#status');
 
 export const pages = page => page.locator('#preview .pagedjs_page');
 
-// Fresh studio: no saved document, no saved view settings.
+// Fresh studio: no saved document, no saved view settings. The welcome tour of a first visit is marked as
+// seen: the test of the tour removes that key itself.
+export const WELCOME_KEY = 'markdown-paged-studio:welcome';
 export async function openFreshStudio(page) {
   await page.goto('/');
-  await page.evaluate(() => localStorage.clear());
+  await page.evaluate(key => {
+    localStorage.clear();
+    localStorage.setItem(key, 'hidden');
+  }, WELCOME_KEY);
   await page.reload();
   await expect(status(page)).toHaveText(STATUS_DONE);
 }

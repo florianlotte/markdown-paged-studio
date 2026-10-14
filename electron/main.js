@@ -135,6 +135,9 @@ const MENU_FR = {
   Edit: 'Édition',
   'Side by side': 'Côte à côte',
   Preview: 'Aperçu',
+  Help: 'Aide',
+  'Welcome Tour': 'Visite guidée',
+  'Keyboard Shortcuts': 'Raccourcis clavier',
 };
 
 function buildMenu() {
@@ -199,6 +202,13 @@ function buildMenu() {
       ],
     },
     { role: 'windowMenu' },
+    {
+      label: label('Help'),
+      submenu: [
+        { label: label('Welcome Tour'), click: () => sendCommand('welcome') },
+        { label: label('Keyboard Shortcuts'), click: () => sendCommand('shortcuts') },
+      ],
+    },
   ];
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 }

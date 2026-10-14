@@ -274,3 +274,108 @@ test('closing a file can be declined, a rename can be cancelled, and the tabs an
   await page.keyboard.press('End');
   await expect(tabs(page).nth(1)).toHaveAttribute('aria-selected', 'true');
 });
+
+test('the menu of a tab renames, moves, downloads and removes the file; the strip shows its overflow', async ({
+  page,
+}) => {
+  await openDocument(page, '# One\n\nFirst.\n', 'One');
+  await page.locator('#addFile').click();
+  await setMarkdown(page, '# Two\n\nSecond.\n');
+  await expect(names(page)).toHaveText(['document.md', 'chapter.md']);
+  const menu = page.locator('#fileMenu');
+  const entries = menu.locator('[role="menuitem"] .menu-label');
+
+  // Right-click: the actions of that file, with their shortcuts; the first entry takes the focus.
+  await tabs(page).nth(1).click({ button: 'right' });
+  await expect(menu).toBeVisible();
+  await expect(entries).toHaveText(['Rename', 'Move left', 'Download', 'Remove']);
+  await expect(menu.locator('kbd')).toHaveText(['F2', 'Alt+←', 'Delete']);
+  await expect(menu.locator('[role="menuitem"]').first()).toBeFocused();
+  await expect(tabs(page).nth(1)).toHaveAttribute('aria-expanded', 'true');
+  // Escape closes it and gives the focus back to the tab.
+  await page.keyboard.press('Escape');
+  await expect(menu).toBeHidden();
+  await expect(tabs(page).nth(1)).toBeFocused();
+  await expect(tabs(page).nth(1)).toHaveAttribute('aria-expanded', 'false');
+  // Shift+F10 opens it from the keyboard, under the tab; the arrows move inside it.
+  await page.keyboard.press('Shift+F10');
+  await expect(menu).toBeVisible();
+  const tab = await tabs(page).nth(1).boundingBox();
+  const box = await menu.boundingBox();
+  expect(box.y).toBeGreaterThanOrEqual(tab.y + tab.height);
+  expect(Math.abs(box.x - tab.x)).toBeLessThan(2);
+  await page.keyboard.press('ArrowDown');
+  await expect(menu.locator('[role="menuitem"]').nth(1)).toBeFocused();
+  await page.keyboard.press('End');
+  await expect(menu.locator('[role="menuitem"]').last()).toBeFocused();
+  // Rename, from the menu.
+  await page.keyboard.press('Home');
+  await page.keyboard.press('Enter');
+  await expect(menu).toBeHidden();
+  await expect(page.locator('.file-rename')).toBeFocused();
+  await page.locator('.file-rename').fill('annex');
+  await page.keyboard.press('Enter');
+  await expect(names(page)).toHaveText(['document.md', 'annex.md']);
+  // Move left: the document follows, the moved tab keeps the focus.
+  await tabs(page).nth(1).click({ button: 'right' });
+  await menu.getByRole('menuitem', { name: 'Move left' }).click();
+  await expect(names(page)).toHaveText(['annex.md', 'document.md']);
+  await expect(headings(page)).toHaveText(['Two', 'One']);
+  await expect(tabs(page).nth(0)).toBeFocused();
+  await expect(tabs(page).nth(0).locator('.file-name')).toHaveText('annex.md');
+  // The first file cannot move left, the last cannot move right.
+  await tabs(page).nth(0).click({ button: 'right' });
+  await expect(entries).toHaveText(['Rename', 'Move right', 'Download', 'Remove']);
+  // Download: the file alone, under its own name.
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    menu.getByRole('menuitem', { name: 'Download' }).click(),
+  ]);
+  expect(savedAs(download)).toBe('annex.md');
+  expect(readFileSync(await download.path(), 'utf8')).toBe('# Two\n\nSecond.\n');
+  // Remove, confirmed.
+  page.once('dialog', dialog => dialog.accept());
+  await tabs(page).nth(0).click({ button: 'right' });
+  await menu.getByRole('menuitem', { name: 'Remove' }).click();
+  await expect(names(page)).toHaveText(['document.md']);
+  // A single file has no Remove entry; a click elsewhere closes the menu.
+  await tabs(page).nth(0).click({ button: 'right' });
+  await expect(entries).toHaveText(['Rename', 'Download']);
+  await page.locator('.preview-shell').click({ position: { x: 5, y: 5 } });
+  await expect(menu).toBeHidden();
+
+  // Many files: the strip scrolls, shadows show where tabs are hidden, the wheel scrolls sideways and a
+  // list button offers every file.
+  const list = page.locator('#fileList');
+  await expect(list).toBeHidden();
+  for (let i = 0; i < 8; i++) {
+    await page.locator('#addFile').click();
+    await tabs(page).and(page.locator('.active')).dblclick();
+    await page.locator('.file-rename').fill(`a-rather-long-chapter-name-${i}`);
+    await page.keyboard.press('Enter');
+  }
+  await expect(names(page)).toHaveCount(9);
+  const strip = page.locator('.file-strip');
+  await expect(strip).toHaveClass(/is-clipped-start/);
+  await expect(list).toBeVisible();
+  const tabsBox = page.locator('#fileTabs');
+  const scrollLeft = () => tabsBox.evaluate(el => el.scrollLeft);
+  const before = await scrollLeft();
+  expect(before).toBeGreaterThan(0);
+  await tabsBox.hover();
+  await page.mouse.wheel(0, -120);
+  await expect.poll(scrollLeft).toBeLessThan(before);
+  await expect(strip).toHaveClass(/is-clipped-end/);
+  // The list: the current file checked and focused; choosing one shows it and scrolls its tab into view.
+  await list.click();
+  await expect(menu).toBeVisible();
+  await expect(menu.locator('[role="menuitemradio"]')).toHaveCount(9);
+  await expect(menu.locator('[aria-checked="true"]')).toHaveText('a-rather-long-chapter-name-7.md');
+  await expect(menu.locator('[aria-checked="true"]')).toBeFocused();
+  await menu.locator('[role="menuitemradio"]').first().click();
+  await expect(tabs(page).nth(0)).toHaveAttribute('aria-selected', 'true');
+  await expect(tabs(page).nth(0)).toBeFocused();
+  await expect.poll(scrollLeft).toBe(0);
+  await expect(strip).not.toHaveClass(/is-clipped-start/);
+  await expect(strip).toHaveClass(/is-clipped-end/);
+});

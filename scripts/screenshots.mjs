@@ -79,16 +79,21 @@ async function waitForServer() {
   throw new Error(`The preview server did not start on port ${PORT}`);
 }
 
+// The pages are up to date, and the autosave of the last change is written (the line of the tabs no
+// longer says "Saving…").
 const rendered = page =>
   page.waitForFunction(
     () =>
       /^\d+ pages?$/.test(document.getElementById('status').textContent) &&
-      !document.getElementById('preview').classList.contains('is-stale'),
+      !document.getElementById('preview').classList.contains('is-stale') &&
+      !document.getElementById('saveState').textContent.endsWith('…'),
   );
 
-async function openStudio(browser, { locale = 'en-US', markdown, colorScheme = 'light' } = {}) {
+async function openStudio(browser, { locale = 'en-US', markdown, colorScheme = 'light', welcome = false } = {}) {
   const context = await browser.newContext({ viewport: VIEWPORT, locale, deviceScaleFactor: 1, colorScheme });
   const page = await context.newPage();
+  // The welcome tour of a first visit is marked as seen, except for its own screenshot.
+  if (!welcome) await page.addInitScript(() => localStorage.setItem('markdown-paged-studio:welcome', 'hidden'));
   await page.goto(URL);
   await rendered(page);
   if (markdown) await write(page, markdown);
@@ -188,6 +193,13 @@ try {
   await page.waitForTimeout(300);
   await rendered(page);
   await shot(page, 'french.png');
+  await page.context().close();
+
+  // The welcome tour of a first visit, on its first panel.
+  page = await openStudio(browser, { welcome: true });
+  await page.locator('#welcomeDialog[open]').waitFor();
+  await page.waitForTimeout(300);
+  await shot(page, 'welcome.png');
   await page.context().close();
 
   // The dark theme, followed from the system: the chrome and the editor are dark, the pages stay white.

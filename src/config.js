@@ -310,6 +310,12 @@ let persistTimer = null;
 // Listeners told when the autosave fails (quota exceeded, storage disabled): the studio warns the user once.
 const storageListeners = new Set();
 export const onStorageFailure = listener => storageListeners.add(listener);
+// Listeners told of the autosave: `pending` when a save is scheduled, `saved` (with the time) once written.
+const persistListeners = new Set();
+export const onPersist = listener => persistListeners.add(listener);
+const tellPersist = (status, at) => {
+  for (const listener of persistListeners) listener(status, at);
+};
 
 function persistNow() {
   clearTimeout(persistTimer);
@@ -317,6 +323,7 @@ function persistNow() {
   try {
     // The files are saved; the Markdown is their assembly and is built again on restore.
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...state, logoDataUrl: undefined, markdown: undefined }));
+    tellPersist('saved', Date.now());
   } catch (error) {
     // Quota exceeded or storage disabled: the app keeps working without autosave.
     console.warn('Autosave failed', error);
@@ -329,6 +336,7 @@ export function schedulePersist() {
   persistLogo();
   clearTimeout(persistTimer);
   persistTimer = setTimeout(persistNow, 500);
+  tellPersist('pending');
 }
 
 // Writes a pending autosave immediately (used when the page is closed or reloaded).

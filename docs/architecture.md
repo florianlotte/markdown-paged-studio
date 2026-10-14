@@ -50,6 +50,9 @@ src/resize-controls.js resize controls on the diagrams and images of the preview
 src/document.js     document CSS (page rules, cover templates, code themes) and HTML, standalone export
 src/render.js       Paged.js preview lifecycle, undo history of the preview
 src/view.js         workspace: Edit, Split or View, splitter, layout and zoom of the preview, sidebar
+src/welcome.js      the welcome tour: panels of index.html paged through, "Don't show this again" remembered
+src/shortcuts.js    keyboard shortcuts: their spelling per platform, the panel that lists them
+src/tooltip.js      tooltips of the chrome, on hover and on keyboard focus, with the shortcut
 src/ui.js           form, tabs, files, images, links of the preview, export and print, banner and toast
 src/pdf-capability.js can this browser draw the pages of a PDF
 src/pdf-render.js   the PDF drawn by the browser: page images, text layer, links

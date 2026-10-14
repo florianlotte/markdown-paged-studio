@@ -96,8 +96,13 @@ test('renders Mermaid diagrams and reports invalid ones in place', async ({ page
 
 test('autosaves the document, restores it on reload, and Reset brings the sample back', async ({ page }) => {
   await openFreshStudio(page);
+  // The row of the tabs says where the document lives: nothing is written until the first edit.
+  const saveState = page.locator('#saveState');
+  await expect(saveState).toHaveText('Autosave in this browser');
   await page.locator('#title').fill('Edited title');
   await expect(pages(page).nth(0).locator('.cover-title')).toHaveText('Edited title');
+  await expect(saveState).toHaveText('Saved in this browser · just now');
+  await expect(saveState).toHaveAttribute('title', /saved in this browser only/);
   // The autosave is flushed when the page hides: no need to wait for its debounce.
   await page.reload();
   await expect(status(page)).toHaveText(STATUS_DONE);
@@ -656,7 +661,11 @@ test('a full browser storage is reported once, in the banner, and the studio kee
   });
   await appendMarkdown(page, '\n\nMore text.\n');
   await expect(notice(page)).toHaveText('Autosave failed: the browser storage is full or disabled');
+  // The row of the tabs says it too, and stays red after the banner is closed.
+  await expect(page.locator('#saveState')).toHaveText('Not saved: the browser storage is full or disabled');
+  await expect(page.locator('#saveState')).toHaveClass(/is-failed/);
   await page.locator('#dismissNotice').click();
+  await expect(page.locator('#saveState')).toHaveClass(/is-failed/);
   await appendMarkdown(page, '\n\nEven more.\n');
   await expect(status(page)).toHaveText('3 pages');
   await expect(page.locator('#notice')).toBeHidden();

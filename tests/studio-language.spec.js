@@ -68,6 +68,36 @@ test('the interface switches to French and back, and remembers the choice', asyn
   await expect(page.locator('#loadMarkdown')).toHaveAttribute('title', 'Remplacer ce fichier par un fichier Markdown');
   await expect(page.locator('#addFile')).toHaveAttribute('aria-label', 'Nouveau fichier');
   await expect(page.locator('#fileTabs')).toHaveAttribute('aria-label', 'Fichiers du document');
+  // Where the document lives, the menu of a tab and the panel of the shortcuts.
+  await expect(page.locator('#saveState')).toHaveText(/^Enregistré dans ce navigateur · à l'instant$/);
+  await page.locator('#fileTabs .file-tab').first().click({ button: 'right' });
+  await expect(page.locator('#fileMenu [role="menuitem"] .menu-label')).toHaveText(['Renommer', 'Télécharger']);
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#showShortcuts strong')).toContainText('Raccourcis clavier');
+  await expect(page.locator('#showWelcome strong')).toHaveText('Visite guidée');
+  await page.locator('#moreMenu').click();
+  await page.locator('#showWelcome').click();
+  await expect(page.locator('#welcomeDialog h2')).toHaveText('Bienvenue dans Markdown Paged Studio');
+  await expect(page.locator('#welcomeDialog .welcome-panel:not([hidden]) h3')).toHaveText('Trois zones, un document');
+  await expect(page.locator('#welcomeDialog .welcome-panel:not([hidden]) p')).toContainText('Les réglages sont dans');
+  await expect(page.locator('#welcomeHide')).toBeChecked();
+  await expect(page.locator('.welcome-footer .check')).toHaveText('Ne plus afficher');
+  await page.locator('#welcomeNext').click();
+  await expect(page.locator('#welcomeDialog .welcome-panel:not([hidden]) h3')).toHaveText('Écrire en Markdown');
+  await expect(page.locator('#welcomeDialog .welcome-panel:not([hidden]) p')).toContainText(
+    'Écrivez \\newpage pour un saut de page et [[toc]]',
+  );
+  await page.locator('#closeWelcome').click();
+  await expect(page.locator('#welcomeDialog')).toBeHidden();
+  await page.locator('#moreMenu').click();
+  await page.locator('#showShortcuts').click();
+  const dialog = page.locator('#shortcutsDialog');
+  await expect(dialog).toBeVisible();
+  await expect(dialog.locator('h3')).toHaveText(['Document', 'Espace de travail', 'Éditeur', 'Fichiers', 'Aperçu']);
+  await expect(dialog.locator('dt').first()).toHaveText('Exporter le PDF avec le projet');
+  await expect(dialog.locator('kbd', { hasText: 'Suppr' })).toHaveCount(1);
+  await page.keyboard.press('Escape');
+  await expect(dialog).toBeHidden();
   // The notice of the export fallback is part of the interface.
   await expect(page.locator('#exportNotice')).toContainText('Ce navigateur ne peut pas dessiner le PDF', {
     useInnerText: false,

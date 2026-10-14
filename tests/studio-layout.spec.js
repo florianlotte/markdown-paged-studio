@@ -2,7 +2,16 @@
 // sidebar, tabs, phone layout.
 import { test, expect } from '@playwright/test';
 import { readFileSync } from 'node:fs';
-import { STATUS_DONE, openFreshStudio, pages, status } from './helpers/studio.mjs';
+import {
+  STATUS_DONE,
+  WELCOME_KEY,
+  cursorToEnd,
+  expectMarkdown,
+  focusEditor,
+  openFreshStudio,
+  pages,
+  status,
+} from './helpers/studio.mjs';
 
 test('the preview scrolls inside its own container', async ({ page }) => {
   await openFreshStudio(page);
@@ -427,4 +436,145 @@ test('Ctrl+Shift+1 and 3 switch to Edit and View, Ctrl + wheel up zooms in', asy
       el.dispatchEvent(new WheelEvent('wheel', { deltaY: -100, ctrlKey: true, bubbles: true, cancelable: true })),
     );
   await expect.poll(zoom).toBeGreaterThan(before);
+});
+
+test('tooltips show on hover and on keyboard focus with the shortcut, ? lists the shortcuts, Ctrl+B hides the sidebar', async ({
+  page,
+}) => {
+  await openFreshStudio(page);
+  const tooltip = page.locator('#tooltip');
+  const text = tooltip.locator('.tooltip-text');
+  await expect(tooltip).toBeHidden();
+  // Hover: the title of the control, its shortcut next to it; the native tooltip is kept away meanwhile.
+  await page.locator('#exportDefault').hover();
+  await expect(tooltip).toBeVisible();
+  await expect(text).toHaveText(/^PDF with project/);
+  await expect(tooltip.locator('kbd')).toHaveText('Ctrl+Shift+E');
+  await expect(page.locator('#exportDefault')).not.toHaveAttribute('title', /./);
+  const button = await page.locator('#exportDefault').boundingBox();
+  const box = await tooltip.boundingBox();
+  expect(box.y).toBeGreaterThanOrEqual(button.y + button.height);
+  await page.mouse.move(5, 400);
+  await expect(tooltip).toBeHidden();
+  await expect(page.locator('#exportDefault')).toHaveAttribute('title', /^PDF with project/);
+  // A control without a shortcut shows its text alone.
+  await page.locator('#import').hover();
+  await expect(text).toHaveText(/^A PDF, an HTML/);
+  await expect(tooltip.locator('kbd')).toBeHidden();
+  await page.mouse.move(5, 400);
+  // Keyboard focus shows it at once; a click does not.
+  await page.locator('#toggleSidebar').focus();
+  await page.keyboard.press('Tab');
+  await expect(page.locator('#modeEdit')).toBeFocused();
+  await expect(tooltip).toBeVisible();
+  await expect(text).toHaveText('Markdown only');
+  await expect(tooltip.locator('kbd')).toHaveText('Ctrl+Shift+1');
+  await page.keyboard.press('Escape');
+  await expect(tooltip).toBeHidden();
+  await page.locator('#layoutSpread').click();
+  await expect(tooltip).toBeHidden();
+  await page.locator('#layoutSingle').click();
+  // The entries of the menus carry their shortcut too.
+  await page.locator('#exportMenu').click();
+  await expect(page.locator('#exportPdfProject kbd')).toHaveText('Ctrl+Shift+E');
+  await expect(page.locator('#exportPdfOnly kbd')).toHaveText('Ctrl+P');
+  await page.keyboard.press('Escape');
+
+  // ? opens the panel of the shortcuts, unless typed in a text field; Escape and the button close it.
+  const dialog = page.locator('#shortcutsDialog');
+  await page.locator('.preview-shell').click({ position: { x: 5, y: 5 } });
+  await page.keyboard.press('?');
+  await expect(dialog).toBeVisible();
+  await expect(dialog.locator('h2')).toHaveText('Keyboard shortcuts');
+  await expect(dialog.locator('h3')).toHaveText(['Document', 'Workspace', 'Editor', 'Files', 'Preview']);
+  await expect(dialog.locator('dt').first()).toHaveText('Export the PDF with the project');
+  await expect(dialog.locator('dd').first().locator('kbd')).toHaveText('Ctrl+Shift+E');
+  await expect(dialog.locator('dt', { hasText: 'Import a file' })).toHaveCount(0);
+  await page.keyboard.press('Escape');
+  await expect(dialog).toBeHidden();
+  await page.locator('#moreMenu').click();
+  await page.locator('#showShortcuts').click();
+  await expect(dialog).toBeVisible();
+  await page.locator('#closeShortcuts').click();
+  await expect(dialog).toBeHidden();
+  await page.locator('#title').fill('');
+  await page.locator('#title').press('?');
+  await expect(dialog).toBeHidden();
+  await expect(page.locator('#title')).toHaveValue('?');
+  await focusEditor(page);
+  await cursorToEnd(page);
+  await page.keyboard.type('?');
+  await expect(dialog).toBeHidden();
+  await expectMarkdown(page, /\?$/);
+
+  // Ctrl+B hides and shows the sidebar, as the desktop menu does.
+  await page.keyboard.press('Control+b');
+  await expect(page.locator('#sidebar')).toBeHidden();
+  await expect(page.locator('#toggleSidebar')).toHaveAttribute('aria-expanded', 'false');
+  await page.keyboard.press('Control+b');
+  await expect(page.locator('#sidebar')).toBeVisible();
+});
+
+test('the welcome tour opens on the first visit, pages through its panels and stays away once dismissed', async ({
+  page,
+}) => {
+  await openFreshStudio(page);
+  const dialog = page.locator('#welcomeDialog');
+  await expect(dialog).toBeHidden();
+  // A first visit: the tour opens over the pages, on its first panel.
+  await page.evaluate(key => localStorage.removeItem(key), WELCOME_KEY);
+  await page.reload();
+  await expect(status(page)).toHaveText(STATUS_DONE);
+  await expect(dialog).toBeVisible();
+  await expect(dialog.locator('h2')).toHaveText('Welcome to Markdown Paged Studio');
+  const shown = dialog.locator('.welcome-panel:not([hidden])');
+  await expect(shown).toHaveCount(1);
+  await expect(shown.locator('h3')).toHaveText('Three zones, one document');
+  await expect(page.locator('#welcomeStep')).toHaveText('1 / 6');
+  await expect(page.locator('#welcomePrev')).toBeDisabled();
+  await expect(page.locator('#welcomeNext')).toBeFocused();
+  // The arrows and the keyboard page through the panels; the last one has no next.
+  await page.locator('#welcomeNext').click();
+  await expect(shown.locator('h3')).toHaveText('Write in Markdown');
+  await expect(page.locator('#welcomeStep')).toHaveText('2 / 6');
+  await page.keyboard.press('ArrowRight');
+  await expect(shown.locator('h3')).toHaveText('Set up the document');
+  await page.keyboard.press('ArrowLeft');
+  await expect(shown.locator('h3')).toHaveText('Write in Markdown');
+  await page.locator('#welcomePrev').click();
+  await expect(page.locator('#welcomePrev')).toBeDisabled();
+  for (let i = 0; i < 5; i++) await page.locator('#welcomeNext').click();
+  await expect(shown.locator('h3')).toHaveText('Go further');
+  await expect(page.locator('#welcomeStep')).toHaveText('6 / 6');
+  await expect(page.locator('#welcomeNext')).toBeDisabled();
+  await expect(shown.locator('a')).toHaveAttribute('href', /docs\/writing\.md$/);
+  // Escape without the box: the tour comes back next time.
+  await page.keyboard.press('Escape');
+  await expect(dialog).toBeHidden();
+  await page.reload();
+  await expect(status(page)).toHaveText(STATUS_DONE);
+  await expect(dialog).toBeVisible();
+  // The box and Close: gone for good, and the choice survives a reload.
+  await page.locator('#welcomeHide').check();
+  await page.locator('#closeWelcome').click();
+  await expect(dialog).toBeHidden();
+  await page.reload();
+  await expect(status(page)).toHaveText(STATUS_DONE);
+  await expect(dialog).toBeHidden();
+  // The ⋯ menu shows it again, from the first panel, the box reflecting the choice; unticking it brings the
+  // tour back at the next start.
+  await page.locator('#moreMenu').click();
+  await page.locator('#showWelcome').click();
+  await expect(dialog).toBeVisible();
+  await expect(shown.locator('h3')).toHaveText('Three zones, one document');
+  await expect(page.locator('#welcomeHide')).toBeChecked();
+  await page.locator('#welcomeHide').uncheck();
+  await page.locator('#dismissWelcome').click();
+  await expect(dialog).toBeHidden();
+  await page.reload();
+  await expect(status(page)).toHaveText(STATUS_DONE);
+  await expect(dialog).toBeVisible();
+  await page.locator('#welcomeHide').check();
+  await page.keyboard.press('Escape');
+  await expect(dialog).toBeHidden();
 });

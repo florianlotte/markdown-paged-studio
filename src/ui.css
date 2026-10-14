@@ -518,9 +518,10 @@ button:hover {
   display: none;
 }
 .toolbar-actions .menu button {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 2px 12px;
+  align-items: center;
   width: 100%;
   padding: 8px 10px;
   border: 0;
@@ -640,6 +641,169 @@ button:hover {
 .toast button:focus-visible {
   background: var(--accent-divider);
 }
+/* The tooltip of a control, under it (above when there is no room), with its shortcut. */
+.tooltip {
+  position: fixed;
+  z-index: 70;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: min(320px, calc(100vw - 16px));
+  padding: 6px 9px;
+  border-radius: 7px;
+  background: var(--accent);
+  color: var(--accent-text);
+  font-size: 12px;
+  line-height: 1.35;
+  box-shadow: 0 6px 20px var(--shadow-menu);
+  pointer-events: none;
+}
+.tooltip[hidden] {
+  display: none;
+}
+.tooltip kbd {
+  border-color: var(--accent-divider);
+  background: transparent;
+  color: inherit;
+}
+/* The panel of the keyboard shortcuts: a modal dialog, closed by Escape, its button or a click outside. */
+.dialog {
+  width: min(760px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 20px 50px var(--shadow-card);
+}
+.dialog::backdrop {
+  background: rgba(17, 24, 39, 0.45);
+}
+.dialog-header {
+  position: sticky;
+  top: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px 12px 20px;
+  border-bottom: 1px solid var(--border-faint);
+  background: var(--surface);
+}
+.dialog-header h2 {
+  margin: 0;
+  font-size: 16px;
+}
+.shortcut-groups {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 6px 28px;
+  padding: 8px 20px 20px;
+}
+.shortcut-groups h3 {
+  margin: 14px 0 6px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-faint);
+}
+.shortcut-groups dl {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: 6px 16px;
+  align-items: center;
+  margin: 0;
+  font-size: 13px;
+}
+.shortcut-groups dt {
+  color: var(--text);
+}
+.shortcut-groups dd {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+  color: var(--text-soft);
+  font-size: 12px;
+}
+/* The welcome tour: one panel at a time, an icon beside its text, the arrows and the box in the footer. */
+.welcome {
+  width: min(640px, calc(100vw - 32px));
+}
+.welcome-panels {
+  padding: 20px 20px 8px;
+}
+.welcome-panel {
+  display: grid;
+  grid-template-columns: 40px 1fr;
+  gap: 18px;
+  min-height: 170px;
+  align-items: start;
+}
+.welcome-panel[hidden] {
+  display: none;
+}
+.welcome-icon {
+  margin-top: 2px;
+  color: var(--focus);
+}
+.welcome-panel h3 {
+  margin: 0 0 8px;
+  font-size: 16px;
+}
+.welcome-panel p {
+  margin: 0 0 10px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text);
+}
+.welcome-panel a {
+  color: var(--link);
+}
+.welcome-footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px 16px;
+  border-top: 1px solid var(--border-faint);
+}
+.welcome-footer .check {
+  flex: 1;
+  margin: 0;
+  font-size: 13px;
+}
+.welcome-step {
+  font-size: 12px;
+  color: var(--text-faint);
+  white-space: nowrap;
+  margin-right: 4px;
+}
+.welcome-footer .icon-button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+/* Where the document lives, at the right of the file tabs: the strip takes what the text leaves, and the
+   text is cut when it would take more than half of the row. */
+.save-state {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 50%;
+  margin-bottom: 5px;
+  padding: 0 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 12px;
+  color: var(--text-faint);
+  white-space: nowrap;
+  cursor: default;
+}
+.save-state.is-failed {
+  color: var(--danger-text);
+}
 .menu-separator {
   height: 1px;
   margin: 4px 6px;
@@ -653,6 +817,75 @@ button:hover {
 /* A destructive entry (Reset the document) is told apart by its colour. */
 .menu button.danger strong {
   color: var(--danger-text);
+}
+/* The shortcut of an entry, at its right. */
+kbd {
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1;
+  padding: 3px 5px;
+  border: 1px solid var(--border);
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  background: var(--surface-2);
+  color: var(--text-soft);
+  white-space: nowrap;
+}
+.menu kbd.shortcut {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+.toolbar-actions .menu button > span {
+  grid-column: 1;
+}
+.toolbar-actions .menu kbd.shortcut {
+  grid-column: 2;
+  grid-row: 1;
+}
+/* The popup menu of the file tabs: placed where it was asked for, one line per entry. */
+.file-menu {
+  position: fixed;
+  top: auto;
+  right: auto;
+  min-width: 200px;
+  max-width: calc(100vw - 16px);
+  max-height: calc(100vh - 16px);
+  overflow-y: auto;
+}
+.file-menu button {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 500;
+  text-align: left;
+  white-space: nowrap;
+  position: relative;
+}
+.file-menu [role='menuitemradio'] {
+  padding-left: 28px;
+}
+.file-menu button.danger {
+  color: var(--danger-text);
+}
+.file-menu .menu-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.file-menu [aria-checked='true'] {
+  font-weight: 700;
+}
+.file-menu [aria-checked='true']::before {
+  content: '✓';
+  position: absolute;
+  left: 10px;
 }
 .menu button:hover,
 .menu button:focus-visible {
@@ -710,6 +943,9 @@ button:hover {
 .editor-pane .bar-button:hover {
   background: var(--surface-2);
 }
+.editor-pane .bar-button[hidden] {
+  display: none;
+}
 .editor-pane .bar-button[aria-pressed='true'] {
   background: var(--accent);
   border-color: var(--accent);
@@ -725,6 +961,12 @@ button:hover {
   background: var(--surface-3);
   border-bottom: 1px solid var(--border-soft);
 }
+.file-strip {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+}
 .file-tabs {
   flex: 1;
   min-width: 0;
@@ -733,6 +975,30 @@ button:hover {
   gap: 2px;
   overflow-x: auto;
   scrollbar-width: thin;
+}
+/* A shadow on the side where tabs are hidden (is-clipped-start / is-clipped-end, see chapters.js). */
+.file-strip::before,
+.file-strip::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 22px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.file-strip::before {
+  left: 0;
+  background: linear-gradient(to right, var(--surface-3), transparent);
+}
+.file-strip::after {
+  right: 0;
+  background: linear-gradient(to left, var(--surface-3), transparent);
+}
+.file-strip.is-clipped-start::before,
+.file-strip.is-clipped-end::after {
+  opacity: 1;
 }
 .file-tab {
   flex-shrink: 0;
@@ -1044,12 +1310,16 @@ button:hover {
     scrollbar-width: thin;
   }
   /* The scrolling actions would clip the menu: fixed to the toolbar, it drops under the whole bar. */
-  .menu {
+  .toolbar-actions .menu {
     position: fixed;
     top: 100%;
     left: 10px;
     right: 10px;
     min-width: 0;
+  }
+  /* The phone has no room for the text. */
+  .save-state {
+    display: none;
   }
   .toolbar-actions button {
     flex-shrink: 0;

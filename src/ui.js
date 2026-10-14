@@ -2,7 +2,15 @@
 // The markup itself lives in index.html.
 import { canDrawPages, markCannotDraw, probePageDrawing } from './pdf-capability.js';
 import { activeFile, addEmptyFile, addFiles, initChapters, replaceActiveText, syncChapters } from './chapters.js';
-import { clearStoredConfig, DEFAULTS, mergeConfig, onStorageFailure, sanitizeConfig, state } from './config.js';
+import {
+  clearStoredConfig,
+  DEFAULTS,
+  mergeConfig,
+  onPersist,
+  onStorageFailure,
+  sanitizeConfig,
+  state,
+} from './config.js';
 import { documentCss, documentHtml, sourcesOfHtml, standaloneHtml } from './document.js';
 import {
   addImageFiles,
@@ -27,6 +35,9 @@ import { currentTheme, onThemeChange, setTheme } from './theme.js';
 import { applyView, revealEditor, setMode, toggleSidebar, toggleSync } from './view.js';
 import { fileStem } from './files.js';
 import { insertBlock, writeFile } from './editor.js';
+import { decorateMenus, initShortcuts, showShortcuts } from './shortcuts.js';
+import { initTooltips } from './tooltip.js';
+import { initWelcome, showWelcome } from './welcome.js';
 
 // Every state key has a form control with the same id, except the logo (a file input) and the text of the
 // document (the files and the editor, see chapters.js).
@@ -180,6 +191,45 @@ function bindNotice() {
   onImageStorageFailure(() =>
     warnOnce(t('Images are kept for this session only: the browser storage is full or disabled')),
   );
+}
+
+// Where the document lives: the line of the editor bar says that it is saved in this browser, and since
+// when; after a failed save it says that it is not.
+function bindSaveState() {
+  const label = document.getElementById('saveState');
+  let savedAt = 0;
+  let failed = false;
+  let status = 'idle';
+  const ago = () => {
+    const seconds = Math.round((Date.now() - savedAt) / 1000);
+    const format = new Intl.RelativeTimeFormat(currentLanguage(), { numeric: 'auto' });
+    if (seconds < 45) return t('just now');
+    if (seconds < 3600) return format.format(-Math.round(seconds / 60), 'minute');
+    return format.format(-Math.round(seconds / 3600), 'hour');
+  };
+  const draw = () => {
+    label.classList.toggle('is-failed', failed);
+    if (failed) label.textContent = t('Not saved: the browser storage is full or disabled');
+    else if (status === 'pending') label.textContent = t('Saving…');
+    else if (status === 'saved') label.textContent = `${t('Saved in this browser')} · ${ago()}`;
+    else label.textContent = t('Autosave in this browser');
+  };
+  onPersist((next, at) => {
+    status = next;
+    if (next === 'saved') {
+      savedAt = at;
+      failed = false;
+    }
+    draw();
+  });
+  onStorageFailure(() => {
+    failed = true;
+    draw();
+  });
+  onLanguageChange(draw);
+  setInterval(() => {
+    if (status === 'saved' && !failed) draw();
+  }, 30000);
 }
 
 function download(name, content, type) {
@@ -629,7 +679,7 @@ function bindPdf() {
     exportArchive: guarded(exportArchive, 'Export failed: {error}'),
     exportProject,
   });
-  bindMenu('moreMenu', 'moreOptions', { resetDocument });
+  bindMenu('moreMenu', 'moreOptions', { showWelcome, showShortcuts, resetDocument });
 
   if (window.desktop) {
     // File menu entries of the desktop app.
@@ -642,6 +692,8 @@ function bindPdf() {
       else if (command === 'export-project') exportProject();
       else if (command === 'import') document.getElementById('importFile').click();
       else if (command === 'print') openPrintWindow();
+      else if (command === 'shortcuts') showShortcuts();
+      else if (command === 'welcome') showWelcome();
       else if (command === 'toggle-sidebar') toggleSidebar();
       else if (command === 'mode-edit') setMode('edit');
       else if (command === 'mode-split') setMode('split');
@@ -655,12 +707,16 @@ function bindPdf() {
     onLanguageChange(describeExport);
     probePageDrawing().then(describeExport);
     document.getElementById('dismissExportNotice').addEventListener('click', dismissExportNotice);
-    // Ctrl/Cmd+P prints the document rather than the studio page. On desktop the menu accelerator does this.
+    // Ctrl/Cmd+P prints the document rather than the studio page, Ctrl+Shift+E exports the PDF with the
+    // project and Ctrl+B hides or shows the sidebar. On desktop the menu accelerators do this.
     document.addEventListener('keydown', event => {
-      if ((event.ctrlKey || event.metaKey) && !event.altKey && event.key.toLowerCase() === 'p') {
-        event.preventDefault();
-        openPrintWindow();
-      }
+      if (!(event.ctrlKey || event.metaKey) || event.altKey) return;
+      const key = event.key.toLowerCase();
+      if (key === 'p' && !event.shiftKey) openPrintWindow();
+      else if (key === 'e' && event.shiftKey) exportPdf({ project: true });
+      else if (key === 'b' && !event.shiftKey) toggleSidebar();
+      else return;
+      event.preventDefault();
     });
   }
 }
@@ -875,6 +931,11 @@ function bindTheme() {
 
 export function initUi() {
   bindNotice();
+  bindSaveState();
+  initTooltips();
+  initShortcuts();
+  initWelcome();
+  onLanguageChange(() => decorateMenus());
   showVersion();
   bindLanguage();
   bindTheme();
@@ -883,6 +944,7 @@ export function initUi() {
     onChange: scheduleRender,
     onScroll: editorScrolled,
     onImageFiles: addEditorImages,
+    onDownload: file => download(file.name, file.markdown, 'text/markdown;charset=utf-8'),
   });
   initSync();
   document.getElementById('syncScroll').addEventListener('click', () => {

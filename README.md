@@ -69,7 +69,9 @@ Node.js 20.19+ or 22.12+ is required by Vite 8.
 
 ## Usage
 
-The Markdown editor sits beside the paged preview (**Split**) or alone (**Edit**); **View** shows the preview alone. The bar above the editor inserts a page break or a table of contents, formats the file (**Prettify**), replaces or downloads it, and switches the scroll synchronisation. The sidebar holds the settings: **Content** (cover fields, images), **Design** (header, footer, numbering, code theme, stylesheet) and **Page** (paper size, margins, document language). The ⋯ menu of the toolbar resets the document, with ten seconds to undo. The [writing guide](docs/writing.md) describes everything you can write:
+The Markdown editor sits beside the paged preview (**Split**) or alone (**Edit**); **View** shows the preview alone. The bar above the editor inserts a page break or a table of contents, formats the file (**Prettify**), replaces or downloads it, and switches the scroll synchronisation; the row of the file tabs says when the document was last saved in the browser. A right-click on a file tab (a long press, or Shift+F10) offers Rename, Move, Download and Remove. The sidebar holds the settings: **Content** (cover fields, images), **Design** (header, footer, numbering, code theme, stylesheet) and **Page** (paper size, margins, document language). The ⋯ menu of the toolbar shows the welcome tour again (six panels on how the studio works, opened on the first visit until you tick "Don't show this again"), lists the keyboard shortcuts (also `?`) and resets the document, with ten seconds to undo. The [writing guide](docs/writing.md) describes everything you can write:
+
+![The welcome tour over the studio: its first panel, the Previous and Next arrows and the "Don't show this again" box](docs/screenshots/welcome.png)
 
 - [Several files](docs/writing.md#several-files): chapters as tabs, one paged document.
 - [Diagrams](docs/writing.md#diagrams): Mermaid fences, sized and aligned from the preview.
@@ -153,7 +155,8 @@ A minimal example:
 | **−** / **+**                            | Zoom out or in by 10 %, between 25 % and 300 %                                                                                                                                                                            |
 | **Fit**                                  | Fit the page (or the pair of pages) to the available width, and keep following window resizes                                                                                                                             |
 | **Ctrl + wheel** (Cmd on macOS)          | Zoom with the mouse over the preview                                                                                                                                                                                      |
-| **Sidebar toggle** (left of the toolbar) | Hide or show the settings sidebar to give the preview the full width; in the desktop app also **View → Toggle Sidebar** (Ctrl+B)                                                                                          |
+| **Sidebar toggle** (left of the toolbar) | Hide or show the settings sidebar to give the preview the full width: Ctrl+B, in the desktop app also **View → Toggle Sidebar**                                                                                           |
+| **Keyboard shortcuts**                   | `?` outside a text field, the ⋯ menu, or **Help → Keyboard Shortcuts** in the desktop app: the panel lists every shortcut; the tooltips, shown on hover and on keyboard focus, carry the shortcut of their control        |
 | **Links** of the document                | Open in a new tab (the system browser in the desktop app), so the studio stays in place                                                                                                                                   |
 
 ![Two pages side by side in the preview: table of contents, highlighted code and a captioned diagram](docs/screenshots/spread.png)
@@ -180,7 +183,7 @@ Your own name, company logo, stylesheet or document template can be the defaults
 
 ### Saving and exports
 
-The document autosaves in the browser; **Reset the document** (⋯ menu) restores the sample, and its toast undoes that for ten seconds. **Export** writes the PDF with the project, drawn by the browser itself, or directly by the desktop app and the MCP server; its menu offers PDF only (through the print dialog), HTML with project, Markdown with project, Markdown files (zip) and Project only. Every export but the project file is named after the title. The HTML, Markdown, zip and PDF with project carry the document, its settings and its images, and **Import…** reopens them, as well as a plain `.md` file or any zip of Markdown files. What each format holds, and how an export reopens: [Saving and exporting](docs/exports.md).
+The document autosaves in the browser, and the row of the file tabs says when ("Saved in this browser · just now"); **Reset the document** (⋯ menu) restores the sample, and its toast undoes that for ten seconds. **Export** (Ctrl+Shift+E) writes the PDF with the project, drawn by the browser itself, or directly by the desktop app and the MCP server; its menu offers PDF only (through the print dialog), HTML with project, Markdown with project, Markdown files (zip) and Project only. Every export but the project file is named after the title. The HTML, Markdown, zip and PDF with project carry the document, its settings and its images, and **Import…** reopens them, as well as a plain `.md` file or any zip of Markdown files. What each format holds, and how an export reopens: [Saving and exporting](docs/exports.md).
 
 ## How it works
 
@@ -240,7 +243,7 @@ Recent Chromium-based browsers (Chrome, Edge, Brave, Arc) are the reference for 
 
 Possible improvements, not scheduled:
 
-- The open items of the [UX review](docs/ux-review.md): settings grouped by intent, discoverable shortcuts and tab actions, an autosave indicator, an empty-state prompt and an Insert menu, overflow of the file tabs, a logo drop zone, a date picker and margin presets, a reduced toolbar and tools on tap on phones.
+- The open items of the [UX review](docs/ux-review.md): settings grouped by intent, an empty-state prompt and an Insert menu, a logo drop zone, a date picker and margin presets, a reduced toolbar and tools on tap on phones.
 - Accessibility: a sidebar drawer that keeps the focus on phones; a banner that does not shift the layout.
 - Splitting `src/markdown.js` and `src/ui.js` into smaller modules; a non-blocking confirmation when a file is removed.
 - An installable web app that works offline; `<u>` in Mermaid labels; an outline of the headings with a search panel; more writing comfort.

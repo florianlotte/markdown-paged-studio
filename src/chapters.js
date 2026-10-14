@@ -5,12 +5,15 @@ import { state } from './config.js';
 import { currentFile, focusEditor, goToLine, initEditor, openFile, setEditorPhrases, writeFile } from './editor.js';
 import { applyAssembledEdit, assembleFiles, DEFAULT_FILE_NAME, fileName, fileOffsets, locateLine } from './files.js';
 import { onLanguageChange, t } from './i18n.js';
+import { keys } from './shortcuts.js';
 
 let active = 0;
 let documentChanged = () => {};
+let downloadFile = () => {};
 let dragged = null;
 
 const strip = () => document.getElementById('fileTabs');
+const tabAt = index => strip().children[index];
 const names = (except = -1) => state.files.filter((_, index) => index !== except).map(file => file.name);
 
 // After any change of the files: the document is assembled again, then rendered and saved.
@@ -89,6 +92,157 @@ function remove(index) {
   commit();
 }
 
+// ---- The popup menu of the strip: the actions of a file (right-click or Shift+F10 on its tab) and, when
+// the tabs overflow, the list of the files. One <ul>, filled again at each opening, placed at the pointer
+// or under the control that opened it; the focus comes back to that control when it closes.
+
+let menuOpener = null;
+const menu = () => document.getElementById('fileMenu');
+const menuItems = () => [...menu().querySelectorAll('[role^="menuitem"]')];
+
+function menuEntry(entry) {
+  const item = document.createElement('li');
+  if (entry === 'separator') {
+    item.setAttribute('role', 'separator');
+    item.className = 'menu-separator';
+    return item;
+  }
+  item.setAttribute('role', 'none');
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.setAttribute('role', entry.checked === undefined ? 'menuitem' : 'menuitemradio');
+  if (entry.checked !== undefined) button.setAttribute('aria-checked', String(entry.checked));
+  if (entry.danger) button.className = 'danger';
+  const label = document.createElement('span');
+  label.className = 'menu-label';
+  label.textContent = entry.label;
+  button.append(label);
+  if (entry.shortcut) {
+    const kbd = document.createElement('kbd');
+    kbd.className = 'shortcut';
+    kbd.textContent = keys(entry.shortcut, entry.shortcutMac);
+    button.append(kbd);
+  }
+  button.addEventListener('click', () => {
+    closeMenu({ focus: true });
+    entry.run();
+  });
+  item.append(button);
+  return item;
+}
+
+function openMenu(entries, { opener, at = null }) {
+  const list = menu();
+  list.replaceChildren(...entries.map(menuEntry));
+  menuOpener = opener;
+  opener.setAttribute('aria-expanded', 'true');
+  list.hidden = false;
+  const anchor = opener.getBoundingClientRect();
+  const size = list.getBoundingClientRect();
+  const left = at ? at.x : anchor.left;
+  const top = at ? at.y : anchor.bottom + 4;
+  list.style.left = `${Math.round(Math.max(8, Math.min(left, innerWidth - size.width - 8)))}px`;
+  list.style.top = `${Math.round(Math.max(8, Math.min(top, innerHeight - size.height - 8)))}px`;
+  (list.querySelector('[aria-checked="true"]') ?? menuItems()[0])?.focus();
+}
+
+function closeMenu({ focus = false } = {}) {
+  const list = menu();
+  if (list.hidden) return;
+  list.hidden = true;
+  menuOpener?.setAttribute('aria-expanded', 'false');
+  if (focus && menuOpener?.isConnected) menuOpener.focus();
+  menuOpener = null;
+}
+
+function bindMenu() {
+  const list = menu();
+  list.addEventListener('keydown', event => {
+    const items = menuItems();
+    const index = items.indexOf(document.activeElement);
+    const moves = { ArrowDown: index + 1, ArrowUp: index + items.length - 1, Home: 0, End: items.length - 1 };
+    if (event.key === 'Escape' || event.key === 'Tab') {
+      event.preventDefault();
+      closeMenu({ focus: true });
+    } else if (event.key in moves) {
+      event.preventDefault();
+      items[moves[event.key] % items.length].focus();
+    }
+  });
+  list.addEventListener('focusout', event => {
+    if (!list.contains(event.relatedTarget)) closeMenu();
+  });
+  document.addEventListener('pointerdown', event => {
+    if (!list.contains(event.target)) closeMenu();
+  });
+  const listButton = document.getElementById('fileList');
+  listButton.addEventListener('click', () => {
+    if (!menu().hidden) return closeMenu();
+    openMenu(
+      state.files.map((file, index) => ({
+        label: file.name,
+        checked: index === active,
+        run: () => {
+          showFile(index);
+          tabAt(active)?.focus();
+        },
+      })),
+      { opener: listButton },
+    );
+  });
+}
+
+// The actions of a file, for the menu of its tab.
+function fileActions(index) {
+  const file = state.files[index];
+  const tab = tabAt(index);
+  const entries = [{ label: t('Rename'), shortcut: 'F2', run: () => startRename(tabAt(index), index) }];
+  const moved = to => () => {
+    move(index, to);
+    tabAt(to)?.focus();
+  };
+  if (index > 0) entries.push({ label: t('Move left'), shortcut: 'Alt+←', run: moved(index - 1) });
+  if (index < state.files.length - 1)
+    entries.push({ label: t('Move right'), shortcut: 'Alt+→', run: moved(index + 1) });
+  entries.push({ label: t('Download'), run: () => downloadFile(file) });
+  if (state.files.length > 1) {
+    entries.push('separator', { label: t('Remove'), shortcut: 'Delete', danger: true, run: () => remove(index) });
+  }
+  return { entries, tab };
+}
+
+function openFileMenu(index, at = null) {
+  const { entries, tab } = fileActions(index);
+  if (!menu().hidden && menuOpener === tab) return;
+  openMenu(entries, { opener: tab, at });
+}
+
+// ---- Overflow of the strip: a shadow on the side where tabs are hidden, the wheel scrolls sideways, and
+// the list button shows.
+function updateOverflow() {
+  const tabs = strip();
+  const wrap = tabs.parentElement;
+  const hiddenEnd = tabs.scrollWidth - tabs.clientWidth - tabs.scrollLeft;
+  wrap.classList.toggle('is-clipped-start', tabs.scrollLeft > 1);
+  wrap.classList.toggle('is-clipped-end', hiddenEnd > 1);
+  document.getElementById('fileList').hidden = tabs.scrollWidth <= tabs.clientWidth + 1;
+}
+
+function bindOverflow() {
+  const tabs = strip();
+  tabs.addEventListener('scroll', updateOverflow, { passive: true });
+  new ResizeObserver(updateOverflow).observe(tabs);
+  tabs.addEventListener(
+    'wheel',
+    event => {
+      if (!event.deltaY || event.deltaX || event.ctrlKey || event.metaKey) return;
+      event.preventDefault();
+      tabs.scrollLeft += event.deltaY;
+    },
+    { passive: false },
+  );
+}
+
 function tabElement(file, index) {
   const tab = document.createElement('div');
   tab.className = 'file-tab';
@@ -97,7 +251,9 @@ function tabElement(file, index) {
   tab.classList.toggle('active', index === active);
   tab.tabIndex = index === active ? 0 : -1;
   tab.draggable = true;
-  tab.title = t('{name}: double-click or F2 to rename, drag or Alt + arrows to move', { name: file.name });
+  tab.title = t('{name}: right-click for the actions, double-click to rename, drag to move', { name: file.name });
+  tab.setAttribute('aria-haspopup', 'menu');
+  tab.setAttribute('aria-expanded', 'false');
   const label = document.createElement('span');
   label.className = 'file-name';
   label.textContent = file.name;
@@ -123,10 +279,18 @@ function tabElement(file, index) {
     if (index !== active) showFile(index);
   });
   tab.addEventListener('dblclick', () => startRename(tab, index));
+  // The menu of the file: right-click (a long press on a touch screen), Shift+F10 or the Menu key.
+  tab.addEventListener('contextmenu', event => {
+    event.preventDefault();
+    openFileMenu(index, event.clientX || event.clientY ? { x: event.clientX, y: event.clientY } : null);
+  });
   tab.addEventListener('keydown', event => {
     const last = state.files.length - 1;
     const steps = { ArrowLeft: -1, ArrowRight: 1 };
-    if (event.key in steps && event.altKey) {
+    if (event.key === 'ContextMenu' || (event.key === 'F10' && event.shiftKey)) {
+      event.preventDefault();
+      openFileMenu(index);
+    } else if (event.key in steps && event.altKey) {
       event.preventDefault();
       move(index, index + steps[event.key]);
       strip().querySelector('.file-tab.active')?.focus();
@@ -172,8 +336,10 @@ function tabElement(file, index) {
 }
 
 function drawTabs() {
+  closeMenu();
   strip().replaceChildren(...state.files.map(tabElement));
   strip().querySelector('.file-tab.active')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  updateOverflow();
 }
 
 // Shows a file in the editor and marks its tab.
@@ -267,9 +433,12 @@ export function revealDocumentLine(line) {
 }
 
 // Creates the editor and the tabs. `onChange()` runs after every change of the document; `onScroll()` and
-// `onImageFiles(files, kind)` come from the editor.
-export function initChapters(host, { onChange, onScroll, onImageFiles }) {
+// `onImageFiles(files, kind)` come from the editor; `onDownload(file)` saves a file from the menu of its tab.
+export function initChapters(host, { onChange, onScroll, onImageFiles, onDownload }) {
   documentChanged = onChange;
+  downloadFile = onDownload;
+  bindMenu();
+  bindOverflow();
   initEditor(host, { onChange: commit, onScroll, onImageFiles });
   setEditorPhrases(searchPhrases());
   onLanguageChange(() => {
