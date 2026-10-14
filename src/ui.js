@@ -1,16 +1,8 @@
 // The studio's controls: form fields bound to the state, tabs, file imports, downloads, export and print.
 // The markup itself lives in index.html.
 import { canDrawPages, markCannotDraw, probePageDrawing } from './pdf-capability.js';
-import {
-  activeFile,
-  addEmptyFile,
-  addFiles,
-  initChapters,
-  insertIntoDocument,
-  replaceActiveText,
-  syncChapters,
-} from './chapters.js';
-import { clearStoredConfig, DEFAULTS, mergeConfig, sanitizeConfig, state } from './config.js';
+import { activeFile, addEmptyFile, addFiles, initChapters, replaceActiveText, syncChapters } from './chapters.js';
+import { clearStoredConfig, DEFAULTS, mergeConfig, onStorageFailure, sanitizeConfig, state } from './config.js';
 import { documentCss, documentHtml, sourcesOfHtml, standaloneHtml } from './document.js';
 import {
   addImageFiles,
@@ -25,15 +17,16 @@ import {
   removeImage,
   replaceImages,
   sanitizeImages,
+  onImageStorageFailure,
 } from './images.js';
 import { currentLanguage, LANGUAGES, onLanguageChange, setLanguage, t } from './i18n.js';
-import { scheduleRender } from './render.js';
+import { refreshPreviewTools, scheduleRender } from './render.js';
 import { APP_COMMIT, APP_VERSION, COMMIT_URL, RELEASE_URL, REPOSITORY_URL } from './version.js';
 import { alignPreview, editorScrolled, initSync } from './sync.js';
 import { currentTheme, onThemeChange, setTheme } from './theme.js';
 import { applyView, revealEditor, setMode, toggleSidebar, toggleSync } from './view.js';
 import { fileStem } from './files.js';
-import { writeFile } from './editor.js';
+import { insertBlock, writeFile } from './editor.js';
 
 // Every state key has a form control with the same id, except the logo (a file input) and the text of the
 // document (the files and the editor, see chapters.js).
@@ -69,9 +62,13 @@ function bindInputs() {
     if (!el) continue;
     const eventName = el.tagName === 'SELECT' || el.type === 'checkbox' ? 'change' : 'input';
     el.addEventListener(eventName, () => {
-      state[key] = el.type === 'checkbox' ? el.checked : el.type === 'number' ? Number(el.value) : el.value;
+      // A typed number is clamped like an imported one: a margin of 500 mm would make the layout loop. Text
+      // keeps its raw value, which the document falls back from and the saved configuration drops if invalid.
+      const value = el.type === 'checkbox' ? el.checked : el.value;
+      state[key] = el.type === 'number' ? (sanitizeConfig({ [key]: value })[key] ?? state[key]) : value;
       scheduleRender();
     });
+    if (el.type === 'number') el.addEventListener('change', () => (el.value = state[key]));
   }
   document.getElementById('runningHeader').addEventListener('change', syncRunningHeaderLevel);
 }
@@ -104,13 +101,85 @@ function bindTabs() {
   });
 }
 
-function readTextFile(input, callback) {
+// The text of the file chosen in `input`, given to `callback`; a failure, of the reading or of the callback,
+// is reported in the notice banner rather than lost.
+async function readTextFile(input, callback) {
   const file = input.files?.[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = () => callback(String(reader.result ?? ''));
-  reader.readAsText(file);
   input.value = '';
+  if (!file) return;
+  try {
+    await callback(await file.text());
+  } catch (error) {
+    console.error(error);
+    notify(t('This file could not be read: {error}', { error: error?.message || error }));
+  }
+}
+
+// The name of an export: the title of the document and the extension.
+const exportName = extension => `${fileStem(state.title)}.${extension}`;
+
+// The sources of the document attached to a PDF: the project JSON and the Markdown, named after the title.
+async function attachProject(pdf) {
+  const { attachSources } = await import('./pdf-sources.js');
+  return attachSources(pdf, { json: sourceJson(), markdown: state.markdown, name: exportName('md') });
+}
+
+// A message for the user, in a banner above the pages instead of a blocking dialog.
+export function notify(message) {
+  document.getElementById('noticeText').textContent = message;
+  document.getElementById('notice').hidden = false;
+}
+
+// A short confirmation in the corner (a file saved, the document reset), gone by itself after `duration`;
+// `action` names a button that runs `run`, to undo what was just done.
+let toastTimer = 0;
+export function toast(message, { action = '', run = null, duration = 5000 } = {}) {
+  const box = document.getElementById('toast');
+  const button = document.getElementById('toastAction');
+  clearTimeout(toastTimer);
+  document.getElementById('toastText').textContent = message;
+  button.textContent = action;
+  button.hidden = !action;
+  button.onclick = () => {
+    hideToast();
+    run?.();
+  };
+  box.hidden = false;
+  toastTimer = setTimeout(hideToast, duration);
+}
+
+function hideToast() {
+  clearTimeout(toastTimer);
+  document.getElementById('toast').hidden = true;
+}
+
+// Runs an action and reports its failure in the banner instead of letting the error vanish.
+const guarded =
+  (action, message) =>
+  async (...args) => {
+    try {
+      await action(...args);
+    } catch (error) {
+      console.error(error);
+      notify(t(message, { error: error?.message || error }));
+    }
+  };
+
+function bindNotice() {
+  document.getElementById('dismissNotice').addEventListener('click', () => {
+    document.getElementById('notice').hidden = true;
+  });
+  // The browser storage is full or disabled: said once, the first time a save fails.
+  const warned = new Set();
+  const warnOnce = message => {
+    if (warned.has(message)) return;
+    warned.add(message);
+    notify(message);
+  };
+  onStorageFailure(() => warnOnce(t('Autosave failed: the browser storage is full or disabled')));
+  onImageStorageFailure(() =>
+    warnOnce(t('Images are kept for this session only: the browser storage is full or disabled')),
+  );
 }
 
 function download(name, content, type) {
@@ -135,7 +204,7 @@ function bindFiles() {
     } catch (error) {
       console.error(error);
       e.target.value = '';
-      alert(t('The logo could not be read: {error}', { error: error?.message || error }));
+      notify(t('The logo could not be read: {error}', { error: error?.message || error }));
     }
   });
 
@@ -167,20 +236,23 @@ function bindFiles() {
       writeFile(file, await prettifyMarkdown(file.markdown));
     } catch (error) {
       console.error(error);
-      alert(t('This file could not be formatted: {error}', { error: error?.message || error }));
+      notify(t('This file could not be formatted: {error}', { error: error?.message || error }));
     }
   });
 
   // More files for the document: an empty one, or Markdown files, each becoming a file of its name.
   document.getElementById('addFile').addEventListener('click', addEmptyFile);
   document.getElementById('addFiles').addEventListener('click', () => document.getElementById('chapterFiles').click());
-  document.getElementById('chapterFiles').addEventListener('change', async e => {
-    const chosen = [...(e.target.files ?? [])];
-    e.target.value = '';
-    const entries = [];
-    for (const file of chosen) entries.push({ name: file.name, markdown: await markdownOfText(await file.text()) });
-    addFiles(entries);
-  });
+  document.getElementById('chapterFiles').addEventListener(
+    'change',
+    guarded(async e => {
+      const chosen = [...(e.target.files ?? [])];
+      e.target.value = '';
+      const entries = [];
+      for (const file of chosen) entries.push({ name: file.name, markdown: await markdownOfText(await file.text()) });
+      addFiles(entries);
+    }, 'This file could not be read: {error}'),
+  );
 
   document.getElementById('loadCss').addEventListener('click', () => document.getElementById('cssFile').click());
   document.getElementById('cssFile').addEventListener('change', e =>
@@ -201,7 +273,7 @@ function bindFiles() {
   // them apart.
   document.getElementById('downloadMarkdown').addEventListener('click', () => {
     const file = activeFile();
-    const name = state.files.length === 1 ? `${fileStem(state.title)}.md` : file.name;
+    const name = state.files.length === 1 ? exportName('md') : file.name;
     download(name, file.markdown, 'text/markdown;charset=utf-8');
   });
 
@@ -214,35 +286,43 @@ function bindFiles() {
       loadSources(await sourcesOfFile(file));
     } catch (error) {
       console.error(error);
-      alert(t('This file could not be opened: {error}', { error: error?.message || error }));
+      notify(t('This file could not be opened: {error}', { error: error?.message || error }));
     }
   });
+}
 
-  document.getElementById('resetDocument').addEventListener('click', () => {
-    if (!confirm(t('Discard the current document and its images, and restore the sample?'))) return;
-    clearStoredConfig();
-    clearImages();
-    document.getElementById('logo').value = '';
-    applyConfig(DEFAULTS);
+// Reset, from the "more" menu: the sample comes back at once, and the toast undoes it for a moment from the
+// sources kept here (the document, its settings and its images), the same way an import restores them.
+const UNDO_MS = 10000;
+function resetDocument() {
+  const before = sourceJson();
+  clearStoredConfig();
+  clearImages();
+  document.getElementById('logo').value = '';
+  applyConfig(DEFAULTS);
+  toast(t('Document reset: the sample is back'), {
+    action: t('Undo'),
+    run: () => loadSources(before),
+    duration: UNDO_MS,
   });
 }
 
 // The exports that are plain downloads: the self-contained HTML page, the Markdown with its front matter,
 // the archive of files and the project file.
 async function exportHtml() {
-  download(`${fileStem(state.title)}.html`, await standaloneHtml({ source: sourceJson() }), 'text/html;charset=utf-8');
+  download(exportName('html'), await standaloneHtml({ source: sourceJson() }), 'text/html;charset=utf-8');
 }
 
 async function exportMarkdown() {
   const { markdownWithSources } = await import('./markdown-sources.js');
   const text = markdownWithSources({ json: sourceJson(), markdown: state.markdown });
-  download(`${fileStem(state.title)}.md`, text, 'text/markdown;charset=utf-8');
+  download(exportName('md'), text, 'text/markdown;charset=utf-8');
 }
 
 // The project as ordinary files in a zip: the Markdown files, the stylesheet, the logo and the images.
 async function exportArchive() {
   const { projectArchive } = await import('./archive.js');
-  download(`${fileStem(state.title)}.zip`, projectArchive(sourceJson()), 'application/zip');
+  download(exportName('zip'), projectArchive(sourceJson()), 'application/zip');
 }
 
 function exportProject() {
@@ -300,11 +380,32 @@ function loadSources(text) {
 
 // Locks the studio while a PDF is written: the overlay covers it and the app is inert (no clicks, no keys),
 // so the document cannot change under the export. `detail` reports the progress.
+// One export at a time: the overlay makes the page inert, but the desktop menu and Ctrl+P still reach the
+// studio. `lock()` says no while an export runs.
+let busy = false;
 function lock(title) {
+  if (busy) return false;
+  busy = true;
   document.getElementById('busyTitle').textContent = title;
   document.getElementById('busyDetail').textContent = '';
   document.getElementById('busy').hidden = false;
   document.getElementById('app').inert = true;
+  return true;
+}
+
+// Resolves once the preview shows the current document (no render pending), or fails after a while.
+function previewSettled() {
+  const preview = document.getElementById('preview');
+  const started = Date.now();
+  return new Promise((resolve, reject) => {
+    const check = () => {
+      if (!preview.classList.contains('is-stale') && !preview.classList.contains('is-rendering')) resolve();
+      else if (Date.now() - started > 60_000)
+        reject(new Error(t('the preview is still rendering, try again in a moment')));
+      else setTimeout(check, 50);
+    };
+    check();
+  });
 }
 
 function progress(detail) {
@@ -312,6 +413,7 @@ function progress(detail) {
 }
 
 function unlock() {
+  busy = false;
   document.getElementById('busy').hidden = true;
   document.getElementById('app').inert = false;
 }
@@ -319,18 +421,12 @@ function unlock() {
 // Browser only, "PDF with project": the print dialog cannot hand its file back, so the studio draws the
 // PDF itself from the preview (see pdf-render.js), puts the project in and downloads it in one go.
 async function exportPdfRendered() {
-  const status = document.getElementById('status');
   const preview = document.getElementById('preview');
-  if (preview.classList.contains('is-stale') || preview.classList.contains('is-rendering')) {
-    alert(t('PDF export failed: {error}', { error: t('the preview is still rendering, try again in a moment') }));
-    return;
-  }
-  lock(t('Exporting the PDF…'));
+  if (!lock(t('Exporting the PDF…'))) return;
   try {
-    const [{ renderPreviewToPdf }, { attachSources }] = await Promise.all([
-      import('./pdf-render.js'),
-      import('./pdf-sources.js'),
-    ]);
+    // An edit may still be on its way to the pages: the export waits for them.
+    await previewSettled();
+    const { renderPreviewToPdf } = await import('./pdf-render.js');
     const html = await documentHtml();
     const pdf = await renderPreviewToPdf({
       preview,
@@ -340,16 +436,11 @@ async function exportPdfRendered() {
       onProgress: (done, total) => progress(t('Drawing page {done} of {total}…', { done, total })),
     });
     progress(t('Writing the file…'));
-    const bytes = await attachSources(pdf, {
-      json: sourceJson(),
-      markdown: state.markdown,
-      name: `${fileStem(state.title)}.md`,
-    });
-    download(`${fileStem(state.title)}.pdf`, bytes, 'application/pdf');
-    status.textContent = t('PDF saved with its project');
+    const bytes = await attachProject(pdf);
+    download(exportName('pdf'), bytes, 'application/pdf');
+    toast(t('PDF saved with its project'));
   } catch (error) {
     console.error(error);
-    status.textContent = t('Render error');
     // The pages could not be drawn or read back: said in plain words, and the next exports use the print
     // dialog (which has to open inside a click, so not from here).
     const drawing = error?.code === 'draw' || error?.name === 'SecurityError';
@@ -362,7 +453,7 @@ async function exportPdfRendered() {
           'this browser could not draw the pages. Use PDF only (print dialog), or export HTML, Markdown or the zip to keep the project',
         )
       : error?.message || error;
-    alert(t('PDF export failed: {error}', { error: reason }));
+    notify(t('PDF export failed: {error}', { error: reason }));
   } finally {
     unlock();
   }
@@ -374,7 +465,7 @@ const NOTICE_KEY = 'markdown-paged-studio:export-notice';
 
 function printInsteadOfDrawing() {
   openPrintWindow();
-  document.getElementById('status').textContent = t('Print dialog opened: this PDF does not carry the project');
+  toast(t('Print dialog opened: this PDF does not carry the project'));
   let seen = false;
   try {
     seen = localStorage.getItem(NOTICE_KEY) === 'seen';
@@ -418,12 +509,22 @@ function describeExport() {
 // this is also how a PDF is produced ("Save as PDF" in the print dialog), so it must run inside a user
 // gesture (click or key press) or pop-up blockers stop it: window.open comes before the first await.
 async function openPrintWindow() {
+  if (busy) return;
   const win = window.open('', '_blank');
   if (!win) {
-    alert(t('The browser blocked the print window. Allow pop-ups for this site.'));
+    notify(t('The browser blocked the print window. Allow pop-ups for this site.'));
     return;
   }
-  const html = await standaloneHtml({ mode: 'print' });
+  let html;
+  try {
+    html = await standaloneHtml({ mode: 'print' });
+  } catch (error) {
+    // No document to print: the empty window must not stay open.
+    win.close();
+    console.error(error);
+    notify(t('Export failed: {error}', { error: error?.message || error }));
+    return;
+  }
   const url = URL.createObjectURL(new Blob([html], { type: 'text/html' }));
   win.location = url;
   // The opened page prints itself when Paged.js finishes; the URL only needs to outlive the load.
@@ -435,24 +536,18 @@ async function openPrintWindow() {
 // `window.desktop.writePdf` writes the file. The desktop package has no node_modules: pdf-lib lives in the
 // page bundle, so this is the only place it can run.
 async function exportPdfDirect({ project }) {
-  const status = document.getElementById('status');
-  lock(t('Exporting the PDF…'));
+  if (!lock(t('Exporting the PDF…'))) return;
   try {
     const html = await standaloneHtml({ mode: 'pdf' });
     progress(t('Choose where to save it, then the pages are printed…'));
-    const result = await window.desktop.exportPdf(html);
+    const result = await window.desktop.exportPdf(html, fileStem(state.title));
     if (result.canceled) return;
     progress(t('Writing the file…'));
     let bytes = result.pdf;
     let saved = t('PDF saved');
     if (project) {
       try {
-        const { attachSources } = await import('./pdf-sources.js');
-        bytes = await attachSources(result.pdf, {
-          json: sourceJson(),
-          markdown: state.markdown,
-          name: `${fileStem(state.title)}.md`,
-        });
+        bytes = await attachProject(result.pdf);
         saved = t('PDF saved with its project');
       } catch (error) {
         console.error(error);
@@ -460,10 +555,10 @@ async function exportPdfDirect({ project }) {
       }
     }
     await window.desktop.writePdf(result.token, bytes);
-    status.textContent = saved;
+    toast(saved);
   } catch (error) {
     console.error(error);
-    alert(t('PDF export failed: {error}', { error: error?.message || error }));
+    notify(t('PDF export failed: {error}', { error: error?.message || error }));
   } finally {
     unlock();
   }
@@ -477,11 +572,12 @@ function exportPdf({ project }) {
   return canDrawPages() === false ? printInsteadOfDrawing() : exportPdfRendered();
 }
 
-// The arrow next to Export opens the five exports as a menu: Escape, a click elsewhere or leaving it closes
-// it; the arrow keys move between its entries.
-function bindExportMenu() {
-  const arrow = document.getElementById('exportMenu');
-  const menu = document.getElementById('exportOptions');
+// A menu under a toolbar button (the arrow next to Export, the "more" button): Escape, a click elsewhere or
+// leaving it closes it; the arrow keys move between its entries; `actions` maps the id of an entry to what
+// it does.
+function bindMenu(buttonId, menuId, actions) {
+  const arrow = document.getElementById(buttonId);
+  const menu = document.getElementById(menuId);
   const items = [...menu.querySelectorAll('[role="menuitem"]')];
   const open = () => {
     menu.hidden = false;
@@ -506,19 +602,11 @@ function bindExportMenu() {
     }
   });
   document.addEventListener('pointerdown', event => {
-    if (!event.target.closest('.menu-button')) close();
+    if (!arrow.parentElement.contains(event.target)) close();
   });
   menu.addEventListener('focusout', event => {
     if (!menu.contains(event.relatedTarget) && event.relatedTarget !== arrow) close();
   });
-  const actions = {
-    exportPdfProject: () => exportPdf({ project: true }),
-    exportPdfOnly: () => exportPdf({ project: false }),
-    exportHtml,
-    exportMarkdown,
-    exportArchive,
-    exportProject,
-  };
   for (const [id, action] of Object.entries(actions)) {
     document.getElementById(id).addEventListener('click', event => {
       // An entry that is not available here keeps the menu open on its explanation.
@@ -533,16 +621,24 @@ function bindPdf() {
   const button = document.getElementById('exportDefault');
   // The main part of the split button is the default export: the PDF with the project.
   button.addEventListener('click', () => exportPdf({ project: true }));
-  bindExportMenu();
+  bindMenu('exportMenu', 'exportOptions', {
+    exportPdfProject: () => exportPdf({ project: true }),
+    exportPdfOnly: () => exportPdf({ project: false }),
+    exportHtml: guarded(exportHtml, 'Export failed: {error}'),
+    exportMarkdown: guarded(exportMarkdown, 'Export failed: {error}'),
+    exportArchive: guarded(exportArchive, 'Export failed: {error}'),
+    exportProject,
+  });
+  bindMenu('moreMenu', 'moreOptions', { resetDocument });
 
   if (window.desktop) {
     // File menu entries of the desktop app.
     window.desktop.onCommand(command => {
       if (command === 'export-pdf') exportPdfDirect({ project: true });
       else if (command === 'export-pdf-plain') exportPdfDirect({ project: false });
-      else if (command === 'export-html') exportHtml();
-      else if (command === 'export-markdown') exportMarkdown();
-      else if (command === 'export-archive') exportArchive();
+      else if (command === 'export-html') guarded(exportHtml, 'Export failed: {error}')();
+      else if (command === 'export-markdown') guarded(exportMarkdown, 'Export failed: {error}')();
+      else if (command === 'export-archive') guarded(exportArchive, 'Export failed: {error}')();
       else if (command === 'export-project') exportProject();
       else if (command === 'import') document.getElementById('importFile').click();
       else if (command === 'print') openPrintWindow();
@@ -601,7 +697,7 @@ function imageReference(name) {
 // Inserts a block at the cursor of the editor, shown first when the preview was alone.
 function insertIntoEditor(text) {
   revealEditor();
-  insertIntoDocument(text);
+  insertBlock(text);
 }
 
 // The Markdown of a file chosen by the user, without the front matter of a studio export.
@@ -712,10 +808,13 @@ function renderImageList() {
 function bindImages() {
   const input = document.getElementById('imageFiles');
   document.getElementById('addImages').addEventListener('click', () => input.click());
-  input.addEventListener('change', async () => {
-    await addImages(input.files);
-    input.value = '';
-  });
+  input.addEventListener(
+    'change',
+    guarded(async () => {
+      await addImages(input.files);
+      input.value = '';
+    }, 'Images could not be added: {error}'),
+  );
 
   onImagesChange(renderImageList);
   renderImageList();
@@ -760,7 +859,7 @@ function bindLanguage() {
     applyView();
     renderImageList();
     document.getElementById('imagesStatus').hidden = true;
-    scheduleRender();
+    refreshPreviewTools();
   });
 }
 
@@ -775,6 +874,7 @@ function bindTheme() {
 }
 
 export function initUi() {
+  bindNotice();
   showVersion();
   bindLanguage();
   bindTheme();

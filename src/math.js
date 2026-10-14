@@ -3,6 +3,7 @@
 // load every face of the second): the preview gets a <style> in the page and the faces it needs through
 // the FontFace API; exports get the same rules and faces inlined. See math-core.js for the pure part.
 import { hasMath, neededMathFaces, parseMathCss, renderFormulas } from './math-core.js';
+import { lazy } from './util.js';
 
 const fontUrls = import.meta.glob('/node_modules/katex/dist/fonts/*.woff2', {
   eager: true,
@@ -19,27 +20,8 @@ const pathOf = file => `/node_modules/katex/dist/fonts/${file}`;
 // drawn alone (the PDF made by the browser) would restart a counter.
 const OVERRIDES = '.katex .eqn-num::before{content:none;counter-increment:none}';
 
-let katexPromise = null;
-function loadKatex() {
-  katexPromise ??= import('katex')
-    .then(module => module.default)
-    .catch(error => {
-      katexPromise = null;
-      throw error;
-    });
-  return katexPromise;
-}
-
-let cssPromise = null;
-function loadMathCss() {
-  cssPromise ??= import('katex/dist/katex.min.css?raw')
-    .then(module => parseMathCss(module.default))
-    .catch(error => {
-      cssPromise = null;
-      throw error;
-    });
-  return cssPromise;
-}
+const loadKatex = lazy(() => import('katex').then(module => module.default));
+const loadMathCss = lazy(() => import('katex/dist/katex.min.css?raw').then(module => parseMathCss(module.default)));
 
 // Draws the formulas of `html` (the placeholders of the Markdown rules). Without a formula, nothing loads.
 export async function renderMath(html) {

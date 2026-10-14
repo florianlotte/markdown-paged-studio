@@ -1,10 +1,15 @@
 // Escaping helpers for the two injection points of user strings: CSS `content: "…"` and HTML.
 
 export function escCssString(value) {
-  return String(value ?? '')
-    .replace(/\\/g, '\\\\')
-    .replace(/"/g, '\\"')
-    .replace(/\n/g, ' ');
+  return (
+    String(value ?? '')
+      .replace(/\\/g, '\\\\')
+      .replace(/"/g, '\\"')
+      // The string also travels inside a <style> element: a "<" is written as its CSS escape (`\3c `).
+      .replace(/</g, '\\3c ')
+      // A line break of any kind would end the string, and the margin box with it.
+      .replace(/[\n\r\f]/g, ' ')
+  );
 }
 
 // A well-formed CSS string from one Paged.js may have left open: it writes its `string-set` values in the

@@ -1,6 +1,7 @@
 // Studio-only controls to resize Mermaid diagrams and images directly in the preview. They are added
 // after pagination, so they never reach the exported document. The size is not kept here: every change
 // rewrites the attributes in the Markdown source (```mermaid width=60% or ![Alt](photo.png){width=60%}).
+import { clamp as clampNumber } from './util.js';
 import { t } from './i18n.js';
 import { DIAGRAM_WIDTH_MAX, DIAGRAM_WIDTH_MIN, updateFenceAttributes, updateImageAttributes } from './markdown.js';
 
@@ -83,7 +84,10 @@ function listenForDeselection(preview) {
   document.addEventListener('pointerdown', () => (keyboardKey = null), true);
 }
 
-const clamp = percent => Math.min(DIAGRAM_WIDTH_MAX, Math.max(DIAGRAM_WIDTH_MIN, Math.round(percent)));
+// The elements the studio adds to the pages, which exports and the source lookup leave out.
+export const STUDIO_ONLY = '.diagram-tools, .diagram-handle';
+
+const clamp = percent => clampNumber(Math.round(percent), DIAGRAM_WIDTH_MIN, DIAGRAM_WIDTH_MAX);
 
 function button(label, title, onClick, { pressed } = {}) {
   const el = document.createElement('button');
@@ -118,9 +122,12 @@ function icon(path) {
 // inline and do not count. Computed paddings are layout pixels: the preview zoom scales them on screen.
 function columnBox(element) {
   let block = element.parentElement;
-  while (block?.parentElement && getComputedStyle(block).display.startsWith('inline')) block = block.parentElement;
+  let style = getComputedStyle(block);
+  while (block?.parentElement && style.display.startsWith('inline')) {
+    block = block.parentElement;
+    style = getComputedStyle(block);
+  }
   const zoom = Number(getComputedStyle(element).getPropertyValue('--view-zoom')) || 1;
-  const style = getComputedStyle(block);
   const edge = side => (parseFloat(style[`padding${side}`]) + parseFloat(style[`border${side}Width`])) * zoom;
   const box = block.getBoundingClientRect();
   const left = box.left + edge('Left');
@@ -178,10 +185,15 @@ function enhance(diagram, target, commit, onSelect) {
   handle.title = t('Drag to resize (arrow keys: 5 % steps)');
 
   // The drawing can be narrower than its container (natural size): place the tools on its edges.
-  // Shares of the container width are zoom-independent.
-  const place = () => {
-    const box = diagram.getBoundingClientRect();
-    const inner = drawing.getBoundingClientRect();
+  // Shares of the container width are zoom-independent. Measuring and writing are two steps, so that
+  // placing every element of the preview reads all the boxes before it writes any style.
+  const measure = () => ({
+    box: diagram.getBoundingClientRect(),
+    inner: drawing.getBoundingClientRect(),
+    sheet: diagram.closest('.pagedjs_page')?.getBoundingClientRect(),
+    toolsWidth: tools.getBoundingClientRect().width,
+  });
+  const apply = ({ box, inner, sheet, toolsWidth }) => {
     const left = ((inner.left - box.left) / box.width) * 100;
     const right = ((inner.right - box.left) / box.width) * 100;
     handle.style.left = `${align === 'right' ? left : right}%`;
@@ -191,22 +203,22 @@ function enhance(diagram, target, commit, onSelect) {
     // in that case it ends at the right edge of the drawing instead.
     tools.style.right = 'auto';
     tools.style.left = `${left}%`;
-    const sheet = diagram.closest('.pagedjs_page')?.getBoundingClientRect();
     if (!sheet) return;
-    let toolsBox = tools.getBoundingClientRect();
-    if (toolsBox.right > sheet.right - 4) {
+    let toolsLeft = inner.left;
+    if (toolsLeft + toolsWidth > sheet.right - 4) {
       tools.style.left = 'auto';
       tools.style.right = `${100 - right}%`;
-      toolsBox = tools.getBoundingClientRect();
+      toolsLeft = inner.right - toolsWidth;
     }
     // A small page at a low zoom: the toolbar, which keeps its screen size, is wider than the room beside
     // the drawing. It then starts at the left edge of the page, where every button stays reachable.
-    if (toolsBox.left < sheet.left + 4) {
+    if (toolsLeft < sheet.left + 4) {
       tools.style.right = 'auto';
       tools.style.left = `${((sheet.left + 4 - box.left) / box.width) * 100}%`;
     }
   };
-  placers.set(diagram, place);
+  const place = () => apply(measure());
+  placers.set(diagram, { measure, apply });
   place();
 
   const preview = percentValue => {
@@ -271,7 +283,19 @@ function enhance(diagram, target, commit, onSelect) {
 
 // Places the tools of every resizable element of the preview again, after the zoom or the layout changed.
 export function placeResizables(preview) {
-  for (const element of preview.querySelectorAll('.resizable')) placers.get(element)?.();
+  const placed = [...preview.querySelectorAll('.resizable')].map(element => placers.get(element)).filter(Boolean);
+  // Every box is read before any style is written: one layout, not one per element.
+  const measures = placed.map(placer => placer.measure());
+  placed.forEach((placer, index) => placer.apply(measures[index]));
+}
+
+// Builds the controls again, with the labels of the current interface language (set when they are made).
+export function refreshResizables(preview, getMarkdown, applyMarkdown) {
+  for (const element of preview.querySelectorAll('.resizable')) {
+    for (const node of element.querySelectorAll(':scope > .diagram-tools, :scope > .diagram-handle')) node.remove();
+    placers.delete(element);
+  }
+  enhanceResizables(preview, getMarkdown, applyMarkdown);
 }
 
 // Adds the controls to every rendered diagram and image of the preview. `getMarkdown` returns the current

@@ -3,8 +3,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { closeCssString, escCssString, escapeHtml, unescapeHtml } from '../src/escape.js';
 
-test('escCssString escapes quotes and backslashes and keeps the value on one line', () => {
+test('escCssString escapes quotes, backslashes and "<", and keeps the value on one line', () => {
   assert.equal(escCssString('A "quoted" \\ title\nnext'), 'A \\"quoted\\" \\\\ title next');
+  assert.equal(escCssString('a<b</style>'), 'a\\3c b\\3c /style>');
+  assert.equal(escCssString('one\rtwo\fthree\r\nfour'), 'one two three  four');
   assert.equal(escCssString(null), '');
 });
 
@@ -12,6 +14,8 @@ test('escapeHtml and unescapeHtml are inverse', () => {
   const text = 'Tom & "Jerry" <b>';
   assert.equal(escapeHtml(text), 'Tom &amp; &quot;Jerry&quot; &lt;b&gt;');
   assert.equal(unescapeHtml(escapeHtml(text)), text);
+  // The numeric form of the apostrophe, which some serialisers write.
+  assert.equal(unescapeHtml('it&#39;s &amp; &quot;ok&quot;'), 'it\'s & "ok"');
 });
 
 test('closeCssString closes the strings Paged.js leaves open and keeps closed ones', () => {

@@ -17,8 +17,6 @@ const lf = text => text.replace(/\r\n?/g, '\n');
 
 export const lineCount = text => text.split('\n').length;
 
-// A file name that is safe in an archive and unique among `taken`: no path, no reserved character, a
-// Markdown extension, and a numeric suffix when the name is already used.
 // A file name made of the title of the document: letters, digits and a few signs, "document" when nothing is
 // left. The exports (PDF, HTML, Markdown, zip) and the Markdown attached to the PDF are named with it.
 export function fileStem(title) {
@@ -30,6 +28,8 @@ export function fileStem(title) {
   return stem || 'document';
 }
 
+// A file name that is safe in an archive and unique among `taken`: no path, no reserved character, a
+// Markdown extension, and a numeric suffix when the name is already used.
 export function fileName(wanted, taken = []) {
   const base = String(wanted ?? '')
     .split(/[\\/]/)

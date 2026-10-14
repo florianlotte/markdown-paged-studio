@@ -29,6 +29,7 @@ const EXTENSIONS = {
 // What is read from an archive: enough for a large document, not for a decompression bomb.
 const MAX_ENTRIES = 2000;
 const MAX_ENTRY_BYTES = 64 * 1024 * 1024;
+const MAX_TOTAL_BYTES = 256 * 1024 * 1024;
 
 const extension = name => /\.([a-z0-9]+)$/i.exec(name)?.[1].toLowerCase() ?? '';
 
@@ -105,10 +106,15 @@ const naturally = (a, b) => a.localeCompare(b, undefined, { numeric: true, sensi
 
 // The project held by an archive, as a configuration text. An archive written by the studio brings the
 // whole project; any other zip brings its Markdown files, in the order of their names, and its images.
-export function sourcesOfArchive(bytes) {
+export function sourcesOfArchive(bytes, { maxTotalBytes = MAX_TOTAL_BYTES } = {}) {
   let count = 0;
+  let total = 0;
   const unzipped = unzipSync(bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes), {
-    filter: file => !file.name.endsWith('/') && file.originalSize <= MAX_ENTRY_BYTES && ++count <= MAX_ENTRIES,
+    filter: file =>
+      !file.name.endsWith('/') &&
+      file.originalSize <= MAX_ENTRY_BYTES &&
+      ++count <= MAX_ENTRIES &&
+      (total += file.originalSize) <= maxTotalBytes,
   });
   const paths = Object.keys(unzipped).filter(
     path => !path.split('/').includes('..') && !baseName(path).startsWith('.'),

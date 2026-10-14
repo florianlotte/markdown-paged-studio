@@ -29,24 +29,24 @@
 - **Live paged preview** powered by [Paged.js](https://pagedjs.org): what you see is what prints.
 - **Bundled font**: Inter ships with the studio and is embedded in every export, so the preview, the print and the PDF look the same on any machine.
 - **Cover page** with title, subtitle, author, date and an optional logo, in four templates with an accent colour.
-- **Table of contents** with page numbers from `[[toc]]`, **page breaks** from `\newpage`, and **footnotes** at the foot of the page.
+- **Table of contents** with page numbers from `[[toc]]`, **page breaks** from `\newpage`, **footnotes** at the foot of the page, and an anchor on every heading for `[links](#heading)`.
 - **Running header** (left and right, or the current chapter), **footer**, and an automatic `Page X / Y` counter.
 - **A4, Letter or A5** with configurable margins, mirrored on facing pages if you print double-sided.
 - **Syntax highlighting** of code blocks, light or dark, and **captions** under images and diagrams.
 - **Mermaid diagrams** from ` ```mermaid ` code fences, rendered to SVG and embedded in exports, resizable by dragging in the preview.
-- **Document language** (BCP 47 tag) driving hyphenation and typographic quotes (« » in French, „ “ in German…).
+- **Document language** (BCP 47 tag) driving hyphenation, typographic quotes (« » in French, „ “ in German…), the titles of alerts and the words of the numbering.
 - **Images** uploaded, dropped or pasted, matched to the Markdown by file name, resizable like the diagrams.
 - **Custom CSS** editor with import, applied to the document only.
-- **Interface in English or French**, following the browser or your choice.
+- **Interface in English or French**, and a **light or dark theme** for the studio, each following the system or your choice; the pages stay white.
 - **Automatic numbering and cross-references**: headings, figures, tables and equations are numbered for you, and `@fig:plan` in the text becomes "figure 3", with a link, wherever the figure ends up.
 - **Formulas, alerts and more**: TeX formulas drawn by KaTeX (`$E = mc^2$`), GitHub alerts (`> [!NOTE]`), highlighted text, subscript, superscript and definition lists.
 - **A document in several files**: chapters as tabs above the editor, assembled into one paged document and one PDF, with shared settings, table of contents and page numbers.
-- **A real editor**: Markdown colours, line numbers, search and replace (Ctrl+F), and the preview scrolling along with the text; a double-click in the preview shows the source.
+- **A real editor**: Markdown colours, line numbers, search and replace (Ctrl+F), **Prettify** to format the file the way Prettier does, and the preview scrolling along with the text; a double-click in the preview shows the source.
 - **Edit, Split or View**: the editor and the paged preview share the window with a draggable splitter, or one of them takes it all; plus one page or two pages side by side, zoom, fit to width, Ctrl + wheel, and a collapsible settings sidebar.
 - **Autosave** in the browser, plus export and import of the whole configuration as JSON.
 - **Personal defaults** (your name, company logo, stylesheet, template) from a gitignored `local/` folder.
 - **Export menu**: PDF with project, PDF only, HTML with project (a standalone page that paginates offline), Markdown with project (a `.md` whose YAML front matter holds the settings and images), Markdown files (a zip of the files, the stylesheet and the images side by side) or the project alone. In the browser the studio draws the PDF with project itself and the PDF only goes through the print dialog; the desktop app writes both directly.
-- **Editable exports**: the HTML export, the Markdown export, the zip of files and the PDF with project carry the document, its settings and its images, and **Import…** reopens them.
+- **Editable exports**: the HTML export, the Markdown export, the zip of files and the PDF with project carry the document, its settings and its images, and **Import…** reopens them, as well as a plain `.md` file or any zip of Markdown files.
 - **Desktop app** for Windows (x64 and ARM64), Linux and macOS (Apple Silicon and Intel), portable, no installation.
 - **MCP server** so a local AI assistant can generate reports through the same rendering pipeline.
 - **Static build** you can host anywhere: GitHub Pages, Netlify, Cloudflare Pages, nginx, or the provided Docker image.
@@ -69,171 +69,17 @@ Node.js 20.19+ or 22.12+ is required by Vite 8.
 
 ## Usage
 
-### Writing
+The Markdown editor sits beside the paged preview (**Split**) or alone (**Edit**); **View** shows the preview alone. The bar above the editor inserts a page break or a table of contents, formats the file (**Prettify**), replaces or downloads it, and switches the scroll synchronisation. The sidebar holds the settings: **Content** (cover fields, images), **Design** (header, footer, numbering, code theme, stylesheet) and **Page** (paper size, margins, document language). The ⋯ menu of the toolbar resets the document, with ten seconds to undo. The [writing guide](docs/writing.md) describes everything you can write:
 
-The Markdown editor sits in the main area, beside the paged preview (**Split**) or alone (**Edit**); **View** shows the preview alone. It colours the Markdown, numbers the lines and searches or replaces with Ctrl+F. The bar above it inserts a page break or a table of contents, formats the current file (**Prettify**: one space after `#`, `-` lists, `_emphasis_`, aligned tables, one blank line between blocks, the way [Prettier](https://prettier.io) writes Markdown; the syntax of the studio is kept, and Ctrl+Z reverts it), replaces the current file with an existing `.md` file or downloads it (named after the title, like the PDF, when it is the only file), and switches the scroll synchronisation: while it is on, the pane you scroll takes the other one to the same part of the document. A double-click on a block of the preview puts the cursor on its source line. The **Content** tab of the sidebar holds the cover fields and the images. The parser is [markdown-it](https://github.com/markdown-it/markdown-it): all of [CommonMark](https://commonmark.org) and of GitHub Flavored Markdown (tables, strikethrough, task lists, automatic links), plus footnotes and typographic replacements. Raw HTML inside Markdown is intentionally disabled. [Markdown support](docs/markdown-support.md) lists what is understood, the four deliberate differences with the specification, what is not supported (abbreviations, emoji shortcodes), and the conformance measured on the official examples.
+- [Several files](docs/writing.md#several-files): chapters as tabs, one paged document.
+- [Diagrams](docs/writing.md#diagrams): Mermaid fences, sized and aligned from the preview.
+- [Formulas, alerts and more](docs/writing.md#formulas-alerts-and-more): TeX with KaTeX, GitHub alerts, highlighted text, subscript and superscript, definition lists.
+- [Numbering and cross-references](docs/writing.md#numbering-and-cross-references): `{#fig:plan}` and `@fig:plan` for figures, tables, equations and headings.
+- [Structure](docs/writing.md#structure-table-of-contents-page-breaks-footnotes-code): table of contents, page breaks, footnotes, task lists, highlighted code, heading anchors.
+- [Images](docs/writing.md#images): matched by file name, sized in braces or from the preview, captioned.
+- [Cover page, header and footer](docs/writing.md#cover-page-header-and-footer) and [Page setup](docs/writing.md#page-setup).
 
-Whatever the studio writes into the editor for you (the insert buttons, a pasted image, a size set from the preview) is an ordinary edit: Ctrl+Z undoes it like something you typed, and Ctrl+Y or Ctrl+Shift+Z redoes it.
-
-### Several files
-
-A document can be written as several Markdown files, one tab each above the editor, in the order of the document. The preview, the table of contents, the page numbers and every export work on the files put one after the other, with one empty line between them; the settings, the stylesheet and the images are shared. Write `\newpage` at the top of a file to start it on a new page.
-
-| Action             | How                                                                                                |
-| ------------------ | -------------------------------------------------------------------------------------------------- |
-| New empty file     | **+** at the end of the tabs                                                                       |
-| Add existing files | The folder button next to it: pick one or several `.md` files, each becomes a file of its own name |
-| Rename             | Double-click the tab, or F2                                                                        |
-| Move               | Drag the tab, or Alt + Left / Right                                                                |
-| Remove             | The **×** of the tab, or Delete; a file that holds text asks for a confirmation                    |
-| Switch             | Click, or Left / Right, Home, End on the tabs; Enter goes to the editor                            |
-
-Each file keeps its own undo history and its place in the editor. A change made from the preview goes to the file that holds the source, shown or not. Footnote labels and link references are shared by the whole document: give them different names in different files.
-
-### Diagrams
-
-Any fenced code block tagged `mermaid` becomes an inline SVG:
-
-````markdown
-```mermaid
-flowchart LR
-  A[Markdown] --> B[HTML]
-  B --> C[Pages]
-```
-````
-
-To size a diagram, add attributes after the language on the opening line:
-
-````markdown
-```mermaid width=60% align=left
-flowchart LR
-  A[Markdown] --> B[HTML]
-```
-````
-
-| Attribute | Values                             | Effect                                                               |
-| --------- | ---------------------------------- | -------------------------------------------------------------------- |
-| `width`   | `10%` to `100%`, or a size in `mm` | Width as a share of the text column, or absolute; the height follows |
-| `align`   | `left`, `center`, `right`          | Horizontal position, centered by default                             |
-| `caption` | text, in double quotes             | Caption shown under the diagram: `caption="The flow"`                |
-| `#fig:…`  | a name, as in `#fig:flow`          | Label of the figure: numbers it and lets `@fig:flow` refer to it     |
-
-You rarely need to type the size and the alignment: hover or click a diagram in the preview to get size presets (25, 50, 75, 100 %, natural size), alignment buttons and a handle to drag, which also answers to the arrow keys in 5 % steps. A clicked diagram keeps its tools open, also on touch screens, until you click elsewhere or press Escape, so several adjustments can follow one another.
-
-Every change is written back to that opening line, so the size travels with the Markdown into exports, the desktop app and the MCP server. Ctrl+Z undoes it, in the editor or straight from the preview (also in View mode, when the editor is hidden). Without attributes a diagram keeps its natural size, and it is never taller than the text area of a page.
-
-Every diagram type supported by [Mermaid](https://mermaid.js.org) works. Diagrams are rendered before pagination, so Paged.js knows their exact size, and the resulting SVG is part of the exported file. Labels are drawn as SVG text: `<br>` breaks a line, `<b>`, `<strong>`, `<i>` and `<em>` format the text, and any other HTML tag is removed while its text stays; Mermaid's own Markdown strings (`A["`**bold**`"]`) work too. A diagram with a syntax error shows its error message and source in place, without breaking the rest of the document. Mermaid is loaded on demand the first time a document contains a diagram.
-
-![A diagram selected in the preview, with its size and alignment tools and its caption](docs/screenshots/diagram.png)
-
-### Formulas, alerts and more
-
-| Write                                   | To get                                                                                |
-| --------------------------------------- | ------------------------------------------------------------------------------------- |
-| `$E = mc^2$`                            | A formula inside the sentence, written in TeX and drawn by [KaTeX](https://katex.org) |
-| `$$` … `$$` on their own lines          | A formula on a line of its own; a ` ```math ` block does the same                     |
-| `\begin{equation} … \end{equation}`     | A numbered formula                                                                    |
-| `> [!NOTE]` then the lines of the quote | A titled box; also `[!TIP]`, `[!IMPORTANT]`, `[!WARNING]`, `[!CAUTION]`               |
-| `==text==`                              | Highlighted text                                                                      |
-| `H~2~O`, `x^2^`                         | Subscript and superscript                                                             |
-| `Term` then a line starting with `: `   | A definition list                                                                     |
-
-KaTeX, its stylesheet and its fonts are only loaded when a document holds a formula, and the fonts a document uses travel inside its exports. Amounts of money are not formulas (`5 $ and 10 $`, `$5-$10`), and `\$` is always a plain dollar. The title of an alert follows the document language. Details and limits are in [Markdown support](docs/markdown-support.md#formulas-alerts-and-more).
-
-### Numbering and cross-references
-
-Give an element a label and refer to it by that label: the studio writes the numbers, and keeps them right when the document changes.
-
-| Element | Label                                                            | Reference      | Shown as     |
-| ------- | ---------------------------------------------------------------- | -------------- | ------------ |
-| Image   | `![Plan](plan.png 'The ground floor'){#fig:plan}`                | `@fig:plan`    | figure 1     |
-| Diagram | ` ```mermaid #fig:flow caption="The flow" `                      | `@fig:flow`    | figure 2     |
-| Table   | a paragraph `Table: Costs per year {#tab:costs}` after the table | `@tab:costs`   | table 1      |
-| Formula | `$$ E = mc^2 $$ {#eq:energy}`                                    | `@eq:energy`   | equation (1) |
-| Heading | `## Details {#sec:details}`                                      | `@sec:details` | section 1.2  |
-
-- A reference is a link to its target. `@Fig:plan` starts a sentence with a capital, `-@fig:plan` gives the number alone ("figures 1 and -@fig:flow"). A label that does not exist shows in red, as written.
-- A labelled element is always numbered. The **Design** tab can also number every captioned figure and table (**Number figures and tables**) and the headings (**Heading numbering**: from level 1, or from level 2 when level 1 is the title of the document). A heading ending with `{-}` keeps no number. The number of a heading ends with a dot ("1.", "1.1.") and stands half an em from the title (`.heading-number { margin-right: .5em }`, yours to override in the custom CSS).
-- The caption of a table is a paragraph starting with `Table:` (or just `:`) right after the table, or right before it; it works without a label too. Write `Table\:` to keep such a paragraph as text.
-- A formula on several lines takes its label after the closing dollars (`$$ {#eq:energy}`), a `math` block on its opening line (` ```math #eq:energy `). `align` numbers each row; a `\tag{A}` you wrote is kept.
-- `{#details}` at the end of a heading sets its anchor: `[see](#details)` and `@sec:details` both lead to it. Without numbering, a reference to a heading shows its title.
-- The words follow the document language ("Figure 1 – " and "tableau 2" in French). A number you typed by hand in a caption is left as it is: remove it when you label the figure.
-
-### Structure: table of contents, page breaks, footnotes, code
-
-| Write                           | To get                                                                                                 |
-| ------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| `[[toc]]` alone on a line       | The table of contents of the headings that follow it (levels 1 to 3), with their page numbers          |
-| `[[toc depth=2]]`               | The same, down to the given level (1 to 6)                                                             |
-| `\newpage` alone on a line      | A page break                                                                                           |
-| `Text[^1]` and `[^1]: The note` | A footnote, numbered and printed at the foot of the page that calls it; `^[a note]` writes it in place |
-| `- [ ] to do`, `- [x] done`     | A task list with check boxes                                                                           |
-| ` ```js ` … ` ``` `             | A code block highlighted for its language (about 35 common languages); unknown ones stay plain         |
-
-The **Page break** and **Table of contents** buttons above the editor write the markers at the cursor. The table lists what comes after it: a heading placed above it, such as "Contents", is not part of it. Clicking an entry in the preview scrolls to its page.
-
-Every heading gets an anchor named after its text, the way GitHub does: `[see the details](#details)` links to the heading "Details", in the preview and in the exports. Two headings with the same text are told apart with a number (`#details-2`).
-
-The theme of the code blocks (light, dark or none) is chosen in the **Design** tab. The highlighter is loaded on demand, the first time a document contains a code block with a language.
-
-### Images
-
-Add the images of your document with **Add images** in the Content tab, by dropping files on the editor, or by pasting from the clipboard. They are matched to the Markdown **by file name only**, whatever the path and the letter case:
-
-```markdown
-![Plan](./docs/img/plan.png)
-![Plan](C:\work\report\Plan.PNG)
-![Plan](plan.png)
-```
-
-All three show the uploaded `plan.png`. An existing Markdown file therefore works as it is: import it, then upload its images. Images that the document uses but that are not uploaded yet are listed in the Images section and shown as a "Missing image" box in the page. Uploading a file with the same name replaces the image.
-
-Size and align an image with attributes in braces right after it, or with the same preview tools as the diagrams (hover or click the image):
-
-```markdown
-![Requests per month](requests.png){width=70% align=center}
-```
-
-`width` is a share of the text column (`10%` to `100%`, the cell in a table) or a size in `mm`. `align` places the image, and what it does depends on where the image is written:
-
-| Image             | No `align`      | `align=left`                          | `align=center`                 | `align=right`                          |
-| ----------------- | --------------- | ------------------------------------- | ------------------------------ | -------------------------------------- |
-| Alone on its line | centered        | on the left                           | centered                       | on the right                           |
-| Inside text       | in the sentence | floats left, the text wraps around it | on a line of its own, centered | floats right, the text wraps around it |
-
-An image is inside text as soon as its paragraph holds something else: a sentence, a line of text right below it, another image. Headings, tables, code blocks and diagrams always start below a floating image. Without `width` an image keeps its natural size, never wider than the text column nor taller than the text area of a page.
-
-A caption goes in the title of the image, or in a `caption` attribute like the one of the diagrams:
-
-```markdown
-![Plan](plan.png 'The ground floor')
-![Plan](plan.png){width=60% caption="The ground floor"}
-![Plan](plan.png 'The ground floor'){#fig:plan width=60%}
-```
-
-The last form labels the figure: it is numbered ("Figure 1: The ground floor") and `@fig:plan` refers to it, see [Numbering and cross-references](#numbering-and-cross-references). Every image has the preview tools, wherever it is: in a paragraph, a list, a quote, a table cell or a link.
-
-![An image sized from the preview, the Images section and a missing image](docs/screenshots/images.png)
-
-Good to know:
-
-- Images are stored in the browser (IndexedDB) and travel in the project file (**Export → Project only**), which is then a complete document. **Reset** removes them.
-- A raster image wider than 2400 px is scaled down to that width on upload (300 dpi across an A4 text column); SVG and GIF files are never modified.
-- Remote images (`https://…`) are left to the browser: they need the network, also in an exported file.
-- Two images with the same file name in different folders cannot be told apart: rename one of them.
-
-### Cover page, header and footer
-
-![The four cover templates: classic, centered, colour band and minimal](docs/screenshots/covers.png)
-
-- **Content** tab: title, subtitle, author, date, the cover page toggle, the logo (any image; wider than 1200 px it is scaled down), and the cover template (classic, centered, colour band, minimal) with its accent colour. The templates arrange the same content, so a stylesheet written for one works with the others.
-- **Design** tab: header title (top left), header name (top right) and footer text (bottom left). The page counter always sits at the bottom right. With **Use the current heading as header title**, the header shows the heading the page belongs to instead of the header title: the chapter (level 1), or, with **Running header level** set to level 2 or 3, the current section, going back to the chapter title on the page where a chapter starts.
-
-### Page setup
-
-The **Page** tab selects the paper size, the four margins in millimetres, and the document language as a BCP 47 tag (`en`, `fr`, `pt-BR`…). The language sets `lang` on the rendered document and on the exported file, which drives hyphenation (`hyphens: auto` in the sample CSS) and the typographic quotes produced by the Markdown parser (« » in French, „ “ in German…). The cover page ignores margins and headers.
-
-**Facing pages** mirrors the left and right margins on left-hand pages, for double-sided printing: the left margin is then the inner one, the page number stays on the outer edge, and the two-page view of the preview pairs the pages as in the bound document.
+[Markdown support](docs/markdown-support.md) lists what the parser understands, its four deliberate differences with CommonMark, and the conformance measured on the official examples.
 
 ### Custom CSS
 
@@ -260,7 +106,7 @@ Inside the content, these class names are stable and meant to be styled:
 
 | Element           | Selector                                                                                                                                                                                                                                                                                     |
 | ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Diagram           | `.mermaid-diagram`, its drawing `.mermaid-diagram > svg`; `.is-sized` with `--diagram-width`, `data-align`; a failed one is `.mermaid-error`                                                                                                                                                 |
+| Diagram           | `.mermaid-diagram`, its drawing `.mermaid-diagram > svg`; `.is-sized` with `--diagram-width`, `data-align`; a failed one keeps the wrapper and holds a `pre.mermaid-error`                                                                                                                   |
 | Image             | `.document-image` around the `img`; `.is-block` alone in a paragraph, `.is-sized` with `--image-width`, `data-align`, `.has-caption` with a caption; `.image-missing` if not uploaded                                                                                                        |
 | Number, reference | `.heading-number` in a numbered heading ("1.1.", with a right margin), `.caption-label` opening a numbered caption ("Figure 1: "), `.ref` (a link) with `.ref-fig`, `.ref-tab`, `.ref-eq` or `.ref-sec`, a `span.ref.ref-missing` for an unknown label; ids start with `fig-`, `tab-`, `eq-` |
 | Table caption     | `caption.table-caption` inside a `table.has-caption`                                                                                                                                                                                                                                         |
@@ -330,57 +176,15 @@ The studio follows the light or dark theme of the system, and the selector next 
 
 ### Personal defaults
 
-To start every session with your own name, company logo, stylesheet or document template, put them in the gitignored `local/` folder: `local/config.json` for the text fields and page setup, `local/logo.png` (or `.svg`, `.jpg`, `.jpeg`, `.webp`, `.gif`) for the cover logo, `local/custom.css` and `local/template.md` for the defaults of the two editors, and `local/images/` for images available to every document. They apply on first launch and on **Reset**, and a document saved in the browser always takes precedence. See [local/README.md](local/README.md) for details.
+Your own name, company logo, stylesheet or document template can be the defaults of every session, from the gitignored `local/` folder: see [local/README.md](local/README.md).
 
-### Saving your work
+### Saving and exports
 
-The document autosaves in the browser after every change (the logo and the images in IndexedDB, which has room for them). **Reset** discards it and restores the sample. **Export → Project only** downloads everything (texts, Markdown, CSS, logo, images, page setup and options) as one JSON file, and **Import…** restores it, from that JSON or from an HTML, a Markdown or a PDF exported by the studio (see [Reopening an export](#reopening-an-export)). Unknown keys and invalid values in an imported file are ignored.
-
-### Export and print
-
-The **Export** button exports the PDF with the project (Ctrl+Shift+E in the desktop app); its arrow opens the six exports.
-
-- **PDF with project** (the default): settings, Markdown and images attached, so the file reopens in the studio. The desktop app and the MCP server write it through the embedded Chromium print engine, so it is a vector PDF. The browser has no print engine a page can use, so there the studio draws the PDF itself from the preview: each page is stored as an image (2 pixels per CSS pixel, about 192 dpi) under an invisible text layer that keeps the text selectable and searchable in any script (Latin, Cyrillic, Greek, Chinese…), with the links of the document kept as links. It downloads in one step, behind a lock that reports the progress; count on a few hundred kilobytes per page.
-- **PDF only** is the document alone, as a vector PDF: in the browser it opens the print-ready document in a new tab and triggers the print dialog once pagination is complete; choose _Save as PDF_. Allow pop-ups for the site if nothing opens. Ctrl+P (Cmd+P on macOS) does the same. In the desktop app it writes the file directly.
-- **HTML with project** downloads a single self-contained file: content, styles, images, diagrams, the font, the Paged.js runtime and the project. It paginates on open, offline, in any modern browser.
-- **Markdown with project** downloads a `.md` file named after the title: the settings, CSS, logo and images sit in a YAML front matter (the `---` block Pandoc, Jekyll, Hugo or Obsidian use for metadata) above the Markdown, so any Markdown tool opens the document and the studio reopens the whole project. The images are embedded as data URLs, which makes the front matter long.
-- **Markdown files (zip)** downloads the project as ordinary files: the Markdown files of the document, `style.css`, the logo and the images next to each other, and the settings in `markdown-paged-studio.yaml`. Nothing is encoded: an image referenced by its name sits beside the Markdown, so the folder reads well in any Markdown tool or in a Git repository.
-- **Project only** downloads the JSON file described in [Saving your work](#saving-your-work).
-- **Printing on paper**: in the browser, the same print dialog; in the desktop app, **File → Print…** (Ctrl+P).
-
-### Reopening an export
-
-An exported file carries everything needed to edit it again: the Markdown, every setting, the logo and the images, in the same form as a project file.
-
-- The **HTML export** holds them in a data block.
-- The **Markdown export** holds them in its YAML front matter, recognised by its first key, `markdown-paged-studio: 1`. The files of the document are written one after the other, and the front matter lists their names and lengths to cut them apart again.
-- The **zip of Markdown files** holds them as files, with the settings in `markdown-paged-studio.yaml`.
-- A **PDF** holds them as file attachments (`markdown-paged-studio.json` and the Markdown, named after the title), which PDF readers list in their attachments panel. The desktop app and the MCP server attach them when they write the PDF. In the browser, the PDF with project is drawn by the studio itself and holds them (see above); the PDF only comes from the print dialog, outside the studio, and holds nothing.
-
-**Import…** opens all five: a project JSON, an HTML, a Markdown, a zip or a PDF exported by the studio. Any other zip that holds Markdown files opens as a document too: its `.md` files in the order of their names, its images, and the first heading as the title. A Markdown file without that front matter (none, or another tool's) replaces the Markdown, takes its first level 1 heading (`# Title`) as the title of the cover, and keeps the other settings and the images; a foreign front matter stays in the text, where it is easy to remove. The desktop app has the same commands in its **File** menu, named Export PDF…, Export PDF without project…, Export HTML…, Export Markdown…, Export Markdown files (zip)…, Save project… and Import… (Ctrl+O).
-
-Chromium-based browsers give the most faithful print output for paged media. Where a browser cannot draw the PDF that carries the project (some older versions of Safari cannot read back the pages they drew), **Export** opens the print dialog instead and says so once: that PDF does not hold the project, the HTML, Markdown and zip exports do.
+The document autosaves in the browser; **Reset the document** (⋯ menu) restores the sample, and its toast undoes that for ten seconds. **Export** writes the PDF with the project, drawn by the browser itself, or directly by the desktop app and the MCP server; its menu offers PDF only (through the print dialog), HTML with project, Markdown with project, Markdown files (zip) and Project only. Every export but the project file is named after the title. The HTML, Markdown, zip and PDF with project carry the document, its settings and its images, and **Import…** reopens them, as well as a plain `.md` file or any zip of Markdown files. What each format holds, and how an export reopens: [Saving and exporting](docs/exports.md).
 
 ## How it works
 
-```mermaid
-flowchart LR
-  MD[Markdown] -->|markdown-it| HTML[HTML]
-  HTML -->|"Mermaid and highlight.js, on demand"| SVG["HTML + inline SVG"]
-  CSS["@page rules + custom CSS + font"] --> P
-  SVG --> P["Paged.js Previewer"]
-  P -->|hidden stage, then swap| Preview[Preview]
-  SVG --> X["Standalone HTML"]
-  CSS --> X
-  X --> PDF["Export PDF / print"]
-```
-
-- `documentHtml()` renders the Markdown (images resolved by file name, heading anchors, table of contents), replaces every Mermaid placeholder with its SVG and highlights the code blocks.
-- `documentCss()` builds the `@page` rules (size, margins, margin boxes for header, footer and counter), the cover template, the built-in styles, and appends your CSS.
-- The subsets of the font that the text needs are loaded before pagination, so the pages are measured with the final font, and inlined in the exports.
-- Page numbers of the table of contents and the running header are resolved by Paged.js while it lays out the pages.
-- Each render paginates into a hidden container and swaps the pages into the preview in one step, so typing never flashes an empty preview and a newer edit cancels the previous pagination.
-- The export inlines the exact Paged.js build used by the preview, so both always match.
+markdown-it turns the Markdown into HTML, Mermaid and highlight.js enrich it on demand, `documentCss()` builds the `@page` rules and appends your CSS, and Paged.js lays the pages out in a hidden stage before they are swapped into the preview; the exports inline the same Paged.js build, so both always match. The pipeline, the layout of the project and the workflows are described in [docs/architecture.md](docs/architecture.md).
 
 ## Desktop app
 
@@ -394,28 +198,13 @@ The same application ships as a portable desktop app built with Electron, with C
 
 The portable Windows executable keeps the saved document and the view settings in a `markdown-paged-studio-data` folder next to it. Each release also carries `SHA256SUMS-<os>.txt` files to verify the downloads. The binaries are not code-signed, so Windows SmartScreen and macOS Gatekeeper will ask for confirmation on first launch.
 
-In the desktop app, the PDF exports write the file directly through the embedded Chromium engine instead of going through a print dialog, and **File → Print…** (Ctrl+P) prints on paper. Links of the document open in the system browser. Everything else works exactly as in the browser, including the personal defaults from `local/` baked in at build time. The application menu is in French on a French system.
+In the desktop app, the PDF exports write the file directly through the embedded Chromium engine instead of going through a print dialog, and **File → Print…** (Ctrl+P) prints on paper. Links of the document open in the system browser. Everything else works exactly as in the browser, including the personal defaults from `local/` baked in at build time. The entries of the application menu that belong to the studio are in French on a French system; the standard Edit and Window menus come from Electron, in English.
 
-From the sources:
-
-```bash
-npm run desktop         # build dist/ and open the app
-npm run desktop:build   # package for the current OS into release/
-npm run test:desktop    # Playwright smoke test of the Electron app (run npm run build first)
-```
-
-Binaries are built by the `Desktop release` workflow (`.github/workflows/release-desktop.yml`). Run it manually from the **Actions** tab with **Run workflow**: the three binaries are attached to the run as downloadable artifacts, and ticking **publish** also creates the GitHub Release `v<version>` with them. Pushing a tag `v*` publishes the release automatically, with notes taken from `CHANGELOG.md`; the steps are in [CONTRIBUTING.md](CONTRIBUTING.md#releases).
+Building and testing the desktop app from the sources, and publishing a release: [CONTRIBUTING.md](CONTRIBUTING.md#desktop-app).
 
 ## MCP server for AI assistants
 
-`mcp/server.mjs` is a [Model Context Protocol](https://modelcontextprotocol.io) server (stdio) that lets a local AI assistant generate reports with the real rendering pipeline: it exposes `render_pdf`, `render_html` and `describe_config`, plus a resource documenting the CSS contract. Everything described above works through it: images, table of contents, page breaks, captions, code highlighting, cover templates and page options. Build the app once, then register the server in your client:
-
-```bash
-npm run build
-claude mcp add markdown-paged-studio -- node /absolute/path/to/markdown-paged-studio/mcp/server.mjs
-```
-
-See [mcp/README.md](mcp/README.md) for the Claude Desktop configuration, the tool inputs and the personal defaults handling.
+`mcp/server.mjs` is a [Model Context Protocol](https://modelcontextprotocol.io) server (stdio) that lets a local AI assistant generate reports with the real rendering pipeline: `render_pdf`, `render_html` and `describe_config`, plus a resource documenting the CSS contract. It takes one Markdown text and the settings of the document, with the syntax of the editor (diagrams, images by file name, formulas, alerts, numbering, table of contents, page breaks); Prettify and the preview tools belong to the studio only. Setup, tool inputs and safety options: [mcp/README.md](mcp/README.md).
 
 ## Docker
 
@@ -438,78 +227,7 @@ The build context includes the gitignored `local/` folder, so an image built on 
 
 ## Development
 
-GitHub Actions workflows in `.github/workflows/`: `ci.yml` runs on every push to `main` and every pull request (lint, Prettier check, the unit, web, desktop and MCP test suites, the Vite build, a Docker build with a smoke test of the container, then the web suite again under Firefox and WebKit); `release-desktop.yml` builds and publishes the desktop binaries on `v*` tags or on demand, once the same checks have passed on that commit (it waits for the CI run of the commit and only runs the checks itself when there is none), with release notes taken from `CHANGELOG.md`; `pages.yml` deploys the web app to GitHub Pages once `ci.yml` has passed on `main`. A commit that fails the tests is neither deployed nor released. Dependabot keeps npm packages and the actions up to date.
-
-| Script                  | What it does                                                                              |
-| ----------------------- | ----------------------------------------------------------------------------------------- |
-| `npm run dev`           | Start the Vite dev server                                                                 |
-| `npm run build`         | Build the static site into `dist/`                                                        |
-| `npm run preview`       | Serve the build locally                                                                   |
-| `npm run lint`          | ESLint (flat config, browser globals)                                                     |
-| `npm run format`        | Prettier over the whole repository                                                        |
-| `npm run format:check`  | Prettier in check mode                                                                    |
-| `npm test`              | Playwright integration tests of the web app in a headless Chromium (starts Vite itself)   |
-| `npm run test:browsers` | The same tests under Chromium, Firefox and WebKit (`test:firefox`, `test:webkit` for one) |
-| `npm run test:unit`     | Unit tests of the helpers, of the Markdown conformance and of the changelog (Node runner) |
-| `npm run desktop`       | Build and open the Electron desktop app                                                   |
-| `npm run desktop:build` | Package the desktop app for the current OS into `release/`                                |
-| `npm run test:desktop`  | Playwright smoke test of the desktop app (after `npm run build`)                          |
-| `npm run desktop:dir`   | Package the desktop app unpacked into `release/`, as the CI does before its smoke test    |
-| `npm run mcp`           | Start the MCP server on stdio (after `npm run build`)                                     |
-| `npm run test:mcp`      | End-to-end test of the MCP server with a real MCP client (after `npm run build`)          |
-| `npm run conformance`   | Measure the parser against the CommonMark and GFM examples (`-- --write` updates the doc) |
-| `npm run screenshots`   | Retake the screenshots of this README from the build (after `npm run build`)              |
-
-Project layout:
-
-```
-index.html          entry point and the studio markup
-vite.config.js      build-time constants: version and commit shown in the sidebar footer
-src/main.js         wires the modules: restore, UI, view, first render
-src/config.js       defaults (built-in and local/), state, validation, autosave
-src/markdown.js     markdown-it rules: images, anchors, table of contents, page breaks, formulas, alerts, numbering; Mermaid, highlighting
-src/diagram-labels.js HTML tags in Mermaid labels: bold and italic kept, the other tags dropped
-src/crossref.js     labels, references and numbering (pure helpers)
-src/math-core.js    formulas: KaTeX output and the font faces a document needs (pure helpers)
-src/math.js         KaTeX, its stylesheet and its fonts, loaded on demand
-src/images.js       image library: matching by file name, storage, upload; logo storage
-src/files.js        the files of a document: assembly, line mapping, safe names (pure helpers)
-src/chapters.js     the tabs of the files above the editor
-src/editor.js       the CodeMirror editor: one state per file, edits that keep the undo history
-src/sync.js         scroll synchronisation between the editor and the preview
-src/i18n.js         interface language: French translations, applied to the markup
-src/theme.js        light or dark theme of the studio
-src/fonts.js        bundled document font: loaded for the preview, inlined in exports
-src/font-faces.js   which font subsets a text needs (pure helpers)
-src/resize-controls.js resize controls on the diagrams and images of the preview
-src/document.js     document CSS (page rules, cover templates, code themes) and HTML, standalone export
-src/render.js       Paged.js preview lifecycle, undo history of the preview
-src/view.js         workspace: Edit, Split or View, splitter, layout and zoom of the preview, sidebar
-src/ui.js           form, tabs, files, images, links of the preview, export and print
-src/pdf-capability.js can this browser draw the pages of a PDF
-src/pdf-render.js   the PDF drawn by the browser: page images, text layer, links
-src/pdf-sources.js  the sources of the document as PDF attachments: attach, read back
-src/markdown-sources.js the Markdown export with its YAML front matter, read back on import
-src/archive.js      the zip of Markdown files, written and read
-src/glyphless-font.js the invisible font of the PDF text layer (Tesseract, Apache 2.0)
-src/automation.js   headless API used by the MCP server and the tests
-src/version.js      version and commit of the running build
-src/escape.js       escaping of text placed in HTML and in CSS strings
-src/ui.css          studio chrome (sidebar, toolbar, editor, preview frame)
-src/assets/logo.svg logo and favicon
-electron/           Electron main process, sandboxed preload and app icon
-electron-builder.yml packaging targets: Windows portable exe and zip, Linux AppImage, macOS dmg and zip
-mcp/                MCP server (stdio) rendering reports headlessly through dist/
-Dockerfile          two-stage image: Vite build, then nginx serving dist/ (docker/nginx.conf); compose.yaml serves it on port 8080
-local/              personal defaults, gitignored (local/README.md)
-docs/screenshots/   images used in this README, taken by scripts/screenshots.mjs
-scripts/            release notes from the changelog, README screenshots, Markdown conformance, repository scan for Understand Anything
-docs/markdown-support.md supported Markdown, deliberate differences, measured conformance
-tests/              web (studio-*.spec.js), desktop, MCP and unit tests
-.github/            workflows, Dependabot, issue forms and pull request template
-```
-
-The rendered document is styled only by the CSS generated in `documentCss()`, never by `src/ui.css`. The integration tests in `tests/studio-*.spec.js` (one file per domain, shared helpers in `tests/helpers/studio.mjs`) drive the real studio in a headless Chromium, since Paged.js needs a browser to lay out pages: the document and its exports, the layout of the studio, diagrams, images, editing and undo, the document features and the interface language. If port 5173 is busy, `PORT=5183 npm test` uses another one. Run `npx playwright install chromium --only-shell` once before `npm test`.
+The scripts, the rules of the code base and the release procedure are in [CONTRIBUTING.md](CONTRIBUTING.md); the rendering pipeline, the layout of the project and the workflows in [docs/architecture.md](docs/architecture.md). In short: `npm run dev`, `npm test` (web tests under Chromium; `PORT=5183 npm test` if port 5173 is busy), `npm run test:unit`, `npm run lint`.
 
 ## Browser support
 
@@ -522,11 +240,10 @@ Recent Chromium-based browsers (Chrome, Edge, Brave, Arc) are the reference for 
 
 Possible improvements, not scheduled:
 
-- Split the entry bundle (about 1 MB: CodeMirror, markdown-it and its plugins) into chunks loaded when needed.
-- An installable web app that works offline (web manifest and service worker).
-- `<u>` in Mermaid labels drawn underlined, like the bold and italic tags.
-- Desktop tests of the menu commands, and an accessibility check of the studio in the test suite.
-- An outline of the headings with a search panel, and more writing comfort in the editor.
+- The open items of the [UX review](docs/ux-review.md): settings grouped by intent, discoverable shortcuts and tab actions, an autosave indicator, an empty-state prompt and an Insert menu, overflow of the file tabs, a logo drop zone, a date picker and margin presets, a reduced toolbar and tools on tap on phones.
+- Accessibility: a sidebar drawer that keeps the focus on phones; a banner that does not shift the layout.
+- Splitting `src/markdown.js` and `src/ui.js` into smaller modules; a non-blocking confirmation when a file is removed.
+- An installable web app that works offline; `<u>` in Mermaid labels; an outline of the headings with a search panel; more writing comfort.
 
 ## Contributing
 

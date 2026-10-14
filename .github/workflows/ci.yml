@@ -122,4 +122,5 @@ jobs:
             sleep 1
           done
           curl -fsS http://localhost:8080/ | grep -q '<div id="app">'
+          curl -fsSI http://localhost:8080/ | grep -qi '^content-security-policy:'
           docker rm -f studio

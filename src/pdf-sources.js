@@ -12,9 +12,10 @@ import {
   PDFRawStream,
   PDFString,
 } from 'pdf-lib';
+import { DEFAULT_FILE_NAME } from './files.js';
 
 export const SOURCE_NAME = 'markdown-paged-studio.json';
-export const MARKDOWN_NAME = 'document.md';
+export const MARKDOWN_NAME = DEFAULT_FILE_NAME;
 
 const bytesOf = input => (input instanceof Uint8Array ? input : new Uint8Array(input));
 const encoder = new TextEncoder();
@@ -25,7 +26,11 @@ function embeddedFiles(document) {
   const found = [];
   const names = document.catalog.lookupMaybe(PDFName.of('Names'), PDFDict);
   const root = names?.lookupMaybe(PDFName.of('EmbeddedFiles'), PDFDict);
+  // A malformed tree that points back at itself must not recurse forever.
+  const seen = new Set();
   const walk = node => {
+    if (!node || seen.has(node)) return;
+    seen.add(node);
     if (!node) return;
     const entries = node.lookupMaybe(PDFName.of('Names'), PDFArray);
     if (entries) {

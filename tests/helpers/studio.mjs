@@ -150,6 +150,19 @@ export const position = async (page, selector) => {
 // underscores: both spellings are the same file for the tests.
 export const savedAs = download => download.suggestedFilename().replace(/_/g, ' ');
 
+// The message of the notice banner (what the studio says instead of an alert()).
+export const notice = page => page.locator('#noticeText');
+
+// The message of the toast (a short confirmation: a file saved, the document reset) and its action button.
+export const toast = page => page.locator('#toastText');
+export const toastAction = page => page.locator('#toastAction');
+
+// Reset the document from the "more" menu of the toolbar.
+export async function resetDocument(page) {
+  await page.locator('#moreMenu').click();
+  await page.locator('#resetDocument').click();
+}
+
 // Triggers one entry of the Export menu (exportPdfProject, exportPdfOnly, exportHtml, exportMarkdown, exportProject).
 export async function exportVia(page, id) {
   await page.locator('#exportMenu').click();

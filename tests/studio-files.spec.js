@@ -6,14 +6,17 @@ import { strFromU8, strToU8, unzipSync, zipSync } from 'fflate';
 import { png } from './helpers/png.mjs';
 import {
   DIAGRAM,
-  STATUS_DONE,
   expectMarkdown,
   expectNoMarkdown,
   exportVia,
   focusEditor,
+  notice,
   openDocument,
+  resetDocument,
   savedAs,
+  setMarkdown,
   status,
+  STATUS_DONE,
 } from './helpers/studio.mjs';
 
 const tabs = page => page.locator('#fileTabs .file-tab');
@@ -44,11 +47,14 @@ test('a document is written as several files: added, renamed, moved, removed, ea
   await expectMarkdown(page, '# One\n\nFirst.\n\n\n# Two\n\nSecond.');
   await expect(headings(page)).toHaveText(['One', 'Two']);
 
-  // Renamed in place: a Markdown name, unique in the document.
+  // Renamed in place: a Markdown name, unique in the document. The pages are kept: nothing changed in them.
+  await page.evaluate(() => (document.querySelector('head style[data-pagedjs-inserted-styles]').dataset.kept = '1'));
   await tabs(page).nth(1).dblclick();
   await page.locator('.file-rename').fill('annex');
   await page.keyboard.press('Enter');
   await expect(names(page)).toHaveText(['document.md', 'annex.md']);
+  await expect(page.locator('#preview')).not.toHaveClass(/is-stale/);
+  await expect(page.locator('head style[data-pagedjs-inserted-styles][data-kept]')).toHaveCount(1);
   await tabs(page).nth(1).press('F2');
   await page.locator('.file-rename').fill('document');
   await page.keyboard.press('Enter');
@@ -164,7 +170,7 @@ test('the files travel with the project and the Markdown export, a plain Markdow
   expect(text.endsWith(`\n---\n${assembled}`)).toBe(true);
 
   // Reset gives the sample back, as one file; the Markdown export brings the files again.
-  await page.locator('#resetDocument').click();
+  await resetDocument(page);
   await expect(names(page)).toHaveText(['document.md']);
   await page.locator('#importFile').setInputFiles(md('document.md', text));
   await expect(names(page)).toHaveText(['document.md', 'two.md']);
@@ -172,7 +178,7 @@ test('the files travel with the project and the Markdown export, a plain Markdow
   await expect(headings(page)).toHaveText(['One', 'Two']);
 
   // So does the project file; a Markdown without front matter is a document of one file.
-  await page.locator('#resetDocument').click();
+  await resetDocument(page);
   await page
     .locator('#importFile')
     .setInputFiles({ name: 'project.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(saved)) });
@@ -207,7 +213,7 @@ test('the archive export holds the files, the stylesheet and the images, and reo
   expect(strFromU8(entries['markdown-paged-studio.yaml'])).toContain('title: Zipped\n');
   expect(strFromU8(entries['style.css'])).toContain('.document-content');
 
-  await page.locator('#resetDocument').click();
+  await resetDocument(page);
   await expect(names(page)).toHaveText(['document.md']);
   await expect(page.locator('#imageList li')).toHaveCount(0);
   await page.locator('#importFile').setInputFiles({ name: 'Zipped.zip', mimeType: 'application/zip', buffer: bytes });
@@ -232,12 +238,39 @@ test('the archive export holds the files, the stylesheet and the images, and reo
   await expect(page.locator('#imageList li')).toHaveText([/cover\.png/]);
   await expect(page.locator('#preview .document-image > img')).toHaveCount(1);
   // A zip without Markdown is refused with a message.
-  const messages = [];
-  page.on('dialog', dialog => messages.push(dialog.message()));
   await page.locator('#importFile').setInputFiles({
     name: 'empty.zip',
     mimeType: 'application/zip',
     buffer: Buffer.from(zipSync({ 'readme.txt': strToU8('nothing') })),
   });
-  await expect.poll(() => messages).toEqual(['This file could not be opened: this archive holds no Markdown file']);
+  await expect(notice(page)).toHaveText('This file could not be opened: this archive holds no Markdown file');
+});
+
+test('closing a file can be declined, a rename can be cancelled, and the tabs answer Alt+Right, Home and End', async ({
+  page,
+}) => {
+  await openDocument(page, '# One\n\nFirst.\n', 'One');
+  await page.locator('#addFile').click();
+  await setMarkdown(page, '# Two\n\nSecond.\n');
+  await expect(names(page)).toHaveText(['document.md', 'chapter.md']);
+  // Declined: the file stays.
+  page.once('dialog', dialog => dialog.dismiss());
+  await tabs(page).nth(1).locator('.file-close').click();
+  await expect(names(page)).toHaveText(['document.md', 'chapter.md']);
+  // Escape leaves the name as it was.
+  await tabs(page).nth(1).press('F2');
+  await page.locator('.file-rename').fill('other');
+  await page.keyboard.press('Escape');
+  await expect(names(page)).toHaveText(['document.md', 'chapter.md']);
+  // Alt+Right moves the first file after the second; Home and End jump to the ends.
+  await tabs(page).nth(0).focus();
+  await page.keyboard.press('Alt+ArrowRight');
+  await expect(names(page)).toHaveText(['chapter.md', 'document.md']);
+  await expect(headings(page)).toHaveText(['Two', 'One']);
+  await tabs(page).nth(1).focus();
+  await page.keyboard.press('Home');
+  await expect(tabs(page).nth(0)).toHaveAttribute('aria-selected', 'true');
+  await expect(tabs(page).nth(0)).toBeFocused();
+  await page.keyboard.press('End');
+  await expect(tabs(page).nth(1)).toHaveAttribute('aria-selected', 'true');
 });

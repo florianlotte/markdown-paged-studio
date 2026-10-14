@@ -10,7 +10,9 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DIST = path.join(__dirname, '..', 'dist');
 const APP_ORIGIN = 'app://studio';
+// Pagination may take as long as pages keep coming, within an overall limit.
 const PDF_TIMEOUT_MS = 30_000;
+const PDF_LIMIT_MS = 10 * 60_000;
 const isMac = process.platform === 'darwin';
 
 // Portable Windows build: keep the saved document and view settings next to the executable.
@@ -75,31 +77,37 @@ function createWindow() {
     },
   });
 
-  // The print flow opens an empty window inside the click and then navigates it to a blob: URL.
-  // External links go to the system browser; anything else is refused.
-  win.webContents.setWindowOpenHandler(({ url }) => {
-    if (url === 'about:blank' || url.startsWith('blob:')) {
-      return {
-        action: 'allow',
-        overrideBrowserWindowOptions: {
-          width: 900,
-          height: 1000,
-          autoHideMenuBar: true,
-          webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false },
-        },
-      };
-    }
-    if (/^(https?|mailto):/i.test(url)) shell.openExternal(url);
-    return { action: 'deny' };
-  });
-
-  win.webContents.on('will-navigate', (event, url) => {
-    if (!url.startsWith(APP_ORIGIN)) event.preventDefault();
-  });
-
   win.loadURL(`${APP_ORIGIN}/`);
   return win;
 }
+
+// Every window of the app keeps to its own pages: the main window, the print windows (opened empty inside
+// the click, then navigated to a blob: URL) and the hidden PDF worker alike. External links go to the system
+// browser; anything else is refused.
+const PRINT_WINDOW = {
+  width: 900,
+  height: 1000,
+  autoHideMenuBar: true,
+  webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false },
+};
+const isOwnPage = url => url.startsWith(APP_ORIGIN) || url === 'about:blank' || url.startsWith('blob:');
+const openOutside = url => /^(https?|mailto):/i.test(url) && shell.openExternal(url);
+
+function guardNavigation(contents) {
+  contents.setWindowOpenHandler(({ url }) => {
+    if (url === 'about:blank' || url.startsWith('blob:'))
+      return { action: 'allow', overrideBrowserWindowOptions: PRINT_WINDOW };
+    openOutside(url);
+    return { action: 'deny' };
+  });
+  contents.on('will-navigate', (event, url) => {
+    if (isOwnPage(url)) return;
+    event.preventDefault();
+    openOutside(url);
+  });
+}
+
+app.on('web-contents-created', (_event, contents) => guardNavigation(contents));
 
 // Menu entries reach the page as commands handled next to the toolbar buttons (see preload.cjs).
 function sendCommand(command) {
@@ -184,7 +192,8 @@ function buildMenu() {
         },
         { type: 'separator' },
         { role: 'reload' },
-        { role: 'toggleDevTools' },
+        // The developer tools belong to a development run, not to a release.
+        ...(app.isPackaged ? [] : [{ role: 'toggleDevTools' }]),
         { type: 'separator' },
         { role: 'togglefullscreen' },
       ],
@@ -195,10 +204,19 @@ function buildMenu() {
 }
 
 async function waitForPagination(webContents) {
-  const deadline = Date.now() + PDF_TIMEOUT_MS;
-  while (Date.now() < deadline) {
-    const ready = await webContents.executeJavaScript('document.documentElement.dataset.pagedReady === "true"');
+  const limit = Date.now() + PDF_LIMIT_MS;
+  let deadline = Date.now() + PDF_TIMEOUT_MS;
+  let pages = 0;
+  while (Date.now() < Math.min(deadline, limit)) {
+    const { ready, count } = await webContents.executeJavaScript(
+      '({ ready: document.documentElement.dataset.pagedReady === "true", count: document.querySelectorAll(".pagedjs_page").length })',
+    );
     if (ready) return;
+    // A long document is still making progress: it gets more time.
+    if (count > pages) {
+      pages = count;
+      deadline = Date.now() + PDF_TIMEOUT_MS;
+    }
     await new Promise(resolve => setTimeout(resolve, 100));
   }
   throw new Error('Pagination did not complete in time');
@@ -211,18 +229,24 @@ const WRITE_TIMEOUT_MS = 10 * 60_000;
 
 // Render the standalone HTML in a hidden window, wait for Paged.js, and print it to PDF. The bytes go back
 // to the page, which attaches the sources of the document and asks `write-pdf` to save the result.
-ipcMain.handle('export-pdf', async (event, html) => {
+ipcMain.handle('export-pdf', async (event, html, name) => {
   if (typeof html !== 'string' || html.length === 0 || html.length > 100 * 1024 * 1024) {
     throw new Error('Invalid document');
   }
+  // The file name proposed by the dialog comes from the title of the document, as in the browser.
+  const stem = (typeof name === 'string' ? name : '')
+    .replace(/[\\/:*?"<>|\s]+/g, ' ')
+    .trim()
+    .slice(0, 80);
   const owner = BrowserWindow.fromWebContents(event.sender);
   const { canceled, filePath } = await dialog.showSaveDialog(owner, {
     title: 'Export PDF',
-    defaultPath: 'document.pdf',
+    defaultPath: `${stem || 'document'}.pdf`,
     filters: [{ name: 'PDF', extensions: ['pdf'] }],
   });
   if (canceled || !filePath) return { canceled: true };
 
+  for (const [token, pending] of pendingWrites) if (pending.expires < Date.now()) pendingWrites.delete(token);
   const id = randomUUID();
   pdfJobs.set(id, html);
   const worker = new BrowserWindow({

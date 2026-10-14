@@ -213,6 +213,30 @@ test('the sidebar can be hidden and the choice is remembered', async ({ page }) 
   expect(await previewWidth()).toBe(widthBefore);
 });
 
+test('under 1100 px the view controls take a row of their own and every action stays in the window', async ({
+  page,
+}) => {
+  for (const width of [1100, 900, 770]) {
+    await page.setViewportSize({ width, height: 700 });
+    await openFreshStudio(page);
+    const toolbar = page.locator('.toolbar');
+    // Two rows, never three: the title and the actions on the first, the view controls on the second.
+    const bar = await toolbar.boundingBox();
+    expect(bar.height, `${width} px`).toBeLessThan(110);
+    const controls = await page.locator('.view-controls').boundingBox();
+    const actions = await page.locator('.toolbar-actions').boundingBox();
+    expect(controls.y, `${width} px`).toBeGreaterThan(actions.y + actions.height - 1);
+    // Nothing leaves the window: Export and the "more" menu are where they can be clicked.
+    for (const id of ['#exportDefault', '#exportMenu', '#moreMenu', '#import', '#zoomFit', '#layoutSpread']) {
+      await expect(page.locator(id), `${width} px`).toBeInViewport({ ratio: 0.99 });
+    }
+    expect(await toolbar.evaluate(el => el.scrollWidth <= el.clientWidth), `${width} px`).toBe(true);
+  }
+  // Back on a wide window the toolbar is one line again.
+  await page.setViewportSize({ width: 1440, height: 800 });
+  expect((await page.locator('.toolbar').boundingBox()).height).toBeLessThan(70);
+});
+
 test('on a phone the settings are a closed drawer and the preview fits the screen', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await openFreshStudio(page);
@@ -383,4 +407,24 @@ test('the sidebar footer shows the running version and stays at the bottom', asy
   });
   expect(await footer.boundingBox()).toEqual(before);
   await expect(footer).toBeInViewport();
+});
+
+test('Ctrl+Shift+1 and 3 switch to Edit and View, Ctrl + wheel up zooms in', async ({ page }) => {
+  await openFreshStudio(page);
+  await page.keyboard.press('Control+Shift+Digit1');
+  await expect(page.locator('#modeEdit')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('.preview-shell')).toBeHidden();
+  await page.keyboard.press('Control+Shift+Digit3');
+  await expect(page.locator('#modeView')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#markdown')).toBeHidden();
+  await page.keyboard.press('Control+Shift+Digit2');
+  await expect(page.locator('#modeSplit')).toHaveAttribute('aria-pressed', 'true');
+  const zoom = async () => parseInt(await page.locator('#zoomValue').textContent(), 10);
+  const before = await zoom();
+  await page
+    .locator('.preview-shell')
+    .evaluate(el =>
+      el.dispatchEvent(new WheelEvent('wheel', { deltaY: -100, ctrlKey: true, bubbles: true, cancelable: true })),
+    );
+  await expect.poll(zoom).toBeGreaterThan(before);
 });

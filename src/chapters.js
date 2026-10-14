@@ -2,17 +2,7 @@
 // order of the document) and the link between the files, the editor and the assembled Markdown that is
 // rendered. `state.files` is the source; `state.markdown` is kept equal to their assembly after every change.
 import { state } from './config.js';
-import {
-  currentFile,
-  editorText,
-  focusEditor,
-  goToLine,
-  initEditor,
-  insertBlock,
-  openFile,
-  setEditorPhrases,
-  writeFile,
-} from './editor.js';
+import { currentFile, focusEditor, goToLine, initEditor, openFile, setEditorPhrases, writeFile } from './editor.js';
 import { applyAssembledEdit, assembleFiles, DEFAULT_FILE_NAME, fileName, fileOffsets, locateLine } from './files.js';
 import { onLanguageChange, t } from './i18n.js';
 
@@ -44,6 +34,11 @@ function searchPhrases() {
     'close',
     'Go to line',
     'go',
+    'current match',
+    'on line',
+    'replaced $ matches',
+    'replaced match on line $',
+    'Control character',
   ];
   return Object.fromEntries(keys.map(key => [key, t(key)]));
 }
@@ -246,13 +241,21 @@ export function writeDocument(markdown) {
 }
 
 // Inserts a block at the cursor of the current file.
-export function insertIntoDocument(text) {
-  insertBlock(text);
-}
-
 // Line of the assembled document (from 0) for a line of the current file, and back: the file and the line
 // in it for a line of the document.
-export const documentLine = line => (fileOffsets(state.files)[active] ?? 0) + line;
+// The line offsets of the files, computed again only when the assembled document changed: the scroll
+// synchronisation asks for them on every frame.
+let offsetsFor = null;
+let offsets = [];
+function currentOffsets() {
+  if (offsetsFor !== state.markdown) {
+    offsetsFor = state.markdown;
+    offsets = fileOffsets(state.files);
+  }
+  return offsets;
+}
+
+export const documentLine = line => (currentOffsets()[active] ?? 0) + line;
 export const locateDocumentLine = line => locateLine(state.files, line);
 export const activeIndex = () => active;
 
@@ -277,4 +280,3 @@ export function initChapters(host, { onChange, onScroll, onImageFiles }) {
 }
 
 // The text of the current file as the editor holds it.
-export const activeText = () => editorText();

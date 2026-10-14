@@ -120,6 +120,7 @@ test('a clicked diagram keeps its tools until another click or Escape', async ({
   await page.mouse.click(drawing.x, drawing.y);
   await expect(diagram).toHaveClass(/is-selected/);
   await page.mouse.move(away.x, away.y, { steps: 5 });
+  // Longer than the grace delay after which unselected tools hide: the wait is the scenario itself.
   await page.waitForTimeout(800);
   await expect(tools).toBeVisible();
 

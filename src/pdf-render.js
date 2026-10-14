@@ -23,28 +23,33 @@ import { inlineFontCss } from './fonts.js';
 import { GLYPH_WIDTH, GLYPHLESS_FONT, TO_UNICODE } from './glyphless-font.js';
 import { inlineMathCss } from './math.js';
 import { previewCss } from './render.js';
+import { STUDIO_ONLY } from './resize-controls.js';
 
 // Pixels per CSS pixel of the page images: 2 gives 192 dpi, enough for screens and ordinary printing.
 export const RENDER_SCALE = 2;
 const PT_PER_PX = 0.75;
-const STUDIO_ONLY = '.diagram-tools, .diagram-handle';
 
 // The current CSS zoom of the preview: on-screen rectangles are measured through it.
 function previewZoom(page) {
   return Number(getComputedStyle(page).getPropertyValue('--view-zoom')) || 1;
 }
 
-// Counters that run across pages (page number, footnotes): a page drawn alone must start from the values
-// the earlier pages left.
-function counterReset(pages, index) {
-  let footnotes = 0;
-  for (let i = 0; i < index; i++) footnotes += pages[i].querySelectorAll('[data-footnote-call]').length;
+// What every page image shares, computed once per export: the styles (fonts, then every rule of the preview)
+// and the number of footnotes before each page, for the counters that run across pages.
+export function pageContext(pages, fonts) {
+  const footnotes = [0];
+  for (const page of pages) footnotes.push(footnotes.at(-1) + page.querySelectorAll('[data-footnote-call]').length);
+  return { styles: `${fonts}\n${previewCss()}`, footnotes };
+}
+
+// A page drawn alone must start its counters (page number, footnotes) from the values the earlier pages left.
+function counterReset(pages, index, footnotes) {
   return `counter-reset: page ${index} pages ${pages.length} footnote ${footnotes} footnote-marker ${footnotes}`;
 }
 
 // The page as an SVG image the browser renders exactly like the preview (same engine, same styles).
 // Exported for the tests.
-export async function pageImage(pages, index, fonts) {
+export async function pageImage(pages, index, fonts, context = pageContext(pages, fonts)) {
   const page = pages[index];
   const width = page.offsetWidth;
   const height = page.offsetHeight;
@@ -59,12 +64,15 @@ export async function pageImage(pages, index, fonts) {
   for (const element of clone.querySelectorAll('.is-selected')) element.classList.remove('is-selected');
   const wrapper = document.createElement('div');
   wrapper.className = 'pagedjs_pages';
-  wrapper.setAttribute('style', `${page.parentElement.getAttribute('style') ?? ''}; ${counterReset(pages, index)}`);
+  wrapper.setAttribute(
+    'style',
+    `${page.parentElement.getAttribute('style') ?? ''}; ${counterReset(pages, index, context.footnotes[index])}`,
+  );
   wrapper.append(clone);
   const html = new XMLSerializer().serializeToString(wrapper);
   const svg =
     `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">` +
-    `<style>${fonts}\n${previewCss()}\n.pagedjs_page{margin:0 !important;box-shadow:none !important}</style>` +
+    `<style>${context.styles}\n.pagedjs_page{margin:0 !important;box-shadow:none !important}</style>` +
     `<foreignObject width="${width}" height="${height}"><div xmlns="http://www.w3.org/1999/xhtml">${html}</div></foreignObject></svg>`;
   // A page that cannot be drawn (an engine that refuses to read such a canvas back, a canvas too large for
   // the memory at hand) is reported with a code: the studio words the message and falls back.
@@ -277,9 +285,10 @@ export async function renderPreviewToPdf({ preview, title, html, css, onProgress
   const textFont = embedTextLayerFont(document_);
   const pdfPages = [];
   const pending = []; // links to other pages, resolved once every page exists
+  const context = pageContext(pages, fonts);
 
   for (let index = 0; index < pages.length; index++) {
-    const image = await pageImage(pages, index, fonts);
+    const image = await pageImage(pages, index, fonts, context);
     const embedded =
       image.type === 'image/jpeg' ? await document_.embedJpg(image.bytes) : await document_.embedPng(image.bytes);
     const pageWidth = image.width * PT_PER_PX;

@@ -134,3 +134,8 @@ test('a labelled formula shows a number, and the references to it are completed'
   );
   assert.match(html, /<div class="math math-block" role="math" aria-label="E = mc\^2" id="eq-energy">/);
 });
+
+test('a runaway macro is an error, not a frozen page', () => {
+  const html = renderFormulas('<span class="math math-inline">\\def\\x{\\x}\\x</span>', katex);
+  assert.match(html, /katex-error/);
+});

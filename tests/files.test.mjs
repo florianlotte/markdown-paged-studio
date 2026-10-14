@@ -5,6 +5,8 @@ import {
   assembleFiles,
   fileName,
   fileOffsets,
+  fileStem,
+  lineCount,
   locateLine,
   sanitizeFiles,
   splitAssembled,
@@ -102,4 +104,18 @@ test('the files of a configuration are validated', () => {
       { name: '5.md', markdown: 'named by default' },
     ],
   );
+});
+
+test('fileStem makes a file name of the title, or "document" when nothing is left', () => {
+  assert.equal(fileStem('Quarterly report'), 'Quarterly report');
+  assert.equal(fileStem('  A/B:C*D?E"F<G>H|I  '), 'A B C D E F G H I');
+  assert.equal(fileStem('x'.repeat(100)).length, 80);
+  assert.equal(fileStem(''), 'document');
+  assert.equal(fileStem(undefined), 'document');
+  assert.equal(fileStem('???'), 'document');
+});
+
+test('lineCount counts the lines of a text', () => {
+  assert.equal(lineCount(''), 1);
+  assert.equal(lineCount('a\nb\n'), 3);
 });

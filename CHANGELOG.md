@@ -7,6 +7,66 @@ All notable changes to Markdown Paged Studio are listed here, newest first. The 
 
 ## [Unreleased]
 
+## [1.25.0] - 2026-10-14
+
+### Fixed
+
+- A render interrupted by a newer edit stops at once: Paged.js 0.4.3 resumes a stopped render, which kept
+  paginating long documents in the background after every keystroke.
+- Renaming a file or switching the interface language no longer paginates the document again.
+- A full or disabled browser storage is reported once, in a banner, instead of silently losing the autosave or
+  the images; an image database that never opens no longer stalls the first render.
+- A tall image is scaled down on upload like a wide one (3600 px at most); the quality of the downscaling is set
+  to high.
+- Errors of the file loaders, of the exports and of the image upload are shown in the banner instead of vanishing
+  in the console; a print window whose document fails to build is closed.
+- Only one export runs at a time: a second click, menu command or Ctrl+P during an export is ignored.
+- Desktop: the PDF export gets more time as long as pages keep coming (10 minutes at most); expired write tokens
+  are purged; the developer tools entry is left out of release builds.
+- The "Missing image" box follows the language of the document.
+- A margin typed beyond 0–80 mm is clamped at once, as an imported one is, instead of reaching the layout.
+- Desktop: the PDF save dialog proposes the title of the document instead of `document.pdf`.
+- Between 761 and 1000 px the toolbar stacked its actions and pushed Export out of the window: under 1100 px
+  the view controls now take a row of their own and the actions stay in reach.
+
+### Added
+
+- `docs/ux-review.md`: a UX review of the studio, its findings by priority and the lots that follow.
+
+### Changed
+
+- Formulas, diagrams and code colours are applied in one pass over an inert fragment, with the coloured code
+  blocks cached; Paged.js is loaded for the first render, which halves the entry bundle.
+- The notice banner replaces every blocking `alert()`; an export started while the preview still renders waits
+  for it instead of failing.
+- MCP: the image and output folders are compared as real paths, so a symbolic link cannot lead outside them; the
+  headless browser fetches nothing (a remote image stays a reference); KaTeX runs with expansion and size limits.
+- A zip is read up to 256 MB in total; the editor and the tests share `src/util.js` (`lazy`, `clamp`).
+- Documentation split: the README presents the studio and links to `docs/writing.md` (the writing guide),
+  `docs/exports.md` (saving, exports, reopening) and `docs/architecture.md` (pipeline, project layout, workflows);
+  CONTRIBUTING.md holds the scripts and the rules of the code base. The MCP descriptions, the Markdown support
+  page and the French translations of the search panel are brought up to date, and the sample document shows an
+  alert, a formula, a table caption and cross-references.
+- **Reset** leaves the toolbar for a ⋯ menu, as "Reset the document": it applies at once, without a dialog, and
+  a toast undoes it for ten seconds, images included.
+- The status line only shows the page count: a thin progress bar under the toolbar replaces "Rendering…", the
+  confirmations of the exports ("PDF saved with its project", the print dialog notice) are a toast that goes
+  away by itself.
+- The **Import .css** and **Default CSS** buttons sit above the stylesheet, in reach without scrolling; the
+  "Pagination" card of the Page tab gives way to a hint about the room the header and the footer need in the
+  margins.
+- Focus rings and the focused field border are at 3:1 or more on every surface, in both themes, as the line
+  numbers of the editor; `prefers-reduced-motion` stops the sweeps and spins of the studio.
+
+### Security
+
+- The custom stylesheet and the header fields can no longer end the `<style>` element of an export or of the print
+  window: a `</style>` in an imported project could inject markup there. `escCssString()` also escapes `<` and
+  every kind of line break.
+- Desktop: the navigation guards apply to every window, the print windows and the hidden PDF worker included.
+- Docker: nginx sends `Content-Security-Policy: frame-ancestors 'none'; object-src 'none'; base-uri 'none'` and
+  hides its version.
+
 ## [1.24.0] - 2026-10-13
 
 ### Added
@@ -465,7 +525,8 @@ All notable changes to Markdown Paged Studio are listed here, newest first. The 
 - Portable desktop app for Windows, Linux and macOS with direct PDF export.
 - Docker image, Playwright integration tests and CI.
 
-[Unreleased]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.24.0...HEAD
+[Unreleased]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.25.0...HEAD
+[1.25.0]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.24.0...v1.25.0
 [1.24.0]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.23.0...v1.24.0
 [1.23.0]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.22.4...v1.23.0
 [1.22.4]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.22.3...v1.22.4

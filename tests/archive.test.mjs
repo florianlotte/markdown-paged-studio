@@ -107,3 +107,14 @@ test('an archive in a folder, with a missing file or a broken settings file, is 
   assert.deepEqual(plain.files, [project.files[0]]);
   assert.equal(plain.title, 'One');
 });
+
+test('an archive whose entries exceed the total size allowed is cut short', () => {
+  const files = { 'a.md': strToU8('# A\n'), 'b.md': strToU8('# B\n'.repeat(100)) };
+  const bytes = zipSync(files);
+  // The first entry fits; the second would take the total over the limit and is left out.
+  const config = JSON.parse(sourcesOfArchive(bytes, { maxTotalBytes: 100 }));
+  assert.deepEqual(
+    config.files.map(file => file.name),
+    ['a.md'],
+  );
+});

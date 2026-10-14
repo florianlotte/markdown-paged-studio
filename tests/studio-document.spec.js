@@ -9,17 +9,22 @@ import {
   expectMarkdown,
   exportVia,
   marginBoxContent,
+  notice,
   openFreshStudio,
   pages,
+  resetDocument,
   savedAs,
   setMarkdown,
   status,
   STATUS_DONE,
+  toast,
+  toastAction,
 } from './helpers/studio.mjs';
 
 test('renders the sample document as pages with cover, header, footer and counter', async ({ page }) => {
   await openFreshStudio(page);
   await expect(status(page)).toHaveText('3 pages');
+  await expect(page.locator('#renderProgress')).toBeHidden();
   await expect(pages(page)).toHaveCount(3);
   await expect(pages(page).nth(0).locator('.cover-title')).toHaveText('Architecture Report');
   await expect(pages(page).nth(1).locator('.document-content h1').first()).toHaveText('Introduction');
@@ -36,6 +41,7 @@ test('renders the sample document as pages with cover, header, footer and counte
 test('edits re-render the document without leaking styles or render stages', async ({ page }) => {
   await openFreshStudio(page);
   const stylesBefore = await page.locator('head style').count();
+  // Typed faster than the render debounce: the wait is the pace of the burst, not a guess about the app.
   for (let i = 0; i < 5; i++) {
     await appendMarkdown(page, `\n\nParagraph ${i} of a fast burst of edits.\n`);
     await page.waitForTimeout(60);
@@ -45,6 +51,30 @@ test('edits re-render the document without leaking styles or render stages', asy
   await expect(page.locator('head style')).toHaveCount(stylesBefore);
   await expect(page.locator('.render-stage')).toHaveCount(0);
   await expect(page.locator('#preview .pagedjs_pages')).toHaveCount(1);
+});
+
+test('a render interrupted by a newer edit stops at once instead of paginating to the end', async ({ page }) => {
+  await openFreshStudio(page);
+  const paragraph =
+    'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt. '.repeat(6);
+  const sections = Array.from({ length: 60 }, (_, i) => `## Section ${i + 1}\n\n${paragraph}\n\n${paragraph}\n`);
+  await setMarkdown(page, '# Long\n\n' + sections.join('\n'));
+  await expect(status(page)).toHaveText(/\d+ pages/);
+  await expect(page.locator('#preview')).not.toHaveClass(/is-stale/);
+  // Each edit arrives while the previous render paginates (the wait is the scenario, not a guess). Just
+  // before the next edit, only the current render may still hold a stage: a stopped one no longer
+  // paginates in the background (Paged.js would resume it).
+  let stages = 0;
+  for (let i = 0; i < 4; i++) {
+    await appendMarkdown(page, `\nEdit ${i}.\n`);
+    await page.waitForTimeout(400);
+    stages = Math.max(stages, await page.locator('.render-stage').count());
+  }
+  expect(stages).toBeLessThanOrEqual(1);
+  await expect(status(page)).toHaveText(/\d+ pages/);
+  await expect(page.locator('#preview')).not.toHaveClass(/is-stale/);
+  await expect(page.locator('.render-stage')).toHaveCount(0);
+  await expect(page.locator('head style[data-pagedjs-inserted-styles]')).toHaveCount(2);
 });
 
 test('renders Mermaid diagrams and reports invalid ones in place', async ({ page }) => {
@@ -68,16 +98,33 @@ test('autosaves the document, restores it on reload, and Reset brings the sample
   await openFreshStudio(page);
   await page.locator('#title').fill('Edited title');
   await expect(pages(page).nth(0).locator('.cover-title')).toHaveText('Edited title');
-  await page.waitForTimeout(700); // autosave debounce
+  // The autosave is flushed when the page hides: no need to wait for its debounce.
   await page.reload();
   await expect(status(page)).toHaveText(STATUS_DONE);
   await expect(page.locator('#title')).toHaveValue('Edited title');
   await expect(pages(page).nth(0).locator('.cover-title')).toHaveText('Edited title');
 
-  page.on('dialog', dialog => dialog.accept());
-  await page.locator('#resetDocument').click();
+  // Reset, from the "more" menu, restores the sample at once; the toast undoes it, images included.
+  await setMarkdown(page, '# Mine\n\nKept by Undo.\n');
+  await page.locator('#imageFiles').setInputFiles({ name: 'plan.png', mimeType: 'image/png', buffer: png(40, 30) });
+  await expect(page.locator('#imageList li')).toHaveCount(1);
+  await resetDocument(page);
+  await expect(page.locator('#moreOptions')).toBeHidden();
   await expect(page.locator('#title')).toHaveValue('Architecture Report');
   await expect(pages(page).nth(0).locator('.cover-title')).toHaveText('Architecture Report');
+  await expect(page.locator('#imageList li')).toHaveCount(0);
+  await expect(toast(page)).toHaveText('Document reset: the sample is back');
+  await toastAction(page).click();
+  await expect(page.locator('#toast')).toBeHidden();
+  await expect(page.locator('#title')).toHaveValue('Edited title');
+  await expectMarkdown(page, '# Mine\n\nKept by Undo.\n');
+  await expect(page.locator('#imageList li')).toHaveCount(1);
+  await expect(pages(page).nth(0).locator('.cover-title')).toHaveText('Edited title');
+  // The undone reset is saved like any edit.
+  await page.reload();
+  await expect(status(page)).toHaveText(STATUS_DONE);
+  await expect(page.locator('#title')).toHaveValue('Edited title');
+  await expect(page.locator('#imageList li')).toHaveCount(1);
 });
 
 test('ignores unknown keys and invalid values in a stored configuration', async ({ page }) => {
@@ -126,11 +173,28 @@ test('exports a standalone HTML file that paginates offline', async ({ page, con
   await expect(offline.locator('.cover-title')).toHaveText('Architecture Report');
 });
 
+test('a stylesheet or a header that would end the style element cannot run script in the exports', async ({ page }) => {
+  await openFreshStudio(page);
+  await page.getByRole('tab', { name: 'Design' }).click();
+  await page.locator('#customCss').fill('.document-content { color: #111 }\n</style><p id="pwned">x</p><style>');
+  await page.locator('#headerTitle').fill('A</style><b id="pwned2">');
+  const [download] = await Promise.all([page.waitForEvent('download'), exportVia(page, 'exportHtml')]);
+  const html = readFileSync(await download.path(), 'utf8');
+  expect(html).not.toContain('</style><p id="pwned">');
+  expect(html).toContain('<\\/style><p id="pwned">');
+  expect(html).not.toContain('</style><b id="pwned2">');
+  // Parsed as a page, the markup stays inside the style elements.
+  const escaped = await page.evaluate(
+    html => new DOMParser().parseFromString(html, 'text/html').querySelectorAll('#pwned, #pwned2').length,
+    html,
+  );
+  expect(escaped).toBe(0);
+});
+
 test('PDF only opens the print window inside the gesture, the Export menu works with the keyboard', async ({
   page,
 }) => {
   await openFreshStudio(page);
-  await expect(page.locator('#printPdf')).toHaveCount(0);
   await expect(page.locator('#exportDefault')).toBeVisible();
   const stubWindowOpen = () =>
     page.evaluate(() => {
@@ -251,9 +315,10 @@ test('the cover page matches the selected paper height', async ({ page }) => {
     ['A4', 297],
   ]) {
     await page.locator('#pageSize').selectOption(size);
-    // The change re-renders after a debounce: wait for pages of the new size before measuring the cover.
+    // The change re-renders after a debounce: the page count stays while the new pages are laid out, so wait
+    // for the render to settle, not for the status, before measuring the cover against its page.
     await expect.poll(pageHeightMm).toBeCloseTo(expectedMm, 0);
-    await expect(status(page)).toHaveText(STATUS_DONE);
+    await expect(page.locator('#preview')).not.toHaveClass(/is-stale|is-rendering/);
     expect(await coverToPageRatio()).toBeCloseTo(1, 1);
   }
 });
@@ -336,7 +401,6 @@ test('a logo saved in localStorage by an older version is moved to IndexedDB', a
 
 test('an exported HTML file carries the document and reopens with Import', async ({ page }) => {
   await openFreshStudio(page);
-  page.on('dialog', dialog => dialog.accept());
   await page.locator('#imageFiles').setInputFiles({ name: 'plan.png', mimeType: 'image/png', buffer: png(40, 30) });
   await page.locator('#title').fill('Round trip');
   await setMarkdown(page, '# Round trip\n\n![Plan](plan.png){width=50%}\n\nText.\n');
@@ -346,7 +410,7 @@ test('an exported HTML file carries the document and reopens with Import', async
   expect(html).toContain('<script type="application/json" id="markdown-paged-studio-source">');
   expect(html).not.toMatch(/id="markdown-paged-studio-source">[^]*<\/script>[^]*<script type="application\/json"/);
 
-  await page.locator('#resetDocument').click();
+  await resetDocument(page);
   await expect(page.locator('#title')).toHaveValue('Architecture Report');
   await expect(page.locator('#imageList li')).toHaveCount(0);
   await page
@@ -362,7 +426,6 @@ test('a Markdown export carries the project in its front matter, a plain Markdow
   page,
 }) => {
   await openFreshStudio(page);
-  page.on('dialog', dialog => dialog.accept());
   await page.locator('#imageFiles').setInputFiles({ name: 'plan.png', mimeType: 'image/png', buffer: png(40, 30) });
   await page.locator('#title').fill('Round trip');
   await setMarkdown(page, '# Round trip\n\n![Plan](plan.png){width=50%}\n\nText.\n');
@@ -374,7 +437,7 @@ test('a Markdown export carries the project in its front matter, a plain Markdow
   expect(text).toContain('\nimages:\n  plan.png: data:image/png;base64,');
   expect(text).toMatch(/\n---\n# Round trip\n\n!\[Plan\]\(plan\.png\)\{width=50%\}\n\nText\.\n$/);
 
-  await page.locator('#resetDocument').click();
+  await resetDocument(page);
   await expect(page.locator('#title')).toHaveValue('Architecture Report');
   await expect(page.locator('#imageList li')).toHaveCount(0);
   await page
@@ -411,7 +474,6 @@ test('a Markdown export carries the project in its front matter, a plain Markdow
 
 test('PDF with project is drawn by the browser in one step, and such a PDF reopens', async ({ page }) => {
   await openFreshStudio(page);
-  page.on('dialog', dialog => dialog.accept());
   await page.locator('#imageFiles').setInputFiles({ name: 'plan.png', mimeType: 'image/png', buffer: png(40, 30) });
   await page.locator('#title').fill('From a PDF');
   await setMarkdown(
@@ -440,7 +502,8 @@ test('PDF with project is drawn by the browser in one step, and such a PDF reope
   });
   const [download] = await Promise.all([page.waitForEvent('download'), page.locator('#exportDefault').click()]);
   expect(savedAs(download)).toBe('From a PDF.pdf');
-  await expect(status(page)).toHaveText('PDF saved with its project');
+  await expect(toast(page)).toHaveText('PDF saved with its project');
+  await expect(status(page)).toHaveText('3 pages');
   await expect(page.locator('#busy')).toBeHidden();
   expect(await page.evaluate(() => document.getElementById('app').inert)).toBe(false);
   const seen = await page.evaluate(() => window.__busy);
@@ -478,7 +541,7 @@ test('PDF with project is drawn by the browser in one step, and such a PDF reope
   expect(sources.title).toBe('From a PDF');
   expect(Object.keys(sources.images)).toEqual(['plan.png']);
 
-  await page.locator('#resetDocument').click();
+  await resetDocument(page);
   await expect(page.locator('#title')).toHaveValue('Architecture Report');
   await page
     .locator('#importFile')
@@ -490,16 +553,10 @@ test('PDF with project is drawn by the browser in one step, and such a PDF reope
   const blank = await PDFDocument.create();
   blank.addPage();
   const plain = Buffer.from(await blank.save());
-  const messages = [];
-  page.removeAllListeners('dialog');
-  page.on('dialog', dialog => {
-    messages.push(dialog.message());
-    dialog.accept();
-  });
   await page.locator('#importFile').setInputFiles({ name: 'plain.pdf', mimeType: 'application/pdf', buffer: plain });
-  await expect
-    .poll(() => messages)
-    .toEqual(['This file could not be opened: this PDF holds no project: import a PDF exported with its project']);
+  await expect(notice(page)).toHaveText(
+    'This file could not be opened: this PDF holds no project: import a PDF exported with its project',
+  );
   await expect(page.locator('#title')).toHaveValue('From a PDF');
 });
 
@@ -547,7 +604,7 @@ test('where the pages cannot be drawn, Export opens the print dialog inside the 
   // The window opened in the click itself, before anything was awaited, then received the document.
   expect(await page.evaluate(() => window.__print.opened)).toBe(1);
   await expect.poll(() => page.evaluate(() => window.__print.url)).toMatch(/^blob:/);
-  await expect(status(page)).toHaveText('Print dialog opened: this PDF does not carry the project');
+  await expect(toast(page)).toHaveText('Print dialog opened: this PDF does not carry the project');
   await expect(notice).toBeVisible();
   await expect(notice).toContainText('use HTML with project, Markdown with project or Markdown files (zip)');
   await expect(page.locator('#busy')).toBeHidden();
@@ -572,22 +629,15 @@ test('where the pages cannot be drawn, Export opens the print dialog inside the 
 test('a drawing that fails midway is explained, and the next Export uses the print dialog', async ({ page }) => {
   await openFreshStudio(page);
   await expect(page.locator('#exportPdfProject')).toHaveAttribute('aria-disabled', 'false');
-  const messages = [];
-  page.on('dialog', dialog => {
-    messages.push(dialog.message());
-    dialog.accept();
-  });
   // The canvas gives nothing back (too large for the memory at hand, or read protected).
   await page.evaluate(() => {
     HTMLCanvasElement.prototype.toBlob = callback => callback(null);
   });
   await stubPrintWindow(page);
   await page.locator('#exportDefault').click();
-  await expect
-    .poll(() => messages)
-    .toEqual([
-      'PDF export failed: this browser could not draw the pages. Use PDF only (print dialog), or export HTML, Markdown or the zip to keep the project',
-    ]);
+  await expect(notice(page)).toHaveText(
+    'PDF export failed: this browser could not draw the pages. Use PDF only (print dialog), or export HTML, Markdown or the zip to keep the project',
+  );
   await expect(page.locator('#busy')).toBeHidden();
   expect(await page.evaluate(() => document.getElementById('app').inert)).toBe(false);
   expect(await page.evaluate(() => window.__print.opened)).toBe(0);
@@ -595,4 +645,58 @@ test('a drawing that fails midway is explained, and the next Export uses the pri
   await page.locator('#exportDefault').click();
   expect(await page.evaluate(() => window.__print.opened)).toBe(1);
   await expect(page.locator('#exportNotice')).toBeVisible();
+});
+
+test('a full browser storage is reported once, in the banner, and the studio keeps working', async ({ page }) => {
+  await openFreshStudio(page);
+  await page.evaluate(() => {
+    Storage.prototype.setItem = () => {
+      throw new DOMException('Quota exceeded', 'QuotaExceededError');
+    };
+  });
+  await appendMarkdown(page, '\n\nMore text.\n');
+  await expect(notice(page)).toHaveText('Autosave failed: the browser storage is full or disabled');
+  await page.locator('#dismissNotice').click();
+  await appendMarkdown(page, '\n\nEven more.\n');
+  await expect(status(page)).toHaveText('3 pages');
+  await expect(page.locator('#notice')).toBeHidden();
+});
+
+test('one export runs at a time', async ({ page }) => {
+  await openFreshStudio(page);
+  const downloads = [];
+  page.on('download', download => downloads.push(download));
+  // Two clicks in a row: the second arrives while the first export holds the lock.
+  await page.evaluate(() => {
+    const button = document.getElementById('exportDefault');
+    button.click();
+    button.click();
+  });
+  await expect(page.locator('#busy')).toBeVisible();
+  await expect(page.locator('#busy')).toBeHidden({ timeout: 60000 });
+  await expect(toast(page)).toHaveText('PDF saved with its project');
+  expect(downloads).toHaveLength(1);
+});
+
+test('a file that cannot be read is reported in the banner, not lost in the console', async ({ page }) => {
+  await openFreshStudio(page);
+  const errors = [];
+  page.on('pageerror', error => errors.push(error.message));
+  await page.evaluate(() => {
+    File.prototype.text = () => Promise.reject(new Error('the disk went away'));
+  });
+  await page
+    .locator('#markdownFile')
+    .setInputFiles({ name: 'x.md', mimeType: 'text/markdown', buffer: Buffer.from('# X') });
+  await expect(notice(page)).toHaveText('This file could not be read: the disk went away');
+  expect(errors).toEqual([]);
+});
+
+test('an image database that never opens does not stall the first render', async ({ page }) => {
+  await page.addInitScript(() => {
+    // A request that never answers, as a database blocked by another tab.
+    indexedDB.open = () => ({});
+  });
+  await page.goto('/');
+  await expect(status(page)).toHaveText('3 pages', { timeout: 20000 });
 });

@@ -1,0 +1,32 @@
+# Saving and exporting
+
+Where the document lives, what each export holds, and how an export reopens in the studio. Writing the document itself is covered by the [writing guide](writing.md).
+
+## Saving your work
+
+The document autosaves in the browser after every change (the logo and the images in IndexedDB, which has room for them). **Reset the document**, in the ⋯ menu of the toolbar, discards it and restores the sample; the toast shown then undoes it for ten seconds, images included. **Export → Project only** downloads everything (texts, Markdown, CSS, logo, images, page setup and options) as one JSON file, and **Import…** restores it, from that JSON or from an HTML, a Markdown or a PDF exported by the studio (see [Reopening an export](#reopening-an-export)). Unknown keys and invalid values in an imported file are ignored.
+
+## Export and print
+
+The **Export** button exports the PDF with the project (Ctrl+Shift+E in the desktop app); its arrow opens the six exports. Every export is named after the title of the document (`My report.pdf`, `.html`, `.md`, `.zip`), the project file excepted; the desktop app proposes the same name in its save dialog.
+
+- **PDF with project** (the default): settings, Markdown and images attached, so the file reopens in the studio. The desktop app and the MCP server write it through the embedded Chromium print engine, so it is a vector PDF. The browser has no print engine a page can use, so there the studio draws the PDF itself from the preview: each page is stored as an image (2 pixels per CSS pixel, about 192 dpi) under an invisible text layer that keeps the text selectable and searchable in any script (Latin, Cyrillic, Greek, Chinese…), with the links of the document kept as links. It downloads in one step, behind a lock that reports the progress; count on a few hundred kilobytes per page.
+- **PDF only** is the document alone, as a vector PDF: in the browser it opens the print-ready document in a new tab and triggers the print dialog once pagination is complete; choose _Save as PDF_. Allow pop-ups for the site if nothing opens. Ctrl+P (Cmd+P on macOS) does the same. In the desktop app it writes the file directly.
+- **HTML with project** downloads a single self-contained file: content, styles, images, diagrams, the font, the Paged.js runtime and the project. It paginates on open, offline, in any modern browser.
+- **Markdown with project** downloads a `.md` file named after the title: the settings, CSS, logo and images sit in a YAML front matter (the `---` block Pandoc, Jekyll, Hugo or Obsidian use for metadata) above the Markdown, so any Markdown tool opens the document and the studio reopens the whole project. The images are embedded as data URLs, which makes the front matter long.
+- **Markdown files (zip)** downloads the project as ordinary files: the Markdown files of the document, `style.css`, the logo and the images next to each other, and the settings in `markdown-paged-studio.yaml`. Nothing is encoded: an image referenced by its name sits beside the Markdown, so the folder reads well in any Markdown tool or in a Git repository.
+- **Project only** downloads the JSON file described in [Saving your work](#saving-your-work), always named `markdown-paged-studio-project.json`.
+- **Printing on paper**: in the browser, the same print dialog; in the desktop app, **File → Print…** (Ctrl+P).
+
+## Reopening an export
+
+An exported file carries everything needed to edit it again: the Markdown, every setting, the logo and the images, in the same form as a project file.
+
+- The **HTML export** holds them in a data block.
+- The **Markdown export** holds them in its YAML front matter, recognised by its first key, `markdown-paged-studio: 1`. The files of the document are written one after the other, and the front matter lists their names and lengths to cut them apart again.
+- The **zip of Markdown files** holds them as files, with the settings in `markdown-paged-studio.yaml`.
+- A **PDF** holds them as file attachments (`markdown-paged-studio.json` and the Markdown, named after the title), which PDF readers list in their attachments panel. The desktop app and the MCP server attach them when they write the PDF. In the browser, the PDF with project is drawn by the studio itself and holds them (see above); the PDF only comes from the print dialog, outside the studio, and holds nothing.
+
+**Import…** opens all five: a project JSON, an HTML, a Markdown, a zip or a PDF exported by the studio. Any other zip that holds Markdown files opens as a document too: its `.md` files in the order of their names, its images, and the first heading as the title. A Markdown file without that front matter (none, or another tool's) replaces the Markdown, takes its first level 1 heading (`# Title`) as the title of the cover, and keeps the other settings and the images; a foreign front matter stays in the text, where it is easy to remove. The desktop app has the same commands in its **File** menu, named Export PDF…, Export PDF without project…, Export HTML…, Export Markdown…, Export Markdown files (zip)…, Save project… and Import… (Ctrl+O).
+
+Chromium-based browsers give the most faithful print output for paged media. Where a browser cannot draw the PDF that carries the project (some older versions of Safari cannot read back the pages they drew), **Export** opens the print dialog instead and says so once: that PDF does not hold the project, the HTML, Markdown and zip exports do.

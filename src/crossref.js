@@ -3,7 +3,6 @@
 // language. A label is written {#fig:plan}, {#tab:costs}, {#eq:energy} or {#sec:intro}, as in
 // pandoc-crossref, and a reference @fig:plan. Shared with the tests.
 
-export const KINDS = ['fig', 'tab', 'eq', 'sec'];
 // Letters, digits and underscores, with single dashes or dots inside: "see @fig:plan." leaves the full stop.
 const NAME = String.raw`[\p{L}\p{N}_]+(?:[-.][\p{L}\p{N}_]+)*`;
 const LABEL = new RegExp(`^#(fig|tab|eq|sec):(${NAME})$`, 'u');
@@ -74,14 +73,36 @@ export function headingCounter(mode) {
 }
 
 const WORDS = {
-  en: { fig: 'Figure', tab: 'Table', eq: 'Equation', sec: 'Section', separator: ': ' },
+  en: { fig: 'Figure', tab: 'Table', eq: 'Equation', sec: 'Section', separator: ': ', missing: 'Missing image' },
   // French typography: a dash between the number and the caption, after a no-break space.
-  fr: { fig: 'Figure', tab: 'Tableau', eq: 'Équation', sec: 'Section', separator: '\u00a0– ' },
-  de: { fig: 'Abbildung', tab: 'Tabelle', eq: 'Gleichung', sec: 'Abschnitt', separator: ': ', nouns: true },
-  es: { fig: 'Figura', tab: 'Tabla', eq: 'Ecuación', sec: 'Sección', separator: ': ' },
-  it: { fig: 'Figura', tab: 'Tabella', eq: 'Equazione', sec: 'Sezione', separator: ': ' },
-  pt: { fig: 'Figura', tab: 'Tabela', eq: 'Equação', sec: 'Secção', separator: ': ' },
-  nl: { fig: 'Figuur', tab: 'Tabel', eq: 'Vergelijking', sec: 'Sectie', separator: ': ' },
+  fr: {
+    fig: 'Figure',
+    tab: 'Tableau',
+    eq: 'Équation',
+    sec: 'Section',
+    separator: '\u00a0– ',
+    missing: 'Image manquante',
+  },
+  de: {
+    fig: 'Abbildung',
+    tab: 'Tabelle',
+    eq: 'Gleichung',
+    sec: 'Abschnitt',
+    separator: ': ',
+    nouns: true,
+    missing: 'Fehlendes Bild',
+  },
+  es: { fig: 'Figura', tab: 'Tabla', eq: 'Ecuación', sec: 'Sección', separator: ': ', missing: 'Imagen no encontrada' },
+  it: { fig: 'Figura', tab: 'Tabella', eq: 'Equazione', sec: 'Sezione', separator: ': ', missing: 'Immagine mancante' },
+  pt: { fig: 'Figura', tab: 'Tabela', eq: 'Equação', sec: 'Secção', separator: ': ', missing: 'Imagem em falta' },
+  nl: {
+    fig: 'Figuur',
+    tab: 'Tabel',
+    eq: 'Vergelijking',
+    sec: 'Sectie',
+    separator: ': ',
+    missing: 'Ontbrekende afbeelding',
+  },
 };
 
 const wordsOf = language => {
@@ -89,6 +110,9 @@ const wordsOf = language => {
   const words = WORDS[tag.split('-')[0]] ?? WORDS.en;
   return tag === 'pt-br' ? { ...words, sec: 'Seção' } : words;
 };
+
+// The label of an image that was not provided, in the language of the document.
+export const missingImageLabel = language => wordsOf(language).missing;
 
 // What opens a caption: "Figure 1: ", or "Figure 1" alone when the element has no caption text.
 export function captionLabel(kind, number, language, { alone = false } = {}) {

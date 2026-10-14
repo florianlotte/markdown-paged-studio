@@ -12,9 +12,12 @@ import {
   imageItems,
   markdownText,
   openDocument,
+  openFreshStudio,
   pngFile,
   position,
+  resetDocument,
   selectImage,
+  setMarkdown,
   status,
   STATUS_DONE,
   upload,
@@ -96,8 +99,7 @@ test('the configuration file carries the images, Reset removes them', async ({ p
   expect(Object.keys(saved.images)).toEqual(['plan.png']);
   expect(saved.images['plan.png']).toMatch(/^data:image\/png;base64,/);
 
-  page.on('dialog', dialog => dialog.accept());
-  await page.locator('#resetDocument').click();
+  await resetDocument(page);
   await expect(imageItems(page)).toHaveCount(0);
   await expect(page.locator('#title')).toHaveValue('Architecture Report');
 
@@ -303,4 +305,31 @@ test('every image can be sized and aligned: same paragraph, table cell, link', a
   await expectMarkdown(page, /\[!\[Linked\]\(plan\.png\)\{width=25%\}\]\(https:\/\/example\.com\)/);
   await expect.poll(async () => (await imageGeometry(page, '#preview a .document-image'))?.percent).toBe(25);
   expect(page.url()).not.toContain('example.com');
+});
+
+test('a tall image is scaled down like a wide one', async ({ page }) => {
+  await openFreshStudio(page);
+  await page.locator('#imageFiles').setInputFiles({ name: 'tall.png', mimeType: 'image/png', buffer: png(100, 5000) });
+  await expect(page.locator('#imagesStatus')).toContainText('tall.png added, scaled down');
+  await setMarkdown(page, '# Tall\n\n![Tall](tall.png)\n');
+  const image = page.locator('#preview .document-image img');
+  await expect(image).toBeVisible();
+  expect(await image.evaluate(img => [img.naturalWidth, img.naturalHeight])).toEqual([72, 3600]);
+});
+
+test('an image goes to the full column width and back to its natural size from the preview', async ({ page }) => {
+  await openDocument(page, '# Sizes\n\n![Plan](plan.png){width=50%}\n', 'Sizes');
+  await upload(page, pngFile('plan.png', 300, 200));
+  const selector = '#preview .document-image.is-block';
+  const block = page.locator(selector);
+  await expect(block.locator('> img')).toBeVisible();
+  await selectImage(page, block);
+  await block.getByRole('button', { name: 'Width 100 %' }).click();
+  await expectMarkdown(page, /!\[Plan\]\(plan\.png\)\{width=100%\}\n/);
+  await expect.poll(() => position(page, selector)).toEqual({ percent: 100, left: 0, right: 0 });
+  await expect(page.locator('#preview')).not.toHaveClass(/is-stale/);
+  await selectImage(page, block);
+  await block.getByRole('button', { name: 'Natural size' }).click();
+  await expectMarkdown(page, /!\[Plan\]\(plan\.png\)\n/);
+  await expect.poll(async () => (await position(page, selector)).percent).toBeLessThan(100);
 });

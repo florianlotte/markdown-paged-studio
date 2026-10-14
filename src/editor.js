@@ -214,7 +214,6 @@ export function selectInEditor(from, to = from) {
 }
 
 export const focusEditor = () => view.focus();
-export const editorHasFocus = () => view.hasFocus;
 
 // Puts the cursor at the start of a line (from 0) of the shown file, brings it into view and takes the focus.
 export function goToLine(line) {
@@ -242,7 +241,6 @@ export function scrollToLine(line) {
   view.scrollDOM.scrollTop = block.top + (line - whole) * block.height;
 }
 
-export const editorScrollTop = () => view.scrollDOM.scrollTop;
 export const editorLineCount = () => view.state.doc.lines;
 
 // Translations of the search panel: CodeMirror reads this table whenever it draws a text.

@@ -34,10 +34,11 @@ This app turns your Markdown into a paginated document that is ready to print[^e
 - table of contents with page numbers;
 - header, footer and Page X / Y counter;
 - images and Mermaid diagrams, with captions;
-- footnotes and task lists;
+- numbered figures, tables and equations, with cross-references;
+- formulas, alerts, footnotes and task lists;
 - highlighted code;
-- custom CSS;
-- standalone HTML and PDF export.
+- custom CSS, and a document in several files;
+- PDF, HTML, Markdown and zip exports that reopen in the studio.
 
 ## Table example
 
@@ -47,12 +48,14 @@ This app turns your Markdown into a paginated document that is ready to print[^e
 | Rendering | HTML |
 | Pagination | Paged.js |
 
+Table: The three steps of the pipeline {#tab:steps}
+
 \\newpage
 
 ## Diagram
 
 This part starts on a new page: the line above its title holds only \`\\newpage\`. @Fig:pipeline shows
-the steps; its number and this reference are written for you.
+the steps listed in @tab:steps; their numbers and these references are written for you.
 
 \`\`\`mermaid #fig:pipeline caption="From Markdown to pages"
 flowchart LR
@@ -62,8 +65,10 @@ flowchart LR
 
 ## Second part
 
-Add content here to get more pages.
+Add content here to get more pages. A formula sits in the text, $E = mc^2$, drawn by KaTeX; the
+[Introduction](#introduction) is one link away.
 
+> [!NOTE]
 > Custom CSS only applies to the rendered document.
 
 ### Tasks
@@ -77,7 +82,7 @@ Add content here to get more pages.
 console.log('Markdown → HTML → pages');
 \`\`\`
 
-[^export]: With **Export PDF**, or with the print dialog of the browser.
+[^export]: With **Export**, or with the print dialog of the browser.
 `;
 
 const DEFAULT_CSS = `
@@ -302,6 +307,10 @@ function persistLogo() {
 }
 
 let persistTimer = null;
+// Listeners told when the autosave fails (quota exceeded, storage disabled): the studio warns the user once.
+const storageListeners = new Set();
+export const onStorageFailure = listener => storageListeners.add(listener);
+
 function persistNow() {
   clearTimeout(persistTimer);
   persistTimer = null;
@@ -311,6 +320,7 @@ function persistNow() {
   } catch (error) {
     // Quota exceeded or storage disabled: the app keeps working without autosave.
     console.warn('Autosave failed', error);
+    for (const listener of storageListeners) listener(error);
   }
 }
 

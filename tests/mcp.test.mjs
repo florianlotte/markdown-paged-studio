@@ -3,7 +3,7 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import assert from 'node:assert/strict';
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { after, before, test } from 'node:test';
@@ -335,4 +335,99 @@ test('render_html supports the table of contents, page breaks, captions, highlig
   assert.match(html, /#aa3366 22mm/);
   assert.match(html, /@page :left/);
   assert.match(html, /\.document-content :is\(h1, h2\) \{ string-set: chapter content\(text\); \}/);
+});
+
+test('MPS_OUTPUT_DIR confines every write, symbolic links included', async () => {
+  const allowed = path.join(dir, 'out-allowed');
+  const elsewhere = path.join(dir, 'out-elsewhere');
+  mkdirSync(allowed);
+  mkdirSync(elsewhere);
+  // A link inside the allowed folder that leads outside it.
+  symlinkSync(elsewhere, path.join(allowed, 'link'));
+  const confined = new Client({ name: 'mcp-test-output', version: '0.0.0' });
+  await confined.connect(
+    new StdioClientTransport({
+      command: process.execPath,
+      args: ['mcp/server.mjs'],
+      env: { ...process.env, MPS_OUTPUT_DIR: allowed },
+    }),
+  );
+  try {
+    const relative = await confined.callTool({
+      name: 'render_html',
+      arguments: { markdown: '# In', output_path: 'reports/in.html' },
+    });
+    assert.equal(relative.isError, undefined, JSON.stringify(relative.content));
+    assert.ok(existsSync(path.join(allowed, 'reports', 'in.html')));
+    const outside = await confined.callTool({
+      name: 'render_html',
+      arguments: { markdown: '# Out', output_path: path.join(elsewhere, 'out.html') },
+    });
+    assert.equal(outside.isError, true);
+    assert.match(outside.content[0].text, /MPS_OUTPUT_DIR/);
+    const throughLink = await confined.callTool({
+      name: 'render_html',
+      arguments: { markdown: '# Link', output_path: 'link/out.html' },
+    });
+    assert.equal(throughLink.isError, true);
+    assert.match(throughLink.content[0].text, /MPS_OUTPUT_DIR/);
+    assert.ok(!existsSync(path.join(elsewhere, 'out.html')));
+  } finally {
+    await confined.close();
+  }
+});
+
+test('a symbolic link cannot lead an image read outside MPS_INPUT_DIR', async () => {
+  const allowed = path.join(dir, 'in-allowed');
+  mkdirSync(allowed);
+  writeFileSync(path.join(dir, 'secret.png'), png(20, 20));
+  symlinkSync(path.join(dir, 'secret.png'), path.join(allowed, 'linked.png'));
+  const confined = new Client({ name: 'mcp-test-links', version: '0.0.0' });
+  await confined.connect(
+    new StdioClientTransport({
+      command: process.execPath,
+      args: ['mcp/server.mjs'],
+      env: { ...process.env, MPS_INPUT_DIR: allowed },
+    }),
+  );
+  try {
+    const result = await confined.callTool({
+      name: 'render_html',
+      arguments: { markdown: '![L](linked.png)', images: [{ path: 'linked.png' }] },
+    });
+    assert.equal(result.isError, true);
+    assert.match(result.content[0].text, /MPS_INPUT_DIR/);
+  } finally {
+    await confined.close();
+  }
+});
+
+test('the headless browser fetches nothing: a remote image renders as a reference only', async () => {
+  const result = await client.callTool({
+    name: 'render_html',
+    arguments: { markdown: '# Remote\n\n![Logo](https://example.invalid/logo.png)' },
+  });
+  assert.equal(result.isError, undefined, JSON.stringify(result.content));
+  assert.match(result.content[0].text, /<img src="https:\/\/example\.invalid\/logo\.png"/);
+});
+
+test('render_html respects overwrite, and the schema rejects values outside their bounds', async () => {
+  const output = path.join(dir, 'twice.html');
+  const first = await client.callTool({ name: 'render_html', arguments: { markdown: '# One', output_path: output } });
+  assert.equal(first.isError, undefined);
+  const second = await client.callTool({ name: 'render_html', arguments: { markdown: '# Two', output_path: output } });
+  assert.equal(second.isError, true);
+  assert.match(second.content[0].text, /already exists/);
+  const third = await client.callTool({
+    name: 'render_html',
+    arguments: { markdown: '# Two', output_path: output, overwrite: true },
+  });
+  assert.equal(third.isError, undefined);
+  assert.match(readFileSync(output, 'utf8'), /Two/);
+  for (const config of [{ pageSize: 'A3' }, { marginTop: 100 }, { codeTheme: 'blue' }]) {
+    const rejected = await client
+      .callTool({ name: 'render_html', arguments: { markdown: '# X', config } })
+      .catch(error => ({ isError: true, content: [{ text: error.message }] }));
+    assert.equal(rejected.isError, true, JSON.stringify(config));
+  }
 });

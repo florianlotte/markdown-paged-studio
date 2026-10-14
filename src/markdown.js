@@ -16,9 +16,11 @@ import {
   parseReference,
   referenceText,
   trailingLabel,
+  missingImageLabel,
 } from './crossref.js';
 import { escapeHtml } from './escape.js';
 import { markLabels, stripMarks, styleLabels } from './diagram-labels.js';
+import { clamp, lazy } from './util.js';
 import { findImage, imageName, isExternalSource } from './images.js';
 
 export const md = new MarkdownIt({ html: false, linkify: true, typographer: true });
@@ -219,6 +221,8 @@ const captionLabelSpan = text => `<span class="caption-label">${escapeHtml(text)
 // The number of a heading ends with a dot ("1.", "1.1."), as in print; a reference keeps the bare number.
 const headingNumber = number => `<span class="heading-number">${escapeHtml(number)}.</span>`;
 
+const CAPTION_MAX_LENGTH = 300;
+
 md.core.ruler.after('block', 'structure_attributes', state => {
   const { tokens } = state;
   const paragraphAt = index =>
@@ -367,7 +371,6 @@ md.core.ruler.after('inline', 'task_lists', state => {
 const WIDTH_PERCENT = /^(\d{1,3}(?:\.\d+)?)%$/;
 const WIDTH_MM = /^(\d{1,3}(?:\.\d+)?)mm$/;
 const ALIGNMENTS = ['left', 'center', 'right'];
-const CAPTION_MAX_LENGTH = 300;
 // One attribute: key=value or key="a value with spaces"; or a bare word.
 const ATTRIBUTE = /([\w-]+)=("[^"]*"|\S+)|\S+/g;
 export const DIAGRAM_WIDTH_MIN = 10;
@@ -392,8 +395,8 @@ export function parseDiagramAttributes(text) {
     } else if (key === 'width') {
       const percent = WIDTH_PERCENT.exec(value);
       const mm = WIDTH_MM.exec(value);
-      if (percent) out.width = `${Math.min(DIAGRAM_WIDTH_MAX, Math.max(DIAGRAM_WIDTH_MIN, Number(percent[1])))}%`;
-      else if (mm) out.width = `${Math.min(400, Math.max(10, Number(mm[1])))}mm`;
+      if (percent) out.width = `${clamp(Number(percent[1]), DIAGRAM_WIDTH_MIN, DIAGRAM_WIDTH_MAX)}%`;
+      else if (mm) out.width = `${clamp(Number(mm[1]), 10, 400)}mm`;
     } else if (key === 'align' && ALIGNMENTS.includes(value)) {
       out.align = value;
     }
@@ -682,7 +685,8 @@ md.core.ruler.after('heading_anchors', 'numbering', state => {
       if (language.toLowerCase() === 'mermaid') {
         const attributes = parseDiagramAttributes(rest.join(' '));
         figure(attributes, attributes.caption);
-        token.meta = { number: attributes.number };
+        // Kept for the renderer of the fence, which would otherwise parse the attributes again.
+        token.meta = { attributes, number: attributes.number };
       } else if (language.toLowerCase() === 'math') {
         const label = rest.map(parseLabel).find(found => found?.kind === 'eq');
         if (label) token.attrSet('id', anchorId('eq', label.name));
@@ -744,7 +748,7 @@ md.renderer.rules.image = (tokens, idx, options, env, self) => {
     if (!image) {
       const name = escapeHtml(imageName(source) || source);
       const id = meta.label ? ` id="${escapeHtml(anchorId('fig', meta.label))}"` : '';
-      return `<span class="image-missing"${id} data-image="${name}">Missing image: ${name}</span>`;
+      return `<span class="image-missing"${id} data-image="${name}">${missingImageLabel(env?.language)}: ${name}</span>`;
     }
     resolved = image.dataUrl;
   }
@@ -782,7 +786,7 @@ md.renderer.rules.fence = (tokens, idx, options, env, self) => {
   const token = tokens[idx];
   const [language = '', ...rest] = token.info.trim().split(/\s+/);
   if (language.toLowerCase() === 'mermaid') {
-    const { width, align, caption, label } = parseDiagramAttributes(rest.join(' '));
+    const { width, align, caption, label } = token.meta?.attributes ?? parseDiagramAttributes(rest.join(' '));
     const number = token.meta?.number;
     const attributes = [
       `class="mermaid-diagram${width ? ' is-sized' : ''}"`,
@@ -813,27 +817,30 @@ md.core.ruler.push('source_lines', state => {
   }
 });
 
-let mermaidPromise = null;
 // Mermaid weighs several MB, so it is only loaded the first time a document contains a diagram.
-function loadMermaid() {
-  mermaidPromise ??= import('mermaid')
-    .then(({ default: mermaid }) => {
-      mermaid.initialize({
-        startOnLoad: false,
-        securityLevel: 'strict',
-        theme: 'neutral',
-        fontFamily: 'Inter, Arial, sans-serif',
-        // Pure SVG text instead of foreignObject labels: more reliable in print and in the exported file.
-        htmlLabels: false,
-      });
-      return mermaid;
-    })
-    .catch(error => {
-      mermaidPromise = null;
-      throw error;
+const loadMermaid = lazy(() =>
+  import('mermaid').then(({ default: mermaid }) => {
+    mermaid.initialize({
+      startOnLoad: false,
+      securityLevel: 'strict',
+      theme: 'neutral',
+      fontFamily: 'Inter, Arial, sans-serif',
+      // Pure SVG text instead of foreignObject labels: more reliable in print and in the exported file.
+      htmlLabels: false,
     });
-  return mermaidPromise;
+    return mermaid;
+  }),
+);
+
+// The HTML of the document as a <template>, whose content is inert (images are not decoded): the passes
+// that edit the HTML (diagrams, code colours) work on it and it is serialised once, in documentHtml().
+export function fragmentOf(html) {
+  const template = document.createElement('template');
+  template.innerHTML = html;
+  return template;
 }
+const rootOf = html => (typeof html === 'string' ? fragmentOf(html) : html);
+const outputOf = (html, root) => (typeof html === 'string' ? root.innerHTML : root);
 
 // Rendered SVG per diagram source, so retyping elsewhere in the document does not re-render every diagram.
 const diagramCache = new Map();
@@ -865,13 +872,13 @@ async function diagramSvg(mermaid, source) {
   return html;
 }
 
-// Replace every mermaid placeholder in `html` with its rendered SVG. Returns `html` untouched when there is none.
+// Replaces every mermaid placeholder with its rendered SVG, in an HTML string or in a template made by
+// fragmentOf() (returned as given). Nothing changes when there is no diagram.
 export async function renderDiagrams(html) {
-  if (!html.includes('class="mermaid-diagram')) return html;
-  const wrap = document.createElement('div');
-  wrap.innerHTML = html;
+  const root = rootOf(html);
+  if (!root.content.querySelector('.mermaid-diagram')) return html;
   const mermaid = await loadMermaid();
-  for (const node of wrap.querySelectorAll('.mermaid-diagram')) {
+  for (const node of root.content.querySelectorAll('.mermaid-diagram')) {
     const source = node.dataset.source ?? '';
     delete node.dataset.source;
     node.innerHTML = await diagramSvg(mermaid, source);
@@ -890,35 +897,35 @@ export async function renderDiagrams(html) {
       node.append(caption);
     }
   }
-  return wrap.innerHTML;
+  return outputOf(html, root);
 }
 
 // ---- Syntax highlighting of code blocks
 
-let highlighterPromise = null;
 // Loaded the first time a document holds a code block with a language.
-function loadHighlighter() {
-  highlighterPromise ??= import('highlight.js/lib/common')
-    .then(module => module.default)
-    .catch(error => {
-      highlighterPromise = null;
-      throw error;
-    });
-  return highlighterPromise;
-}
+const loadHighlighter = lazy(() => import('highlight.js/lib/common').then(module => module.default));
+
+// Coloured code per theme, language and text: retyping elsewhere does not colour every block again.
+const highlightCache = new Map();
 
 // Colours the code blocks whose language is known (```js, ```python...). The theme is a class on the <pre>;
 // its colours come from documentCss(). Blocks without a language, or with an unknown one, stay plain.
 export async function highlightCode(html, theme = 'light') {
-  if (!['light', 'dark'].includes(theme) || !/<code\b[^>]*\bclass="language-/.test(html)) return html;
+  if (!['light', 'dark'].includes(theme)) return html;
+  const root = rootOf(html);
+  const blocks = root.content.querySelectorAll('pre > code[class*="language-"]');
+  if (!blocks.length) return html;
   const highlighter = await loadHighlighter();
-  const wrap = document.createElement('div');
-  wrap.innerHTML = html;
-  for (const code of wrap.querySelectorAll('pre > code[class*="language-"]')) {
+  for (const code of blocks) {
     const language = /(?:^|\s)language-(\S+)/.exec(code.className)?.[1];
     if (!language || !highlighter.getLanguage(language)) continue;
-    code.innerHTML = highlighter.highlight(code.textContent, { language, ignoreIllegals: true }).value;
+    const key = `${theme}\0${language}\0${code.textContent}`;
+    if (!highlightCache.has(key)) {
+      if (highlightCache.size >= 200) highlightCache.clear();
+      highlightCache.set(key, highlighter.highlight(code.textContent, { language, ignoreIllegals: true }).value);
+    }
+    code.innerHTML = highlightCache.get(key);
     code.parentElement.classList.add('code-block', `code-${theme}`);
   }
-  return wrap.innerHTML;
+  return outputOf(html, root);
 }

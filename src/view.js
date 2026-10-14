@@ -4,6 +4,7 @@
 // so the scrollable area follows the scale.
 import { t } from './i18n.js';
 import { placeResizables } from './resize-controls.js';
+import { clamp } from './util.js';
 
 const VIEW_KEY = 'markdown-paged-studio:view';
 const ZOOM_MIN = 0.25;
@@ -31,7 +32,7 @@ const view = {
   sidebar: !NARROW.matches,
 };
 
-const clampWidth = width => Math.min(EDITOR_WIDTH_MAX, Math.max(EDITOR_WIDTH_MIN, Math.round(width * 1000) / 1000));
+const clampWidth = width => clamp(Math.round(width * 1000) / 1000, EDITOR_WIDTH_MIN, EDITOR_WIDTH_MAX);
 
 function loadView() {
   try {
@@ -42,7 +43,7 @@ function loadView() {
     if (typeof stored.sync === 'boolean') view.sync = stored.sync;
     if (stored.layout === 'single' || stored.layout === 'spread') view.layout = stored.layout;
     const zoom = Number(stored.zoom);
-    if (Number.isFinite(zoom)) view.zoom = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, zoom));
+    if (Number.isFinite(zoom)) view.zoom = clamp(zoom, ZOOM_MIN, ZOOM_MAX);
     if (typeof stored.fit === 'boolean') view.fit = stored.fit;
     if (typeof stored.sidebar === 'boolean') view.sidebar = stored.sidebar;
   } catch {
@@ -90,7 +91,7 @@ function fitZoom() {
   // The preview is hidden (Edit mode): keep the zoom instead of fitting into nothing.
   if (available <= 0) return view.zoom;
   const zoom = available / (pageWidth * columns + PAGE_GAP_PX * (columns - 1));
-  return Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, zoom));
+  return clamp(zoom, ZOOM_MIN, ZOOM_MAX);
 }
 
 // The mode the workbench shows: a phone has no room for the two panes side by side, so a remembered
@@ -152,7 +153,7 @@ function schedulePlacement(preview) {
 
 function setZoom(zoom) {
   view.fit = false;
-  view.zoom = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, Math.round(zoom * 100) / 100));
+  view.zoom = clamp(Math.round(zoom * 100) / 100, ZOOM_MIN, ZOOM_MAX);
   applyView();
 }
 

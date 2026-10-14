@@ -5,7 +5,8 @@
 import { LANGUAGE_TAG, PAGE_HEIGHT_MM, RUNNING_HEADER_LEVELS, state } from './config.js';
 import { escCssString, escapeHtml } from './escape.js';
 import { inlineFontCss } from './fonts.js';
-import { highlightCode, md, renderDiagrams } from './markdown.js';
+import { fragmentOf, highlightCode, md, renderDiagrams } from './markdown.js';
+import { lazy } from './util.js';
 import { inlineMathCss, renderMath } from './math.js';
 
 // Typographic quotes used by markdown-it's typographer, per primary language.
@@ -243,22 +244,18 @@ export async function documentHtml({ sourceLines = false } = {}) {
     numberHeadings: state.numberHeadings,
     numberFigures: state.numberFigures,
   });
-  const body = await highlightCode(await renderDiagrams(await renderMath(rendered)), state.codeTheme);
+  const root = fragmentOf(await renderMath(rendered));
+  await renderDiagrams(root);
+  await highlightCode(root, state.codeTheme);
+  const body = root.innerHTML;
   return `${cover}<article class="document-content" lang="${lang}">${body}</article>`;
 }
 
 // The Paged.js polyfill is inlined into exports as a string (so they paginate offline with the exact version
 // used by the preview). It only matters for export and print, so it is loaded on first use, not at startup.
-let pagedPolyfillPromise = null;
-function loadPagedPolyfill() {
-  pagedPolyfillPromise ??= import('../node_modules/pagedjs/dist/paged.polyfill.min.js?raw')
-    .then(module => module.default)
-    .catch(error => {
-      pagedPolyfillPromise = null;
-      throw error;
-    });
-  return pagedPolyfillPromise;
-}
+const loadPagedPolyfill = lazy(() =>
+  import('../node_modules/pagedjs/dist/paged.polyfill.min.js?raw').then(module => module.default),
+);
 
 // What happens once Paged.js reports pagination is complete, per `standaloneHtml` mode:
 //   'export' nothing (the file is meant to be opened later),
@@ -294,13 +291,16 @@ export async function standaloneHtml({ mode = 'export', source = '' } = {}) {
     console.warn('The fonts of the formulas could not be embedded', error);
     return '';
   });
-  const fonts = `${textFont}${math}`;
-  // A literal "</script" inside the inlined library would end the script element early.
+  // A literal "</style" in the user's CSS (or in a font) would end the style element early and let markup
+  // through: `\/` is a plain `/` for CSS. The inlined library gets the same treatment for "</script".
+  const styleSafe = text => text.replace(/<\/(style)/gi, '<\\/$1');
+  const fonts = styleSafe(`${textFont}${math}`);
+  const styles = styleSafe(css);
   const library = (await loadPagedPolyfill()).replace(/<\/script/gi, '<\\/script');
   const after = AFTER_PAGINATION[mode] ?? '';
   // A "<" in the JSON could end the script element: written as its escape, which JSON reads back as is.
   const sources = source
     ? `<script type="application/json" id="${SOURCE_BLOCK_ID}">${source.replace(/</g, '\\u003c')}</script>`
     : '';
-  return `<!doctype html>\n<html lang="${documentLanguage()}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(state.title)}</title>${fonts ? `<style data-pagedjs-ignore>${fonts}</style>` : ''}<style>${css}</style><script>window.PagedConfig={auto:true${after}};</script><script>${library}</script>${sources}</head><body>${content}</body></html>`;
+  return `<!doctype html>\n<html lang="${documentLanguage()}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(state.title)}</title>${fonts ? `<style data-pagedjs-ignore>${fonts}</style>` : ''}<style>${styles}</style><script>window.PagedConfig={auto:true${after}};</script><script>${library}</script>${sources}</head><body>${content}</body></html>`;
 }

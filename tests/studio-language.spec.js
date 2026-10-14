@@ -6,9 +6,12 @@ import {
   markdownText,
   openDiagramDocument,
   openFreshStudio,
+  resetDocument,
   setMarkdown,
   status,
   STATUS_DONE,
+  toast,
+  toastAction,
 } from './helpers/studio.mjs';
 
 test('the interface switches to French and back, and remembers the choice', async ({ page }) => {
@@ -124,13 +127,12 @@ test('the tools of the preview and the messages follow the language', async ({ p
   await expectMarkdown(page, /```mermaid width=50%\n/);
   await expect(diagram.getByRole('button', { name: 'Aligner à gauche' })).toBeVisible();
 
-  let message = '';
-  page.once('dialog', dialog => {
-    message = dialog.message();
-    dialog.dismiss();
-  });
-  await page.locator('#resetDocument').click();
-  expect(message).toBe("Abandonner le document en cours et ses images, et restaurer l'exemple ?");
+  // The "more" menu and the toast of Reset speak French too.
+  await expect(page.locator('#moreMenu')).toHaveAttribute('aria-label', 'Autres actions');
+  await expect(page.locator('#resetDocument strong')).toHaveText('Réinitialiser le document');
+  await resetDocument(page);
+  await expect(toast(page)).toHaveText("Document réinitialisé : l'exemple est de retour");
+  await expect(toastAction(page)).toHaveText('Annuler');
 });
 
 test.describe('with a French browser', () => {
@@ -152,4 +154,14 @@ test.describe('with a browser in another language', () => {
     await expect(page.locator('#uiLanguage')).toHaveValue('en');
     await expect(page.locator('.tabs').getByRole('tab')).toHaveText(['Content', 'Design', 'Page']);
   });
+});
+
+test('switching the interface language relabels the preview tools without paginating again', async ({ page }) => {
+  await openFreshStudio(page);
+  const tools = page.locator('#preview .diagram-tools').first();
+  await expect(tools).toHaveAttribute('aria-label', 'Diagram size and alignment');
+  await page.evaluate(() => (document.querySelector('head style[data-pagedjs-inserted-styles]').dataset.kept = '1'));
+  await page.locator('#uiLanguage').selectOption('fr');
+  await expect(tools).toHaveAttribute('aria-label', 'Taille et alignement du diagramme');
+  await expect(page.locator('head style[data-pagedjs-inserted-styles][data-kept]')).toHaveCount(1);
 });

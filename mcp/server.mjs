@@ -9,7 +9,7 @@
 // Never write to stdout here: it carries the MCP protocol. Use console.error for diagnostics.
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { access, mkdir, readFile, stat, writeFile } from 'node:fs/promises';
+import { access, mkdir, readFile, realpath, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { readFileSync } from 'node:fs';
@@ -75,6 +75,8 @@ async function withStudio(fn) {
   await ensureBuild();
   const context = await (await getBrowser()).newContext();
   try {
+    // The page reaches nothing but dist/: a document from an assistant cannot make this host fetch URLs.
+    await context.route('**/*', route => route.abort());
     await serveDist(context);
     const page = await context.newPage();
     page.setDefaultTimeout(RENDER_TIMEOUT_MS);
@@ -123,6 +125,8 @@ async function renderPdf(config, images, { project = true } = {}) {
 // Image files the tools may read. Only image types, of a bounded size; MPS_INPUT_DIR confines the reads to
 // one folder, as MPS_OUTPUT_DIR does for the writes.
 const INPUT_DIR = process.env.MPS_INPUT_DIR ? path.resolve(process.env.MPS_INPUT_DIR) : null;
+// Compared as real paths: a symbolic link inside the folder must not lead outside it.
+const REAL_INPUT_DIR = INPUT_DIR ? await realpath(INPUT_DIR).catch(() => INPUT_DIR) : null;
 const MAX_IMAGE_BYTES = 20 * 1024 * 1024;
 const IMAGE_TYPES = {
   '.png': 'image/png',
@@ -138,7 +142,8 @@ async function readImages(images = []) {
   const files = {};
   for (const { path: file, name } of images) {
     const source = path.resolve(INPUT_DIR ?? process.cwd(), file);
-    if (INPUT_DIR && !source.startsWith(INPUT_DIR + path.sep)) {
+    const real = await realpath(source).catch(() => source);
+    if (INPUT_DIR && !(source.startsWith(INPUT_DIR + path.sep) && real.startsWith(REAL_INPUT_DIR + path.sep))) {
       throw new Error(`Image ${file} must stay inside ${INPUT_DIR} (MPS_INPUT_DIR)`);
     }
     const type = IMAGE_TYPES[path.extname(source).toLowerCase()];
@@ -155,6 +160,7 @@ async function readImages(images = []) {
 // Where the tools may write. MPS_OUTPUT_DIR confines every output to one folder; without it, any path the
 // server process can write to is accepted. Existing files are never overwritten unless asked.
 const OUTPUT_DIR = process.env.MPS_OUTPUT_DIR ? path.resolve(process.env.MPS_OUTPUT_DIR) : null;
+const REAL_OUTPUT_DIR = OUTPUT_DIR ? await realpath(OUTPUT_DIR).catch(() => OUTPUT_DIR) : null;
 
 function resolveOutput(outputPath) {
   const target = path.resolve(OUTPUT_DIR ?? process.cwd(), outputPath);
@@ -167,6 +173,11 @@ function resolveOutput(outputPath) {
 async function writeOutput(outputPath, data, { overwrite = false } = {}) {
   const target = resolveOutput(outputPath);
   await mkdir(path.dirname(target), { recursive: true });
+  // The folder exists now: its real path must still be inside the allowed one (no symbolic link out).
+  const realDir = await realpath(path.dirname(target));
+  if (OUTPUT_DIR && realDir !== REAL_OUTPUT_DIR && !realDir.startsWith(REAL_OUTPUT_DIR + path.sep)) {
+    throw new Error(`output_path must stay inside ${OUTPUT_DIR} (MPS_OUTPUT_DIR)`);
+  }
   await writeFile(target, data, { flag: overwrite ? 'w' : 'wx' }).catch(error => {
     if (error.code === 'EEXIST') throw new Error(`${target} already exists; pass overwrite: true to replace it`);
     throw error;
@@ -184,7 +195,10 @@ const configShape = {
   headerTitle: z.string().optional().describe('Running header, top left of every page'),
   headerName: z.string().optional().describe('Running header, top right of every page'),
   footerText: z.string().optional().describe('Footer, bottom left; the "Page X / Y" counter is always bottom right'),
-  language: z.string().optional().describe('BCP 47 tag ("en", "fr", "pt-BR"): hyphenation and typographic quotes'),
+  language: z
+    .string()
+    .optional()
+    .describe('BCP 47 tag ("en", "fr", "pt-BR"): hyphenation, typographic quotes, alert titles and numbering words'),
   pageSize: z.enum(['A4', 'Letter', 'A5']).optional(),
   marginTop: z.number().min(0).max(80).optional().describe('mm'),
   marginRight: z.number().min(0).max(80).optional().describe('mm'),
@@ -194,7 +208,9 @@ const configShape = {
   customCss: z
     .string()
     .optional()
-    .describe('Replaces the default document stylesheet; see the studio://css-contract resource'),
+    .describe(
+      'Appended after the built-in styles of the document (replaces its sample stylesheet only); see the studio://css-contract resource',
+    ),
   logoDataUrl: z.string().optional().describe('Cover logo as a data:image/... URL'),
   coverTemplate: z.enum(['classic', 'centered', 'band', 'minimal']).optional().describe('Layout of the cover page'),
   accentColor: z.string().optional().describe('Accent colour of the cover templates, as #rrggbb'),
@@ -225,12 +241,14 @@ const markdownField = z
   .string()
   .min(1)
   .describe(
-    'The report body in Markdown (CommonMark + tables). ```mermaid fences become diagrams; size one with ' +
+    'The report body in Markdown: CommonMark and GitHub Flavored Markdown (tables, strikethrough, task lists, ' +
+      'autolinks); raw HTML is shown as text, never rendered. ```mermaid fences become diagrams; size one with ' +
       'attributes on its opening line, e.g. ```mermaid width=60% align=left (width: 10-100% or mm). Local ' +
       'images are passed through `images` and sized the same way: ![Alt](photo.png){width=60% align=center}. An ' +
       'image alone on its line is centered unless align says left or right; inside a sentence, align=left or ' +
       'align=right floats it with the text around, align=center puts it on its own line. A caption goes in ' +
-      'the image title, ![Alt](photo.png "Caption"), or in caption="..." on a mermaid fence line. A line ' +
+      'the image title, ![Alt](photo.png "Caption"), or in caption="..." in the braces of an image or on a ' +
+      'mermaid fence line. A line ' +
       'holding only \\newpage starts a new page; a line holding only [[toc]] (or [[toc depth=2]]) becomes the ' +
       'table of contents of the headings that follow it, with page numbers. Code fences with a language are ' +
       'syntax-highlighted. Footnotes: Text[^1] with "[^1]: the note" on its own line, or ^[a note in place]; ' +
@@ -240,7 +258,9 @@ const markdownField = z
       'lists (a line starting with ": " after the term). Labels number their element and @ refers to it: ' +
       '{#fig:name} in the braces of an image, #fig:name on a mermaid fence, "Table: caption {#tab:name}" after a ' +
       'table, {#eq:name} after the closing $$, {#sec:name} at the end of a heading; @fig:name in the text becomes ' +
-      '"figure 1" with a link.',
+      '"figure 1" with a link; @Fig:name starts a sentence, -@fig:name gives the bare number. "Table: caption" may ' +
+      'also stand right before the table. {#name} at the end of a heading sets its anchor, {-} keeps it unnumbered, ' +
+      '[text](#heading) links to a heading by its slug. \\begin{equation} numbers a formula.',
   );
 const imagesField = z
   .array(
@@ -379,7 +399,7 @@ server.registerResource(
 
 ${CSS_CONTRACT}
 
-\`customCss\` replaces the default stylesheet entirely; start from \`describe_config().defaults.customCss\`.
+\`customCss\` is appended after the built-in styles of the document and replaces its sample stylesheet only; start from \`describe_config().defaults.customCss\`.
 `,
       },
     ],

@@ -1,6 +1,7 @@
 // Automation API for headless rendering, used by the MCP server (mcp/server.mjs). It builds a document from a
 // config object without touching the UI; it is not part of the browser UX.
-import { activeText, replaceActiveText } from './chapters.js';
+import { replaceActiveText } from './chapters.js';
+import { editorText } from './editor.js';
 import { CONFIG_SCHEMA, DEFAULTS, MARGIN_MAX_MM, mergeConfig, PAGE_SIZES, state } from './config.js';
 import { editorSelection, focusEditor, selectInEditor } from './editor.js';
 import { standaloneHtml } from './document.js';
@@ -30,7 +31,7 @@ export function installAutomationApi() {
     },
     // The editor, for the integration tests: the text of the current file, its selection and the focus.
     editor: {
-      text: activeText,
+      text: editorText,
       setText: replaceActiveText,
       selection: editorSelection,
       select: selectInEditor,

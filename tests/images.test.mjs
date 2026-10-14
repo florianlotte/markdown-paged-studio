@@ -174,3 +174,8 @@ test('updateImageAttributes rewrites images in table rows and link labels', () =
     '![A](a.png)\n![B](b.png){align=right}',
   );
 });
+
+test('the missing image box follows the language of the document', () => {
+  assert.match(md.render('![Plan](schema.png)', { language: 'fr' }), /Image manquante: schema.png/);
+  assert.match(md.render('![Plan](schema.png)', { language: 'de-AT' }), /Fehlendes Bild: schema.png/);
+});

@@ -12,11 +12,18 @@ What the studio understands, how it differs from the specifications on purpose, 
 - **Formulas** in TeX, **alerts**, highlighted text, subscript, superscript and definition lists are supported
   as well: see [Formulas, alerts and more](#formulas-alerts-and-more).
 - **Labels and references** in the style of pandoc-crossref number figures, tables, equations and headings:
-  `{#fig:plan}` and `@fig:plan`, table captions (`Table: …`), heading identifiers (`# Title {#custom}`). See
-  the [README](../README.md#numbering-and-cross-references).
+  `{#fig:plan}` and `@fig:plan`, table captions (`Table: …` after or before the table; `Table\:` keeps such a
+  paragraph as text), heading identifiers (`# Title {#custom}`) and `{-}` for a heading left unnumbered; the
+  words (Figure, Table…) follow the document language in seven languages. See the
+  [writing guide](writing.md#numbering-and-cross-references).
+- **Heading anchors**: every heading gets an id named after its text, as on GitHub, so `[see](#details)` links to
+  it in the preview and in the exports.
 - The studio adds its own syntax for paged documents: size, alignment and caption of images and diagrams,
-  `[[toc]]`, `\newpage`, Mermaid diagrams. See the [README](../README.md#usage).
-- Four behaviours differ from CommonMark on purpose. They are listed below; nothing else differs.
+  `[[toc]]`, `\newpage`, Mermaid diagrams. See the [writing guide](writing.md).
+- Four behaviours differ from CommonMark on purpose. They are listed below; nothing else differs on the examples
+  of the specification. The syntaxes above give a meaning to text that CommonMark would print as written
+  (`$…$`, `~x~`, `^x^`, `==x==`, a `: ` line after a paragraph, `Table:` next to a table, `@fig:x`); none of
+  them appears in those examples.
 
 ## Differences made on purpose
 
@@ -79,10 +86,13 @@ How to read them:
 
 ## Not supported
 
-| Syntax           | Example               | What you see today                         |
-| ---------------- | --------------------- | ------------------------------------------ |
-| Abbreviations    | `*[HTML]: Hyper Text` | The text as written                        |
-| Emoji shortcodes | `:smile:`             | The text as written; type the emoji itself |
+| Syntax                    | Example                                        | What you see today                                                                       |
+| ------------------------- | ---------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| Abbreviations             | `*[HTML]: Hyper Text`                          | The text as written                                                                      |
+| Emoji shortcodes          | `:smile:`                                      | The text as written; type the emoji itself                                               |
+| Generic attributes        | `{.class}` or `{#id}` on a paragraph or a list | The text as written; only images and headings take braces                                |
+| Pandoc divs and citations | `::: note`, `[@doe2020]`                       | The text as written                                                                      |
+| Other code languages      | ` ```cobol `                                   | A plain code block: only the common set of highlight.js (about 35 languages) is coloured |
 
 ## Formulas, alerts and more
 

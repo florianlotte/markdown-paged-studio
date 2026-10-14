@@ -2,16 +2,19 @@
 // layout to measure overflow), then swaps the pages into #preview in one step. The previous pages stay
 // visible meanwhile, so typing never flashes an empty preview, and two renders never write into the same
 // element. Each Previewer injects a <style> into <head>; disposePreviewer() removes it.
-import { Previewer } from 'pagedjs';
 import { schedulePersist, state } from './config.js';
 import { setMissingImages } from './images.js';
-import { enhanceResizables } from './resize-controls.js';
+import { enhanceResizables, refreshResizables } from './resize-controls.js';
 import { documentCss, documentHtml } from './document.js';
 import { writeDocument } from './chapters.js';
 import { loadPreviewFonts } from './fonts.js';
 import { prepareMathPreview } from './math.js';
 import { t } from './i18n.js';
 import { applyView } from './view.js';
+import { lazy } from './util.js';
+
+// Paged.js (about 500 kB) is loaded for the first render, so the studio itself shows up before it.
+const loadPaged = lazy(() => import('pagedjs'));
 
 let renderTimer;
 let renderToken = 0;
@@ -19,6 +22,19 @@ let renderToken = 0;
 let activePreviewer = null;
 // The previewer still paginating, if any, so a newer render can stop it early.
 let pendingPreviewer = null;
+// What the displayed pages were made of: a render that produces the same HTML and CSS (a file renamed, a
+// setting of the studio) keeps them instead of paginating again.
+let lastRendered = null;
+
+// Stops a render still paginating. Paged.js 0.4.3 resumes a stopped render (`flow()` calls `start()` and
+// renders again while the result is canceled), so the restart is made to throw: `preview()` then rejects
+// and the stale render ends in its own catch, silently.
+function cancelPreviewer(previewer) {
+  previewer.chunker.start = () => {
+    throw new Error('Render cancelled');
+  };
+  previewer.chunker.stop();
+}
 
 function disposePreviewer(previewer) {
   if (!previewer) return;
@@ -42,14 +58,18 @@ function renderErrorElement(error) {
   return box;
 }
 
+const pageCount = total => (total > 1 ? t('{count} pages', { count: total }) : t('1 page'));
+
 export async function render() {
   const token = ++renderToken;
   const preview = document.getElementById('preview');
   const status = document.getElementById('status');
-  status.textContent = t('Rendering…');
+  const progress = document.getElementById('renderProgress');
+  // The count of the pages shown stays readable: the bar says that new ones are on their way.
+  progress.hidden = false;
   preview.classList.add('is-rendering');
 
-  if (pendingPreviewer) pendingPreviewer.chunker.stop();
+  if (pendingPreviewer) cancelPreviewer(pendingPreviewer);
 
   const stage = document.createElement('div');
   stage.className = 'render-stage';
@@ -65,6 +85,15 @@ export async function render() {
     // The fonts must be there before pagination: text measured with a fallback font breaks elsewhere.
     await Promise.all([loadPreviewFonts(html, css), prepareMathPreview(html)]);
     if (token !== renderToken) return;
+    if (activePreviewer && lastRendered?.html === html && lastRendered.css === css) {
+      // Nothing changed in the document itself: the pages shown are still right.
+      preview.classList.remove('is-stale');
+      status.textContent = pageCount(lastRendered.total);
+      applyView();
+      return;
+    }
+    const { Previewer } = await loadPaged();
+    if (token !== renderToken) return;
     previewer = new Previewer();
     pendingPreviewer = previewer;
     const flow = await previewer.preview(html, [styleUrl], stage);
@@ -78,7 +107,8 @@ export async function render() {
     preview.classList.remove('is-stale');
     disposePreviewer(activePreviewer);
     activePreviewer = previewer;
-    status.textContent = flow.total > 1 ? t('{count} pages', { count: flow.total }) : t('1 page');
+    lastRendered = { html, css, total: flow.total };
+    status.textContent = pageCount(flow.total);
     applyView();
     enhanceResizables(preview, () => state.markdown, applyMarkdown);
     setMissingImages([...preview.querySelectorAll('.image-missing')].map(element => element.dataset.image));
@@ -89,13 +119,22 @@ export async function render() {
     status.textContent = t('Render error');
     disposePreviewer(activePreviewer);
     activePreviewer = null;
+    lastRendered = null;
     preview.replaceChildren(renderErrorElement(error));
   } finally {
     stage.remove();
     if (pendingPreviewer === previewer) pendingPreviewer = null;
-    if (token === renderToken) preview.classList.remove('is-rendering');
+    if (token === renderToken) {
+      preview.classList.remove('is-rendering');
+      progress.hidden = true;
+    }
     setTimeout(() => URL.revokeObjectURL(styleUrl), 1000);
   }
+}
+
+// The controls of the preview built again, with the labels of the current interface language.
+export function refreshPreviewTools() {
+  refreshResizables(document.getElementById('preview'), () => state.markdown, applyMarkdown);
 }
 
 // Changes made from the preview, so they can be undone from the preview too: Ctrl+Z in the editor only works
@@ -105,19 +144,13 @@ const undone = [];
 const done = [];
 let historyBound = false;
 
-// Writes an edit of the assembled document back into the file it belongs to (an undoable edit of that
-// file); the change of the file schedules the render.
-function writeMarkdown(markdown) {
-  writeDocument(markdown);
-}
-
 // Undoes (or redoes) the last change made from the preview, unless the source was edited since.
 function travel(from, to, source, target) {
   const entry = from.at(-1);
   if (!entry || entry[source] !== state.markdown) return false;
   from.pop();
   to.push(entry);
-  writeMarkdown(entry[target]);
+  writeDocument(entry[target]);
   return true;
 }
 
@@ -150,7 +183,7 @@ function applyMarkdown(markdown) {
   if (markdown === state.markdown) return;
   bindHistory();
   const before = state.markdown;
-  writeMarkdown(markdown);
+  writeDocument(markdown);
   done.push({ before, after: state.markdown });
   if (done.length > HISTORY_LIMIT) done.shift();
   undone.length = 0;

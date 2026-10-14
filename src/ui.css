@@ -18,8 +18,8 @@
   --accent: #111827;
   --accent-text: #fff;
   --accent-divider: rgba(255, 255, 255, 0.25);
-  --focus: #8096e8;
-  --focus-ring: #b8c7ff;
+  --focus: #4263eb;
+  --focus-ring: #4c6ef5;
   --link: #0a66c2;
   --success: #1f5f3a;
   --warning-bg: #fff8dc;
@@ -34,7 +34,7 @@
   --shadow-menu: rgba(17, 24, 39, 0.14);
   --shadow-card: rgba(0, 0, 0, 0.25);
   /* The Markdown editor (CodeMirror reads them from its theme in src/editor.js). */
-  --code-gutter-text: #9aa3ae;
+  --code-gutter-text: #7f8793;
   /* Translucent: the selection of CodeMirror is painted behind the line. */
   --code-active-line: rgba(36, 72, 180, 0.05);
   --code-active-gutter: #eef1f8;
@@ -65,7 +65,7 @@
   --accent-text: #15181d;
   --accent-divider: rgba(0, 0, 0, 0.2);
   --focus: #7f97f0;
-  --focus-ring: #3b4f9a;
+  --focus-ring: #6b86e8;
   --link: #6cb0ff;
   --success: #7fd49a;
   --warning-bg: #3a3418;
@@ -329,6 +329,22 @@ textarea:focus {
   gap: 8px;
   margin: -2px 0 14px;
 }
+/* A label with its buttons beside it, above a tall field. */
+.field-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.field-header label,
+.field-header .row-actions {
+  margin: 0;
+}
+.field-header .row-actions button {
+  padding: 5px 9px;
+  font-size: 12px;
+}
 button {
   border: 1px solid transparent;
   border-radius: 8px;
@@ -404,7 +420,7 @@ button:hover {
   color: var(--text-muted);
   flex-shrink: 0;
 }
-.icon-button[aria-expanded='false'] {
+#toggleSidebar[aria-expanded='false'] {
   background: var(--accent);
   color: var(--accent-text);
   border-color: var(--accent);
@@ -423,8 +439,37 @@ button:hover {
 .toolbar-actions {
   display: flex;
   gap: 6px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   justify-content: flex-end;
+}
+/* A thin bar at the foot of the toolbar while the pages are laid out again: the page count stays readable. */
+.toolbar-progress {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  overflow: hidden;
+  background: var(--border-faint);
+}
+.toolbar-progress[hidden] {
+  display: none;
+}
+.toolbar-progress::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  width: 40%;
+  background: var(--focus);
+  animation: toolbar-progress 1.1s ease-in-out infinite;
+}
+@keyframes toolbar-progress {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(250%);
+  }
 }
 /* Compact labels: the actions fit on one line beside the view controls at 1440 px in English. */
 .toolbar-actions button {
@@ -562,6 +607,39 @@ button:hover {
     transform: rotate(360deg);
   }
 }
+/* A short confirmation in the corner, gone by itself; its button undoes what was just done. */
+.toast {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  max-width: min(440px, calc(100vw - 32px));
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: var(--accent);
+  color: var(--accent-text);
+  font-size: 13px;
+  line-height: 1.4;
+  box-shadow: 0 10px 30px var(--shadow-menu);
+}
+.toast[hidden] {
+  display: none;
+}
+.toast button {
+  flex-shrink: 0;
+  padding: 5px 10px;
+  font-size: 13px;
+  border-color: var(--accent-divider);
+  background: transparent;
+  color: inherit;
+}
+.toast button:hover,
+.toast button:focus-visible {
+  background: var(--accent-divider);
+}
 .menu-separator {
   height: 1px;
   margin: 4px 6px;
@@ -572,6 +650,10 @@ button:hover {
   font-weight: 400;
   color: var(--text-soft);
 }
+/* A destructive entry (Reset the document) is told apart by its colour. */
+.menu button.danger strong {
+  color: var(--danger-text);
+}
 .menu button:hover,
 .menu button:focus-visible {
   background: var(--surface-2);
@@ -579,7 +661,7 @@ button:hover {
 }
 /* The workbench: the editor pane, a draggable splitter and the preview, shown together or alone according
    to the view mode (data-mode on .workbench, set by applyView()). The editor width is a fraction of the
-   workbench (--editor-width). A strip of document tabs will sit at the top of the editor pane. */
+   workbench (--editor-width). The tabs of the files sit at the top of the editor pane. */
 .workbench {
   flex: 1;
   min-height: 0;
@@ -895,12 +977,29 @@ button:hover {
     white-space: nowrap;
   }
 }
+/* Under 1100 px the three groups no longer fit on one line: the view controls take a row of their own
+   under the title and the actions, so the actions never stack or leave the window. */
+@media (max-width: 1100px) {
+  .toolbar {
+    flex-wrap: wrap;
+  }
+  .view-controls {
+    order: 3;
+    flex-basis: 100%;
+  }
+}
 @media (max-width: 980px) {
   .shell {
     grid-template-columns: 330px 1fr;
   }
-  .toolbar {
-    align-items: flex-start;
+  /* The view controls keep one line beside a 330 px sidebar: tighter segments, labels never broken. */
+  .view-controls {
+    gap: 4px;
+  }
+  .segmented button {
+    padding-left: 7px;
+    padding-right: 7px;
+    white-space: nowrap;
   }
 }
 /* Phones and narrow windows: the preview is the main view and the settings become a full-screen drawer. */
@@ -977,6 +1076,23 @@ button:hover {
     font-size: 16px;
   }
 }
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+  .toolbar-progress::after {
+    animation: none;
+    width: 100%;
+    opacity: 0.6;
+  }
+  .busy-spinner {
+    animation: none;
+  }
+}
 @media print {
   .sidebar,
   .toolbar,
@@ -1019,18 +1135,18 @@ button:hover {
   pointer-events: none;
 }
 
-/* Diagram resizing controls, added to the preview only (see src/diagram-resize.js). */
+/* Resize controls of diagrams and images, added to the preview only (see src/resize-controls.js). */
 .preview .resizable {
   position: relative;
 }
 .preview .resizable:hover > :is(svg, img),
 .preview .resizable:focus-within > :is(svg, img),
 .preview .resizable.is-resizing > :is(svg, img) {
-  outline: 1px dashed #8096e8;
+  outline: 1px dashed #4263eb;
   outline-offset: 2px;
 }
 .preview .resizable.is-selected > :is(svg, img) {
-  outline: 2px solid #8096e8;
+  outline: 2px solid #4263eb;
   outline-offset: 2px;
 }
 .preview .diagram-tools,
@@ -1108,7 +1224,7 @@ button:hover {
   width: 14px;
   height: 34px;
   margin: -17px 0 0 -7px;
-  border: 1px solid #8096e8;
+  border: 1px solid #4263eb;
   border-radius: 7px;
   background: #fff;
   box-shadow: 0 2px 8px rgba(20, 30, 45, 0.18);
@@ -1117,7 +1233,7 @@ button:hover {
   z-index: 6;
 }
 .preview .diagram-handle:focus-visible {
-  outline: 2px solid #b8c7ff;
+  outline: 2px solid #4263eb;
 }
 .preview .diagram-handle[data-value]::after {
   content: attr(data-value);
@@ -1162,7 +1278,8 @@ button:hover {
   color: var(--text-soft);
 }
 .images-hint,
-.images-status {
+.images-status,
+.field-hint {
   margin: 8px 0 0;
   font-size: 11.5px;
   line-height: 1.45;

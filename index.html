@@ -18,7 +18,7 @@
     </script>
     <meta
       name="description"
-      content="Write Markdown, add custom CSS and get a paginated, print-ready document with cover page, headers, footers and page numbers. 100% in the browser."
+      content="Write Markdown, add custom CSS and get a paginated, print-ready document with cover page, table of contents, headers, footers, page numbers, diagrams and formulas. 100% in the browser."
     />
     <link rel="icon" type="image/svg+xml" href="/src/assets/logo.svg" />
     <title>Markdown Paged Studio</title>
@@ -186,12 +186,15 @@
                   <option value="none">None</option>
                 </select>
               </label>
-              <label>Custom CSS<textarea id="customCss" class="editor css-editor" spellcheck="false"></textarea></label>
-              <div class="row-actions">
-                <button id="loadCss" class="secondary">Import .css</button>
-                <input id="cssFile" type="file" accept=".css,text/css" hidden />
-                <button id="resetCss" class="secondary">Default CSS</button>
+              <div class="field-header">
+                <label for="customCss">Custom CSS</label>
+                <div class="row-actions">
+                  <button id="loadCss" class="secondary">Import .css</button>
+                  <input id="cssFile" type="file" accept=".css,text/css" hidden />
+                  <button id="resetCss" class="secondary">Default CSS</button>
+                </div>
               </div>
+              <textarea id="customCss" class="editor css-editor" spellcheck="false"></textarea>
             </div>
 
             <div class="panel" role="tabpanel" id="panel-page" aria-labelledby="tabPage" data-panel="page">
@@ -225,10 +228,9 @@
               <label class="check"
                 ><input id="mirrorMargins" type="checkbox" /> Facing pages: mirror the left and right margins</label
               >
-              <div class="info-card">
-                <strong>Pagination</strong>
-                <p>The header, footer and <code>Page X / Y</code> counter are computed by Paged.js.</p>
-              </div>
+              <p class="field-hint">
+                The running header and the footer sit inside the top and bottom margins: keep room for them there.
+              </p>
             </div>
           </div>
 
@@ -353,7 +355,6 @@
               </div>
             </div>
             <div class="toolbar-actions">
-              <button id="resetDocument" class="secondary">Reset</button>
               <button
                 id="import"
                 class="secondary"
@@ -429,7 +430,38 @@
                   </li>
                 </ul>
               </div>
+              <div class="menu-button">
+                <button
+                  id="moreMenu"
+                  class="icon-button"
+                  type="button"
+                  aria-haspopup="menu"
+                  aria-expanded="false"
+                  aria-controls="moreOptions"
+                  aria-label="More actions"
+                  title="More actions"
+                >
+                  <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" focusable="false">
+                    <circle cx="4.5" cy="10" r="1.6" fill="currentColor" />
+                    <circle cx="10" cy="10" r="1.6" fill="currentColor" />
+                    <circle cx="15.5" cy="10" r="1.6" fill="currentColor" />
+                  </svg>
+                </button>
+                <ul id="moreOptions" class="menu" role="menu" aria-label="More actions" hidden>
+                  <li role="none">
+                    <button id="resetDocument" class="danger" role="menuitem" type="button">
+                      <strong>Reset the document</strong>
+                      <span
+                        >Discard the document and its images and restore the sample; Undo is offered for ten
+                        seconds</span
+                      >
+                    </button>
+                  </li>
+                </ul>
+              </div>
             </div>
+            <!-- Shown while the pages are laid out again: the page count above stays until the new one is known. -->
+            <div id="renderProgress" class="toolbar-progress" aria-hidden="true" hidden></div>
           </header>
           <!-- Shown once, when Export had to use the print dialog because the pages cannot be drawn here. -->
           <div id="exportNotice" class="notice" role="status" hidden>
@@ -439,6 +471,10 @@
               (zip) to keep an editable copy.
             </p>
             <button id="dismissExportNotice" class="secondary" type="button">Got it</button>
+          </div>
+          <div id="notice" class="notice" role="alert" hidden>
+            <p id="noticeText"></p>
+            <button id="dismissNotice" class="secondary" type="button">Close</button>
           </div>
           <div class="workbench" data-mode="split">
             <section class="editor-pane" id="editorPane" aria-label="Markdown editor">
@@ -562,6 +598,11 @@
         <span id="busyDetail"></span>
         <span class="busy-hint">The studio is locked until the file is ready.</span>
       </div>
+    </div>
+    <!-- A short confirmation (a file saved, the document reset), gone by itself; its button undoes or acts. -->
+    <div id="toast" class="toast" role="status" aria-live="polite" hidden>
+      <span id="toastText"></span>
+      <button id="toastAction" type="button" hidden></button>
     </div>
     <script type="module" src="/src/main.js"></script>
   </body>

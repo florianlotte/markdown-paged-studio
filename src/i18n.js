@@ -36,7 +36,6 @@ const TRANSLATIONS = {
     'Insert \\newpage at the cursor': 'Insérer \\newpage au curseur',
     'Table of contents': 'Table des matières',
     'Insert [[toc]] at the cursor': 'Insérer [[toc]] au curseur',
-    'Download .md': 'Télécharger .md',
     Images: 'Images',
     'Add images': 'Ajouter des images',
     'Matched by file name, whatever the path:': 'Associées par nom de fichier, quel que soit le chemin :',
@@ -69,9 +68,8 @@ const TRANSLATIONS = {
     'Bottom (mm)': 'Bas (mm)',
     'Left (mm)': 'Gauche (mm)',
     'Facing pages: mirror the left and right margins': 'Pages en vis-à-vis : marges gauche et droite en miroir',
-    Pagination: 'Pagination',
-    'The header, footer and': "L'en-tête, le pied de page et le compteur",
-    'counter are computed by Paged.js.': 'sont calculés par Paged.js.',
+    'The running header and the footer sit inside the top and bottom margins: keep room for them there.':
+      "L'en-tête courant et le pied de page occupent les marges haute et basse : gardez-leur de la place.",
     'Source code on GitHub': 'Code source sur GitHub',
     'Release notes': 'Notes de version',
     'Commit this build was made from': 'Commit dont provient cette version',
@@ -84,7 +82,6 @@ const TRANSLATIONS = {
     'Show sidebar': 'Afficher la barre latérale',
     'Paged preview': 'Aperçu paginé',
     'Starting…': 'Démarrage…',
-    'Rendering…': 'Rendu en cours…',
     'Render error': 'Erreur de rendu',
     'Paged.js error': 'Erreur Paged.js',
     '1 page': '1 page',
@@ -115,6 +112,12 @@ const TRANSLATIONS = {
     'Replace this file with a Markdown file': 'Remplacer ce fichier par un fichier Markdown',
     'Download this file': 'Télécharger ce fichier',
     Prettify: 'Mettre en forme',
+    Letter: 'Lettre US',
+    'current match': 'correspondance courante',
+    'on line': 'à la ligne',
+    'replaced $ matches': '$ correspondances remplacées',
+    'replaced match on line $': 'correspondance remplacée à la ligne $',
+    'Control character': 'Caractère de contrôle',
     'Format this file: one space after #, - lists, _emphasis_, aligned tables (Prettier)':
       'Mettre en forme ce fichier : une espace après #, listes en -, _emphase_, tableaux alignés (Prettier)',
     'This file could not be formatted: {error}': 'Ce fichier n’a pas pu être mis en forme : {error}',
@@ -140,7 +143,12 @@ const TRANSLATIONS = {
     'Editor width': 'Largeur de l’éditeur',
     'Drag to resize the editor (arrow keys: 2 % steps, double-click: half)':
       'Glisser pour redimensionner l’éditeur (flèches : pas de 2 %, double-clic : moitié)',
-    Reset: 'Réinitialiser',
+    'More actions': 'Autres actions',
+    'Reset the document': 'Réinitialiser le document',
+    'Discard the document and its images and restore the sample; Undo is offered for ten seconds':
+      "Abandonne le document et ses images et restaure l'exemple ; Annuler est proposé pendant dix secondes",
+    'Document reset: the sample is back': "Document réinitialisé : l'exemple est de retour",
+    Undo: 'Annuler',
     'Import…': 'Importer…',
     'A PDF, an HTML, a Markdown, a zip or a project exported by the studio':
       'Un PDF, un HTML, un Markdown, un zip ou un projet exportés par le studio',
@@ -171,6 +179,14 @@ const TRANSLATIONS = {
     'This browser cannot draw the PDF that carries the project, so Export opens the print dialog. A PDF saved there cannot be reopened in the studio: use HTML with project, Markdown with project or Markdown files (zip) to keep an editable copy.':
       "Ce navigateur ne peut pas dessiner le PDF qui contient le projet : Exporter ouvre donc la boîte de dialogue d'impression. Un PDF enregistré ainsi ne peut pas être rouvert dans le studio : utilisez HTML avec projet, Markdown avec projet ou Fichiers Markdown (zip) pour garder une copie modifiable.",
     'Got it': 'Compris',
+    Close: 'Fermer',
+    'Export failed: {error}': 'L’export a échoué : {error}',
+    'Images could not be added: {error}': 'Les images n’ont pas pu être ajoutées : {error}',
+    'This file could not be read: {error}': 'Ce fichier n’a pas pu être lu : {error}',
+    'Autosave failed: the browser storage is full or disabled':
+      'L’enregistrement automatique a échoué : le stockage du navigateur est plein ou désactivé',
+    'Images are kept for this session only: the browser storage is full or disabled':
+      'Les images ne sont gardées que pour cette session : le stockage du navigateur est plein ou désactivé',
     'this browser could not draw the pages. Use PDF only (print dialog), or export HTML, Markdown or the zip to keep the project':
       "ce navigateur n'a pas pu dessiner les pages. Utilisez PDF seul (boîte de dialogue d'impression), ou exportez en HTML, en Markdown ou en zip pour garder le projet",
     'Drawing page {done} of {total}…': 'Dessin de la page {done} sur {total}…',
@@ -197,8 +213,6 @@ const TRANSLATIONS = {
 
     // Messages
     'The logo could not be read: {error}': "Le logo n'a pas pu être lu : {error}",
-    'Discard the current document and its images, and restore the sample?':
-      "Abandonner le document en cours et ses images, et restaurer l'exemple ?",
     'The browser blocked the print window. Allow pop-ups for this site.':
       "Le navigateur a bloqué la fenêtre d'impression. Autorisez les fenêtres surgissantes pour ce site.",
     'PDF export failed: {error}': "L'export PDF a échoué : {error}",

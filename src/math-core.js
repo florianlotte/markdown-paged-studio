@@ -29,6 +29,9 @@ function formula(katex, tex, displayMode) {
         throwOnError: false,
         trust: false,
         strict: 'ignore',
+        // A runaway macro or an absurd size is an error, not a frozen page.
+        maxExpand: 1000,
+        maxSize: 100,
         errorColor: '#b3261e',
         macros: {},
       });

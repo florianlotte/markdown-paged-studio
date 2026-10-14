@@ -3,12 +3,12 @@
 // preview only); between two marked blocks the position is interpolated. The pane the user is acting on
 // drives the other one, so a programmatic scroll (a render, a jump to a line) never bounces back.
 import { activeIndex, documentLine, locateDocumentLine, revealDocumentLine } from './chapters.js';
+import { STUDIO_ONLY } from './resize-controls.js';
 import { editorLineCount, scrollToLine, topLine } from './editor.js';
 import { effectiveMode, syncOn } from './view.js';
 
 // Room kept above the block that is brought to the top of the preview.
 const MARGIN_PX = 16;
-const STUDIO_ONLY = '.diagram-tools, .diagram-handle';
 
 let shell = null;
 let preview = null;

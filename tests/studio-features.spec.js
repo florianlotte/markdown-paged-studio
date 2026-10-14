@@ -4,10 +4,12 @@ import { test, expect } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import {
   cursorToEnd,
+  DIAGRAM,
   expectMarkdown,
   exportVia,
   marginBoxContent,
   openDocument,
+  openFreshStudio,
   pages,
   setMarkdown,
   status,
@@ -363,9 +365,9 @@ test('formulas are drawn by KaTeX with their fonts, alerts are titled in the lan
         .sort(),
     );
   await openDocument(page, '# Plain\n\nIt costs 5 $ or 10 $, H~2~O and ==marked==.\n', 'Plain');
-  // Nothing of KaTeX is loaded for a document without formula, and nothing is added to its export.
-  expect(await katexFonts()).toEqual([]);
-  await expect(page.locator('#mathStyle')).toHaveCount(0);
+  // The sample document holds a formula, so KaTeX and the two faces it needs are already loaded; a document
+  // without formula adds nothing to its export.
+  expect(await katexFonts()).toEqual(['KaTeX_Main loaded', 'KaTeX_Math loaded']);
   await expect(page.locator('#preview mark')).toHaveText('marked');
   await expect(page.locator('#preview mark')).toHaveCSS('background-color', 'rgb(255, 243, 163)');
   await expect(page.locator('#preview sub')).toHaveText('2');
@@ -513,4 +515,74 @@ test('figures, tables, equations and headings are numbered, and references lead 
   await expect(exported.locator('a.ref-eq')).toHaveText('equation\u00a0(1)');
   await expect(exported.locator('#tab-costs caption')).toHaveText('Table 1: Costs per item');
   await exported.close();
+});
+
+test('a margin typed beyond its limits is clamped like an imported one', async ({ page }) => {
+  await openFreshStudio(page);
+  await page.getByRole('tab', { name: 'Page' }).click();
+  const project = async () => JSON.parse(await page.evaluate(() => window.studio.source()));
+  await page.locator('#marginTop').fill('500');
+  await page.locator('#marginTop').press('Tab');
+  expect((await project()).marginTop).toBe(80);
+  await expect(page.locator('#marginTop')).toHaveValue('80');
+  await page.locator('#marginLeft').fill('-5');
+  await page.locator('#marginLeft').press('Tab');
+  expect((await project()).marginLeft).toBe(0);
+  // The pages are laid out with the clamped margins.
+  await expect(page.locator('#preview')).not.toHaveClass(/is-stale/);
+  await expect(pages(page).first()).toBeVisible();
+});
+
+test('the custom CSS is applied to the document, loaded from a file and restored', async ({ page }) => {
+  await openFreshStudio(page);
+  await page.getByRole('tab', { name: 'Design' }).click();
+  const heading = page.locator('#preview .document-content h1').first();
+  // The buttons of the stylesheet sit above it, in reach without scrolling the tall field.
+  const cssBox = await page.locator('#customCss').boundingBox();
+  for (const id of ['#loadCss', '#resetCss']) {
+    const box = await page.locator(id).boundingBox();
+    expect(box.y + box.height).toBeLessThanOrEqual(cssBox.y);
+  }
+  await page.locator('#customCss').fill('.document-content h1 { color: rgb(200, 0, 0); }');
+  await expect(heading).toHaveCSS('color', 'rgb(200, 0, 0)');
+  // A stylesheet file replaces the text of the editor.
+  await page.locator('#cssFile').setInputFiles({
+    name: 'style.css',
+    mimeType: 'text/css',
+    buffer: Buffer.from('.document-content h1 { color: rgb(0, 120, 0); }'),
+  });
+  await expect(page.locator('#customCss')).toHaveValue(/rgb\(0, 120, 0\)/);
+  await expect(heading).toHaveCSS('color', 'rgb(0, 120, 0)');
+  // Default CSS brings the sample stylesheet back.
+  await page.locator('#resetCss').click();
+  await expect(page.locator('#customCss')).toHaveValue(/font-family: Inter/);
+  await expect(heading).not.toHaveCSS('color', 'rgb(0, 120, 0)');
+});
+
+test('Number figures and tables, the footer text and the bottom margin reach the pages', async ({ page }) => {
+  await openDocument(
+    page,
+    '# Report\n\n' + DIAGRAM.replace('%ATTRS%', ' caption="The flow"') + '\n| a |\n| --- |\n| 1 |\n\nTable: Costs\n',
+    'Report',
+  );
+  await page.getByRole('tab', { name: 'Design' }).click();
+  await expect(page.locator('#preview .caption-label')).toHaveCount(0);
+  await page.locator('#numberFigures').check();
+  await expect(page.locator('#preview .caption-label')).toHaveText(['Figure 1: ', 'Table 1: ']);
+  await page.locator('#footerText').fill('Draft only');
+  await expect(page.locator('#preview')).not.toHaveClass(/is-stale/);
+  expect(await marginBoxContent(page, 1, 'bottom-left')).toBe('"Draft only"');
+
+  await page.getByRole('tab', { name: 'Page' }).click();
+  const bottom = () =>
+    pages(page)
+      .nth(1)
+      .locator('.pagedjs_margin-bottom')
+      .evaluate(el => el.getBoundingClientRect().height);
+  const before = await bottom();
+  await page
+    .locator('#marginBottom')
+    .fill(String(Math.round(Number(await page.locator('#marginBottom').inputValue()) * 2)));
+  await expect(page.locator('#preview')).not.toHaveClass(/is-stale/);
+  await expect.poll(bottom).toBeGreaterThan(before * 1.8);
 });

@@ -6,6 +6,8 @@
 export const IMAGE_DATA_URL = /^data:image\/[a-z0-9.+-]+(?:;[a-z0-9=-]+)*,[^\s"<>]*$/i;
 // Wider raster images are scaled down on upload: 2400 px is 300 dpi across the text column of an A4 page.
 export const MAX_IMAGE_WIDTH = 2400;
+// 300 dpi over the height of an A4 page.
+export const MAX_IMAGE_HEIGHT = 3600;
 // The cover logo is printed at most 55 mm wide: 1200 px is already more than 500 dpi.
 export const MAX_LOGO_WIDTH = 1200;
 const MAX_NAME_LENGTH = 200;
@@ -99,18 +101,37 @@ function notify(reason = 'library') {
 
 // ---- Persistence (IndexedDB). Every failure degrades to "memory only" with a warning.
 
+// A database that another tab holds open at an older version, or that never answers, must not stall the
+// studio: the images are then kept for the session only.
+const OPEN_TIMEOUT_MS = 5000;
+
 function openDatabase() {
   return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error('The image database did not open in time')), OPEN_TIMEOUT_MS);
     const request = indexedDB.open(DATABASE, 2);
+    request.onblocked = () => {
+      clearTimeout(timer);
+      reject(new Error('The image database is blocked by another tab'));
+    };
     request.onupgradeneeded = () => {
       const stores = request.result.objectStoreNames;
       if (!stores.contains(STORE)) request.result.createObjectStore(STORE, { keyPath: 'key' });
       if (!stores.contains(DOCUMENT_STORE)) request.result.createObjectStore(DOCUMENT_STORE);
     };
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error);
+    request.onsuccess = () => {
+      clearTimeout(timer);
+      resolve(request.result);
+    };
+    request.onerror = () => {
+      clearTimeout(timer);
+      reject(request.error);
+    };
   });
 }
+
+// Listeners told when the images cannot be saved: the studio warns the user once.
+const storageListeners = new Set();
+export const onImageStorageFailure = listener => storageListeners.add(listener);
 
 async function inStore(mode, action, name = STORE) {
   const database = await openDatabase();
@@ -132,6 +153,7 @@ async function persist(action, mode = 'readwrite', name = STORE) {
     return await inStore(mode, action, name);
   } catch (error) {
     console.warn('Images are kept for this session only', error);
+    for (const listener of storageListeners) listener(error);
     return undefined;
   }
 }
@@ -227,16 +249,20 @@ function decode(dataUrl) {
   });
 }
 
-// Data URL and pixel size of a file, scaled down when it is a raster image wider than `maxWidth`.
-export async function prepareImage(file, maxWidth = MAX_IMAGE_WIDTH) {
+// Data URL and pixel size of a file, scaled down when it is a raster image wider than `maxWidth` or taller
+// than `maxHeight` (a tall screenshot would otherwise stay huge).
+export async function prepareImage(file, maxWidth = MAX_IMAGE_WIDTH, maxHeight = MAX_IMAGE_HEIGHT) {
   const original = await readAsDataUrl(file);
   const image = await decode(original);
   const { naturalWidth: width, naturalHeight: height } = image;
-  if (!RESIZABLE_TYPES.includes(file.type) || width <= maxWidth) return { dataUrl: original, width, height };
+  const scale = Math.min(1, maxWidth / width, maxHeight / height);
+  if (!RESIZABLE_TYPES.includes(file.type) || scale === 1) return { dataUrl: original, width, height };
   const canvas = document.createElement('canvas');
-  canvas.width = maxWidth;
-  canvas.height = Math.round((height * maxWidth) / width);
-  canvas.getContext('2d').drawImage(image, 0, 0, canvas.width, canvas.height);
+  canvas.width = Math.round(width * scale);
+  canvas.height = Math.round(height * scale);
+  const context = canvas.getContext('2d');
+  context.imageSmoothingQuality = 'high';
+  context.drawImage(image, 0, 0, canvas.width, canvas.height);
   return { dataUrl: canvas.toDataURL(file.type, 0.9), width: canvas.width, height: canvas.height, resized: true };
 }
 
