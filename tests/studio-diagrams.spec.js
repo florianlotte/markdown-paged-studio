@@ -2,7 +2,7 @@
 import { test, expect } from '@playwright/test';
 
 const GANTT =
-  '```mermaid\ngantt\n  title Plan\n  dateFormat YYYY-MM-DD\n  section Build\n  Write :a, 2026-01-01, 10d\n  Review :after a, 5d\n```\n';
+  '```mermaid\ngantt\n  title Plan\n  dateFormat YYYY-MM-DD\n  section Build\n  Write :a, 2020-01-01, 10d\n  Review :after a, 5d\n```\n';
 import { readFileSync } from 'node:fs';
 import {
   centre,
@@ -319,11 +319,7 @@ test('the diagram settings and the font attribute change the drawings', async ({
   await expect.poll(async () => (await drawingStyle(page)).fontSize).toBe(40);
 });
 
-test('a Gantt chart follows the diagram text size as a whole', async ({ page, browserName }) => {
-  test.skip(
-    browserName === 'webkit',
-    'Paged.js splits a Gantt chart over two pages in WebKit and the copy loses the styles of the drawing',
-  );
+test('a Gantt chart follows the diagram text size as a whole', async ({ page }) => {
   await openFreshStudio(page);
   await setMarkdown(page, '# Plan\n\n' + GANTT);
   await expect(page.locator('#preview .mermaid-diagram > svg')).toHaveCount(1);
@@ -334,4 +330,29 @@ test('a Gantt chart follows the diagram text size as a whole', async ({ page, br
   await page.locator('#tabDesign').click();
   await page.locator('#diagramFontSize').fill('32');
   await expect.poll(() => ganttStyle(page)).toEqual({ bar: 40, axis: 20, title: 36, section: 22 });
+});
+
+// Mermaid draws the today marker of a Gantt chart at today's date even when it lies outside the drawing,
+// where the SVG clips it. Paged.js walks the drawing when the chart starts a page, took that line for the
+// overflow of the page, and cut the chart there: a second copy of the drawing on the next page and the
+// text after it moved along.
+test('a Gantt chart that starts a page keeps the text after it on the same page', async ({ page }) => {
+  await openFreshStudio(page);
+  await setMarkdown(page, '# Plan\n\nBefore the chart.\n\n\\newpage\n\n' + GANTT + '\nAfter the chart.\n');
+  await expect(page.locator('#preview .document-content p', { hasText: 'After the chart.' })).toBeVisible();
+  await expect(page.locator('#preview')).not.toHaveClass(/is-stale/);
+  await expect(page.locator('#preview .mermaid-diagram > svg')).toHaveCount(1);
+  const placement = await page.evaluate(() => {
+    const pageOf = node => Number(node.closest('.pagedjs_page').dataset.pageNumber);
+    const chart = document.querySelector('#preview .mermaid-diagram > svg');
+    const after = [...document.querySelectorAll('#preview .document-content p')].find(
+      p => p.textContent === 'After the chart.',
+    );
+    return {
+      pages: document.querySelectorAll('#preview .pagedjs_page').length,
+      chart: pageOf(chart),
+      after: pageOf(after),
+    };
+  });
+  expect(placement).toEqual({ pages: 3, chart: 3, after: 3 });
 });

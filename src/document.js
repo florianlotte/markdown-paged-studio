@@ -113,6 +113,11 @@ export function documentCss() {
   const coverHeight = PAGE_HEIGHT_MM[state.pageSize] ?? PAGE_HEIGHT_MM.A4;
   // A diagram never grows taller than the text area of a page (it cannot be split across pages).
   const diagramMaxHeight = Math.max(40, coverHeight - state.marginTop - state.marginBottom - 12);
+  // The content is a formatting context (`flow-root`): the top margin of the block that starts a page
+  // stays inside it. It otherwise collapses through the article and the wrapper Paged.js lays the page
+  // in, pushes that wrapper below the page by the margin, and Paged.js, which then sees every such page
+  // as overflowing, looks for the overflow inside the first block: in a Gantt chart that starts a page it
+  // took the today marker, drawn far outside the drawing, and cut the chart there.
   return `
 @page {
   size: ${state.pageSize};
@@ -195,6 +200,7 @@ export function documentCss() {
 a.ref { color: inherit; text-decoration: none; }
 .ref-missing { color: #b3261e; }
 .document-image.has-caption > .image-caption { box-sizing: border-box; width: 0; min-width: 100%; }
+.document-content { display: flow-root; }
 .document-content h1, .document-content h2, .document-content h3 { break-after: avoid; }
 .document-content img, .document-content table, .document-content pre, .document-content blockquote, .mermaid-diagram { break-inside: avoid; max-width: 100%; }
 .mermaid-diagram { margin: 5mm auto; text-align: center; }

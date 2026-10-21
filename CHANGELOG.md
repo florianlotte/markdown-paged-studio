@@ -7,6 +7,12 @@ All notable changes to Markdown Paged Studio are listed here, newest first. The 
 
 ## [Unreleased]
 
+## [1.33.0] - 2026-10-21
+
+### Fixed
+
+- A Gantt chart that started a page was cut in two when its today marker (today's date, drawn by Mermaid even outside the chart) lay beyond the page: a second, empty copy of the drawing on the next page and the text after it pushed along. The content of the document is now a formatting context, so the top margin of the block that starts a page no longer pushes the page's wrapper out of the page, and Paged.js no longer looks for an overflow inside that block. WebKit was the same.
+
 ## [1.32.0] - 2026-10-21
 
 ### Fixed
@@ -625,7 +631,8 @@ All notable changes to Markdown Paged Studio are listed here, newest first. The 
 - Portable desktop app for Windows, Linux and macOS with direct PDF export.
 - Docker image, Playwright integration tests and CI.
 
-[Unreleased]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.32.0...HEAD
+[Unreleased]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.33.0...HEAD
+[1.33.0]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.32.0...v1.33.0
 [1.32.0]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.31.0...v1.32.0
 [1.31.0]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.30.0...v1.31.0
 [1.30.0]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.29.0...v1.30.0
