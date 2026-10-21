@@ -332,17 +332,18 @@ test('a Gantt chart follows the diagram text size as a whole', async ({ page }) 
   await expect.poll(() => ganttStyle(page)).toEqual({ bar: 40, axis: 20, title: 36, section: 22 });
 });
 
-// The width a chart of the preview is drawn at (its viewBox, in px) and the height on screen of its first
-// bar in the px of the page: 20 px at a text size of 16 when the chart is shown at scale 1. The bar is
-// measured against the text column of the page, 174 mm (657.6 px) on the default page, as the engines
-// disagree on the zoom of the preview in the rectangles they report.
+// The width a chart of the preview is drawn at (its viewBox, in px) and the width it is shown at in the px
+// of the page: equal when the chart is at scale 1, so its text has the size it was drawn with. The shown
+// width is measured against the text column of the page, 174 mm (657.6 px) on the default page, as the
+// engines disagree on the zoom of the preview in the rectangles they report (and Firefox counts the
+// stroke in the rectangle of a bar, so the bars themselves are not measured).
 function ganttScale(page) {
   return page.evaluate(() => {
     const svg = document.querySelector('#preview .mermaid-diagram > svg');
     const column = svg.closest('.pagedjs_page_content').getBoundingClientRect().width;
     return {
       drawn: Math.round(svg.viewBox.baseVal.width),
-      bar: Math.round((svg.querySelector('rect.task').getBoundingClientRect().height / column) * 657.6),
+      shown: Math.round((svg.getBoundingClientRect().width / column) * 657.6),
     };
   });
 }
@@ -355,28 +356,29 @@ test('a Gantt chart is drawn at the width of its column, whatever the window', a
   await expect(page.locator('#preview .mermaid-diagram > svg')).toHaveCount(1);
   await expect(page.locator('#preview')).not.toHaveClass(/is-stale/);
   // A4 with margins of 18 mm: a column of 174 mm, 658 px.
-  expect(await ganttScale(page)).toEqual({ drawn: 658, bar: 20 });
+  expect(await ganttScale(page)).toEqual({ drawn: 658, shown: 658 });
   expect(await diagramGeometry(page)).toEqual({ percent: 100, left: 0, right: 0 });
 
   await page.setViewportSize({ width: 900, height: 800 });
   await setMarkdown(page, '# Plan again\n\n' + GANTT);
   await expect(page.locator('#preview .document-content h1')).toHaveText('Plan again');
   await expect(page.locator('#preview')).not.toHaveClass(/is-stale/);
-  expect(await ganttScale(page)).toEqual({ drawn: 658, bar: 20 });
+  expect(await ganttScale(page)).toEqual({ drawn: 658, shown: 658 });
 
   // The width of the fence line is the width the chart is drawn at, so its text keeps its size.
   await setMarkdown(page, '# Plan\n\n' + GANTT.replace('```mermaid', '```mermaid width=50%'));
   await expect.poll(() => diagramGeometry(page)).toEqual({ percent: 50, left: 25, right: 25 });
-  expect(await ganttScale(page)).toEqual({ drawn: 329, bar: 20 });
+  expect(await ganttScale(page)).toEqual({ drawn: 329, shown: 329 });
   await setMarkdown(page, '# Plan\n\n' + GANTT.replace('```mermaid', '```mermaid width=80mm'));
   await expect.poll(async () => (await ganttScale(page)).drawn).toBe(302);
-  expect(await ganttScale(page)).toEqual({ drawn: 302, bar: 20 });
+  expect(await ganttScale(page)).toEqual({ drawn: 302, shown: 302 });
 
-  // A larger text size shows on screen as asked, and so does an XY chart, drawn at the column too.
+  // A larger text size keeps the chart at scale 1 (its bars follow the size: see the test above), and an
+  // XY chart is drawn at the column too.
   await setMarkdown(page, '# Plan\n\n' + GANTT);
   await page.locator('#tabDesign').click();
   await page.locator('#diagramFontSize').fill('32');
-  await expect.poll(() => ganttScale(page)).toEqual({ drawn: 658, bar: 40 });
+  await expect.poll(() => ganttScale(page)).toEqual({ drawn: 658, shown: 658 });
   await setMarkdown(page, '# Sales\n\n```mermaid\nxychart-beta\n  x-axis [a, b, c]\n  bar [3, 5, 2]\n```\n');
   await expect
     .poll(() =>
