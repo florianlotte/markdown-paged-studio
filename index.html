@@ -265,6 +265,35 @@
                 <p class="field-hint">Figure 1, Table 1, and the references written with @fig: and @tab:.</p>
               </details>
 
+              <details class="group" data-group="diagrams" open>
+                <summary>Diagrams</summary>
+                <div class="grid2">
+                  <label>Text size (px)<input id="diagramFontSize" type="number" min="8" max="40" /></label>
+                  <label>Line width (px)<input id="diagramLineWidth" type="number" min="1" max="6" step="0.5" /></label>
+                </div>
+                <label
+                  >Spacing
+                  <select id="diagramSpacing">
+                    <option value="compact">Compact</option>
+                    <option value="normal">Standard</option>
+                    <option value="wide">Spacious</option>
+                  </select>
+                </label>
+                <label
+                  >Colours
+                  <select id="diagramTheme">
+                    <option value="neutral">Neutral</option>
+                    <option value="default">Default</option>
+                    <option value="forest">Forest</option>
+                    <option value="dark">Dark</option>
+                  </select>
+                </label>
+                <p class="field-hint">
+                  A diagram wider than the text column is scaled down to fit: larger text and compact spacing keep it
+                  readable. font=20 on a fence line sizes the text of one diagram.
+                </p>
+              </details>
+
               <details class="group" data-group="style" open>
                 <summary>Code and stylesheet</summary>
                 <label
@@ -514,14 +543,14 @@
                 type="button"
                 id="import"
                 class="secondary"
-                title="A PDF, an HTML, a Markdown, a zip or a project exported by the studio"
+                title="A PDF, a Word file, an HTML, a Markdown, a zip or a project exported by the studio"
               >
                 Import…
               </button>
               <input
                 id="importFile"
                 type="file"
-                accept="application/json,.json,application/pdf,.pdf,text/html,.html,text/markdown,.md,.markdown,application/zip,.zip"
+                accept="application/json,.json,application/pdf,.pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.docx,text/html,.html,text/markdown,.md,.markdown,application/zip,.zip"
                 hidden
               />
               <div class="menu-button">
@@ -565,6 +594,19 @@
                     <button id="exportPdfOnly" role="menuitem" type="button" data-shortcut="Ctrl+P">
                       <strong>PDF only</strong>
                       <span>The document alone</span>
+                    </button>
+                  </li>
+                  <li role="separator" class="menu-separator"></li>
+                  <li role="none">
+                    <button id="exportDocxProject" role="menuitem" type="button">
+                      <strong>Word with project</strong>
+                      <span>A .docx for Word or LibreOffice, project embedded: the file reopens in the studio</span>
+                    </button>
+                  </li>
+                  <li role="none">
+                    <button id="exportDocxOnly" role="menuitem" type="button">
+                      <strong>Word only</strong>
+                      <span>The document alone, as a .docx</span>
                     </button>
                   </li>
                   <li role="separator" class="menu-separator"></li>
@@ -616,7 +658,7 @@
                   <li role="none" class="phone-only">
                     <button id="importEntry" role="menuitem" type="button">
                       <strong>Import…</strong>
-                      <span>A PDF, an HTML, a Markdown, a zip or a project exported by the studio</span>
+                      <span>A PDF, a Word file, an HTML, a Markdown, a zip or a project exported by the studio</span>
                     </button>
                   </li>
                   <li role="separator" class="menu-separator phone-only"></li>

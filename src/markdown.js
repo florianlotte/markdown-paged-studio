@@ -638,7 +638,7 @@ md.renderer.rules.fence = (tokens, idx, options, env, self) => {
   const token = tokens[idx];
   const [language = '', ...rest] = token.info.trim().split(/\s+/);
   if (language.toLowerCase() === 'mermaid') {
-    const { width, align, caption, label } = token.meta?.attributes ?? parseDiagramAttributes(rest.join(' '));
+    const { width, align, caption, label, font } = token.meta?.attributes ?? parseDiagramAttributes(rest.join(' '));
     const number = token.meta?.number;
     const attributes = [
       `class="mermaid-diagram${width ? ' is-sized' : ''}"`,
@@ -647,6 +647,7 @@ md.renderer.rules.fence = (tokens, idx, options, env, self) => {
       token.map ? `data-line="${token.map[0]}"` : '',
       width ? `style="--diagram-width: ${width}"` : '',
       align ? `data-align="${align}"` : '',
+      font ? `data-font="${font}"` : '',
       caption ? `data-caption="${escapeHtml(caption)}"` : '',
       number
         ? `data-caption-label="${escapeHtml(captionLabel('fig', number, env.language, { alone: !caption }))}"`

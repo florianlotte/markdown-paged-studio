@@ -48,6 +48,8 @@ test('the interface switches to French and back, and remembers the choice', asyn
   await expect(page.locator('#exportOptions [role="menuitem"] strong')).toHaveText([
     'PDF avec projet',
     'PDF seul',
+    'Word avec projet',
+    'Word seul',
     'HTML avec projet',
     'Markdown avec projet',
     'Fichiers Markdown (zip)',
@@ -158,6 +160,7 @@ test('the interface switches to French and back, and remembers the choice', asyn
   await expect(page.locator('#panel-design summary')).toHaveText([
     'En-têtes et pieds de page',
     'Numérotation',
+    'Diagrammes',
     'Code et feuille de style',
   ]);
   await expect(page.locator('#panel-page summary')).toHaveText(['Papier', 'Marges']);

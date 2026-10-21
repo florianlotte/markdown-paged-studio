@@ -7,6 +7,14 @@ All notable changes to Markdown Paged Studio are listed here, newest first. The 
 
 ## [Unreleased]
 
+## [1.31.0] - 2026-10-21
+
+### Added
+
+- Word export: **Word with project** and **Word only** in the Export menu write a native `.docx` (heading styles, lists, task lists, tables and captions, quotes, alerts, definition lists, coloured code, footnotes, running header and page counter, page breaks, images, diagrams as SVG with a PNG beside each, formulas as Word equations, a table of contents Word fills on opening). The project travels in a custom XML part that Word keeps, so **Import…** reopens a `.docx` with project; the desktop File menu has **Export Word…** and **Export Word without project…**, and the MCP server the tool `render_docx`. The custom CSS of the document is not applied to the Word file.
+- Diagram settings in the Design tab, for every Mermaid diagram of the document: text size, spacing (compact, standard, spacious), colour theme (neutral, default, forest, dark) and line width of the arrows, so a wide diagram scaled down to the text column stays readable. They are part of the project, the HTML and PDF exports carry them, and the MCP server takes them in `config` (`diagramFontSize`, `diagramSpacing`, `diagramTheme`, `diagramLineWidth`).
+- `font=<px>` on a ` ```mermaid ` fence line sets the text size of that diagram alone (8 to 40 px); the resize controls of the preview keep it.
+
 ## [1.30.0] - 2026-10-14
 
 ### Added
@@ -611,7 +619,8 @@ All notable changes to Markdown Paged Studio are listed here, newest first. The 
 - Portable desktop app for Windows, Linux and macOS with direct PDF export.
 - Docker image, Playwright integration tests and CI.
 
-[Unreleased]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.30.0...HEAD
+[Unreleased]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.31.0...HEAD
+[1.31.0]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.30.0...v1.31.0
 [1.30.0]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.29.0...v1.30.0
 [1.29.0]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.28.0...v1.29.0
 [1.28.0]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.27.0...v1.28.0

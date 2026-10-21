@@ -45,8 +45,8 @@
 - **Edit, Split or View**: the editor and the paged preview share the window with a draggable splitter, or one of them takes it all; plus one page or two pages side by side, zoom, fit to width, Ctrl + wheel, and a collapsible settings sidebar.
 - **Autosave** in the browser, plus export and import of the whole configuration as JSON.
 - **Personal defaults** (your name, company logo, stylesheet, template) from a gitignored `local/` folder.
-- **Export menu**: PDF with project, PDF only, HTML with project (a standalone page that paginates offline), Markdown with project (a `.md` whose YAML front matter holds the settings and images), Markdown files (a zip of the files, the stylesheet and the images side by side) or the project alone. In the browser the studio draws the PDF with project itself and the PDF only goes through the print dialog; the desktop app writes both directly.
-- **Editable exports**: the HTML export, the Markdown export, the zip of files and the PDF with project carry the document, its settings and its images, and **Import…** reopens them, as well as a plain `.md` file or any zip of Markdown files.
+- **Export menu**: PDF with project, PDF only, Word with project or Word only (a native `.docx`: styles, lists, tables, footnotes, header and footer, table of contents, images, diagrams and equations), HTML with project (a standalone page that paginates offline), Markdown with project (a `.md` whose YAML front matter holds the settings and images), Markdown files (a zip of the files, the stylesheet and the images side by side) or the project alone. In the browser the studio draws the PDF with project itself and the PDF only goes through the print dialog; the desktop app writes both directly.
+- **Editable exports**: the HTML export, the Markdown export, the zip of files, the Word file with project and the PDF with project carry the document, its settings and its images, and **Import…** reopens them, as well as a plain `.md` file or any zip of Markdown files.
 - **Desktop app** for Windows (x64 and ARM64), Linux and macOS (Apple Silicon and Intel), portable, no installation.
 - **MCP server** so a local AI assistant can generate reports through the same rendering pipeline.
 - **Static build** you can host anywhere: GitHub Pages, Netlify, Cloudflare Pages, nginx, or the provided Docker image.
@@ -209,7 +209,7 @@ Building and testing the desktop app from the sources, and publishing a release:
 
 ## MCP server for AI assistants
 
-`mcp/server.mjs` is a [Model Context Protocol](https://modelcontextprotocol.io) server (stdio) that lets a local AI assistant generate reports with the real rendering pipeline: `render_pdf`, `render_html` and `describe_config`, plus a resource documenting the CSS contract. It takes one Markdown text and the settings of the document, with the syntax of the editor (diagrams, images by file name, formulas, alerts, numbering, table of contents, page breaks); Prettify and the preview tools belong to the studio only. Setup, tool inputs and safety options: [mcp/README.md](mcp/README.md).
+`mcp/server.mjs` is a [Model Context Protocol](https://modelcontextprotocol.io) server (stdio) that lets a local AI assistant generate reports with the real rendering pipeline: `render_pdf`, `render_docx`, `render_html` and `describe_config`, plus a resource documenting the CSS contract. It takes one Markdown text and the settings of the document, with the syntax of the editor (diagrams, images by file name, formulas, alerts, numbering, table of contents, page breaks); Prettify and the preview tools belong to the studio only. Setup, tool inputs and safety options: [mcp/README.md](mcp/README.md).
 
 ## Docker
 

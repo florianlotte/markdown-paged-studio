@@ -1,6 +1,7 @@
 // The exports and the imports of the document: the PDF with its project (drawn by the browser, or written
-// by the desktop app), the PDF through the print dialog, the HTML, the Markdown, the zip and the project
-// file; the reading of any of them back (Import…); the lock while a PDF is written.
+// by the desktop app), the PDF through the print dialog, the Word file, the HTML, the Markdown, the zip and
+// the project file; the reading of any of them back (Import…); the lock while a PDF or a Word file is
+// written.
 import { canDrawPages, markCannotDraw, probePageDrawing } from './pdf-capability.js';
 import { exportImages, replaceImages, sanitizeImages } from './images.js';
 import { state } from './config.js';
@@ -54,6 +55,30 @@ export function exportProject() {
   download('markdown-paged-studio-project.json', sourceJson(2), 'application/json');
 }
 
+const DOCX_TYPE = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+
+// The Word file, built by the page from the HTML of the document (see docx-export.js), with the project in
+// a custom XML part when asked. Browser and desktop alike: the download opens the save dialog there.
+export async function exportDocx({ project }) {
+  if (!lock(t('Exporting the Word file…'))) return;
+  try {
+    const { documentDocx } = await import('./docx-export.js');
+    let bytes = await documentDocx();
+    if (project) {
+      progress(t('Writing the file…'));
+      const { attachSources } = await import('./docx-sources.js');
+      bytes = attachSources(bytes, { json: sourceJson() });
+    }
+    download(exportName('docx'), bytes, DOCX_TYPE);
+    toast(t(project ? 'Word file saved with its project' : 'Word file saved'));
+  } catch (error) {
+    console.error(error);
+    notify(t('Word export failed: {error}', { error: error?.message || error }));
+  } finally {
+    unlock();
+  }
+}
+
 // ---- The sources of the document: the project file, what the exports carry.
 
 // The images travel with the configuration, so the file is a complete, portable document.
@@ -61,8 +86,9 @@ export function sourceJson(indent = 0) {
   return JSON.stringify({ ...state, images: exportImages() }, null, indent);
 }
 
-// The configuration text held by a file, told apart by content: a PDF, an HTML or a Markdown exported by
-// the studio, a project JSON, or a plain Markdown document, which holds the Markdown alone.
+// The configuration text held by a file, told apart by content: a PDF, a Word file, an HTML or a Markdown
+// exported by the studio, a zip of Markdown files, a project JSON, or a plain Markdown document, which
+// holds the Markdown alone.
 export async function sourcesOfFile(file) {
   const head = new TextDecoder().decode(new Uint8Array(await file.slice(0, 16).arrayBuffer()));
   if (head.startsWith('%PDF-')) {
@@ -72,9 +98,17 @@ export async function sourcesOfFile(file) {
     return found.json;
   }
   if (head.startsWith('PK\u0003\u0004')) {
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    // A Word file is a zip too: the one the studio wrote holds the project in a part of its own.
+    const { isDocx, readSources } = await import('./docx-sources.js');
+    if (isDocx(bytes)) {
+      const found = readSources(bytes);
+      if (!found) throw new Error(t('this Word file holds no project: import a Word file exported with its project'));
+      return found.json;
+    }
     const { sourcesOfArchive } = await import('./archive.js');
     try {
-      return sourcesOfArchive(new Uint8Array(await file.arrayBuffer()));
+      return sourcesOfArchive(bytes);
     } catch (error) {
       throw new Error(t(error?.message || 'this archive could not be read'), { cause: error });
     }
@@ -302,6 +336,8 @@ export function bindExports() {
   bindMenu('exportMenu', 'exportOptions', {
     exportPdfProject: () => exportPdf({ project: true }),
     exportPdfOnly: () => exportPdf({ project: false }),
+    exportDocxProject: () => exportDocx({ project: true }),
+    exportDocxOnly: () => exportDocx({ project: false }),
     exportHtml: guarded(exportHtml, 'Export failed: {error}'),
     exportMarkdown: guarded(exportMarkdown, 'Export failed: {error}'),
     exportArchive: guarded(exportArchive, 'Export failed: {error}'),

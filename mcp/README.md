@@ -44,6 +44,7 @@ current `dist/`.
 | Tool              | Input                                                                                      | Result                                                                                                                 |
 | ----------------- | ------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------- |
 | `render_pdf`      | `markdown`, optional `config`, `output_path`, optional `overwrite`, `images` and `project` | Writes the PDF; returns `{ path, pages, bytes, missing_images, editable }`                                             |
+| `render_docx`     | `markdown`, optional `config`, `output_path`, optional `overwrite`, `images` and `project` | Writes a native Word file (`.docx`); returns `{ path, bytes, missing_images, editable }`                               |
 | `render_html`     | `markdown`, optional `config`, optional `output_path`, `overwrite` and `images`            | Standalone HTML returned inline, or written with `output_path`: `{ path, bytes, missing_images }`                      |
 | `describe_config` | none                                                                                       | Current defaults (including `local/`; `logoDataUrl` shown as `<set>`), the accepted keys, page sizes and margin limits |
 

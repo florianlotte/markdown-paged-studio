@@ -3,6 +3,7 @@
 // the files and their assembled Markdown consistent (`mergeConfig()`). Pure: no browser, no defaults.
 import { assembleFiles, DEFAULT_FILE_NAME, sanitizeFiles } from './files.js';
 import { IMAGE_DATA_URL } from './images.js';
+import { clamp } from './util.js';
 
 export const PAGE_SIZES = ['A4', 'Letter', 'A5'];
 // Page heights in mm, used to size the cover page to the selected paper.
@@ -15,6 +16,13 @@ export const COVER_TEMPLATES = ['classic', 'centered', 'band', 'minimal'];
 export const HEADING_NUMBERING = ['none', 'h1', 'h2'];
 // The deepest heading level the running header follows.
 export const RUNNING_HEADER_LEVELS = ['h1', 'h2', 'h3'];
+// Mermaid options of the document: the space between the nodes and ranks, and the colour theme.
+export const DIAGRAM_SPACINGS = ['compact', 'normal', 'wide'];
+export const DIAGRAM_THEMES = ['neutral', 'default', 'forest', 'dark'];
+// Numeric keys with their bounds (the kind `range`): the text size of the diagrams and the width of their
+// lines, in px of the drawing before it is scaled to the column.
+export const RANGES = { diagramFontSize: [8, 40], diagramLineWidth: [1, 6] };
+export const DIAGRAM_FONT_SIZE = RANGES.diagramFontSize;
 const COLOR = /^#[0-9a-f]{6}$/i;
 // BCP 47 language tag such as "en", "fr", "pt-BR" or "zh-Hant".
 export const LANGUAGE_TAG = /^[a-z]{2,3}(?:-[a-z0-9]{2,8})*$/i;
@@ -47,6 +55,10 @@ export const CONFIG_SCHEMA = {
   mirrorMargins: 'boolean',
   coverTemplate: 'coverTemplate',
   accentColor: 'color',
+  diagramFontSize: 'range',
+  diagramSpacing: 'diagramSpacing',
+  diagramTheme: 'diagramTheme',
+  diagramLineWidth: 'range',
 };
 
 // Returns only the keys of `input` that are known and well-typed, coerced into safe values.
@@ -83,6 +95,17 @@ export function sanitizeConfig(input) {
       case 'runningHeaderLevel':
         if (RUNNING_HEADER_LEVELS.includes(value)) out[key] = value;
         break;
+      case 'diagramSpacing':
+        if (DIAGRAM_SPACINGS.includes(value)) out[key] = value;
+        break;
+      case 'diagramTheme':
+        if (DIAGRAM_THEMES.includes(value)) out[key] = value;
+        break;
+      case 'range': {
+        const n = Number(value);
+        if (Number.isFinite(n)) out[key] = clamp(n, ...RANGES[key]);
+        break;
+      }
       case 'color':
         if (typeof value === 'string' && COLOR.test(value.trim())) out[key] = value.trim().toLowerCase();
         break;

@@ -120,6 +120,8 @@ const MENU_FR = {
   File: 'Fichier',
   'Export PDF…': 'Exporter en PDF…',
   'Export PDF without project…': 'Exporter en PDF sans projet…',
+  'Export Word…': 'Exporter en Word…',
+  'Export Word without project…': 'Exporter en Word sans projet…',
   'Export HTML…': 'Exporter en HTML…',
   'Export Markdown…': 'Exporter en Markdown…',
   'Export Markdown files (zip)…': 'Exporter les fichiers Markdown (zip)…',
@@ -151,6 +153,8 @@ function buildMenu() {
       submenu: [
         { label: label('Export PDF…'), accelerator: 'CmdOrCtrl+Shift+E', click: () => sendCommand('export-pdf') },
         { label: label('Export PDF without project…'), click: () => sendCommand('export-pdf-plain') },
+        { label: label('Export Word…'), click: () => sendCommand('export-docx') },
+        { label: label('Export Word without project…'), click: () => sendCommand('export-docx-plain') },
         { label: label('Export HTML…'), click: () => sendCommand('export-html') },
         { label: label('Export Markdown…'), click: () => sendCommand('export-markdown') },
         { label: label('Export Markdown files (zip)…'), click: () => sendCommand('export-archive') },

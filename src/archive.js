@@ -34,7 +34,7 @@ const MAX_TOTAL_BYTES = 256 * 1024 * 1024;
 const extension = name => /\.([a-z0-9]+)$/i.exec(name)?.[1].toLowerCase() ?? '';
 
 // The bytes and the type of an image data URL (base64 or percent-encoded).
-function bytesOfDataUrl(dataUrl) {
+export function bytesOfDataUrl(dataUrl) {
   const comma = dataUrl.indexOf(',');
   const header = dataUrl.slice(5, comma);
   const payload = dataUrl.slice(comma + 1);
@@ -104,18 +104,24 @@ export function projectArchive(json) {
 const baseName = path => path.split('/').pop();
 const naturally = (a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
 
-// The project held by an archive, as a configuration text. An archive written by the studio brings the
-// whole project; any other zip brings its Markdown files, in the order of their names, and its images.
-export function sourcesOfArchive(bytes, { maxTotalBytes = MAX_TOTAL_BYTES } = {}) {
+// The entries of a zip, { path: bytes }, within the bounds above: folders are skipped, and so is any entry
+// beyond the limits. Shared with the Word export, which edits the package of a .docx.
+export function unzipBounded(bytes, { maxTotalBytes = MAX_TOTAL_BYTES } = {}) {
   let count = 0;
   let total = 0;
-  const unzipped = unzipSync(bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes), {
+  return unzipSync(bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes), {
     filter: file =>
       !file.name.endsWith('/') &&
       file.originalSize <= MAX_ENTRY_BYTES &&
       ++count <= MAX_ENTRIES &&
       (total += file.originalSize) <= maxTotalBytes,
   });
+}
+
+// The project held by an archive, as a configuration text. An archive written by the studio brings the
+// whole project; any other zip brings its Markdown files, in the order of their names, and its images.
+export function sourcesOfArchive(bytes, { maxTotalBytes = MAX_TOTAL_BYTES } = {}) {
+  const unzipped = unzipBounded(bytes, { maxTotalBytes });
   const paths = Object.keys(unzipped).filter(
     path => !path.split('/').includes('..') && !baseName(path).startsWith('.'),
   );

@@ -11,6 +11,11 @@ test('parseDiagramAttributes keeps valid sizes and alignments only', () => {
   assert.deepEqual(parseDiagramAttributes('width=2%'), { width: '10%' });
   assert.deepEqual(parseDiagramAttributes('width=60%;color:red align="left" onclick=x'), {});
   assert.deepEqual(parseDiagramAttributes(''), {});
+  // The text size of one diagram: whole px, 8 to 40.
+  assert.deepEqual(parseDiagramAttributes('font=22 width=50%'), { font: 22, width: '50%' });
+  assert.deepEqual(parseDiagramAttributes('font=99'), { font: 40 });
+  assert.deepEqual(parseDiagramAttributes('font=2'), { font: 8 });
+  assert.deepEqual(parseDiagramAttributes('font=abc font=1.5 font=20px'), {});
 });
 
 test('the fence rule carries size, alignment and source line on the placeholder', () => {
@@ -22,6 +27,8 @@ test('the fence rule carries size, alignment and source line on the placeholder'
   const plain = md.render('```mermaid\nflowchart LR\n  A --> B\n```\n');
   assert.match(plain, /class="mermaid-diagram" data-source=/);
   assert.doesNotMatch(plain, /style=/);
+  assert.doesNotMatch(plain, /data-font/);
+  assert.match(md.render('```mermaid font=24\nflowchart LR\n  A --> B\n```\n'), /data-line="0" data-font="24"/);
   // Other languages are untouched.
   assert.match(md.render('```js width=40%\nlet a;\n```\n'), /<pre><code class="language-js">/);
 });
@@ -36,6 +43,11 @@ test('updateFenceAttributes rewrites only the targeted mermaid fence', () => {
   assert.equal(
     updateFenceAttributes(source, 6, { width: null, align: 'left' }),
     '# T\n\n```mermaid\nflowchart LR\n```\n\n```mermaid theme=dark align=left\nflowchart TD\n```\n',
+  );
+  // The text size written by hand stays when the preview controls resize the diagram.
+  assert.equal(
+    updateFenceAttributes('```mermaid font=22\nflowchart LR\n```\n', 0, { width: '50%' }),
+    '```mermaid font=22 width=50%\nflowchart LR\n```\n',
   );
   // Not a mermaid fence, or out of range: unchanged.
   assert.equal(updateFenceAttributes(source, 3, { width: '60%' }), source);

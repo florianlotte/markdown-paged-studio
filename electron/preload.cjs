@@ -8,7 +8,7 @@ contextBridge.exposeInMainWorld('desktop', {
   exportPdf: (html, name) => ipcRenderer.invoke('export-pdf', html, name),
   // Writes the final bytes of the PDF at the place the token stands for.
   writePdf: (token, bytes) => ipcRenderer.invoke('write-pdf', token, bytes),
-  // Commands sent by the application menu: 'export-pdf', 'export-pdf-plain', 'export-html', 'export-markdown',
+  // Commands sent by the application menu: 'export-pdf', 'export-pdf-plain', 'export-docx', 'export-docx-plain', 'export-html', 'export-markdown',
   // 'export-archive', 'export-project', 'import', 'print', 'mode-edit', 'mode-split', 'mode-view',
   // 'toggle-sidebar', 'theme-system', 'theme-light' and 'theme-dark'.
   onCommand: callback => ipcRenderer.on('command', (_event, command) => callback(String(command))),

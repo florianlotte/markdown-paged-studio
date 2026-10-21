@@ -18,6 +18,10 @@ test('sanitizeConfig keeps the known keys with well-typed values and drops the r
     language: 'pt-BR',
     cover: 'yes',
     logoDataUrl: 'javascript:alert(1)',
+    diagramFontSize: '99',
+    diagramLineWidth: 'thick',
+    diagramSpacing: 'compact',
+    diagramTheme: 'neon',
     extra: true,
   });
   assert.deepEqual(clean, {
@@ -28,6 +32,8 @@ test('sanitizeConfig keeps the known keys with well-typed values and drops the r
     accentColor: '#aa3366',
     language: 'pt-BR',
     cover: true,
+    diagramFontSize: 40,
+    diagramSpacing: 'compact',
   });
   assert.deepEqual(sanitizeConfig(null), {});
   assert.deepEqual(sanitizeConfig([1, 2]), {});
@@ -51,6 +57,9 @@ test('every key of the schema has a kind the sanitizer knows', () => {
       language: 'fr',
       imageDataUrl: '',
       files: [],
+      range: 10,
+      diagramSpacing: 'compact',
+      diagramTheme: 'forest',
     }[kind];
     assert.notEqual(sample, undefined, `no sample for the kind ${kind}`);
     const [key] = Object.entries(CONFIG_SCHEMA).find(([, k]) => k === kind);

@@ -122,6 +122,11 @@ const DEFAULT_STATE = {
   mirrorMargins: false,
   coverTemplate: 'classic',
   accentColor: '#2c2f73',
+  // Mermaid draws at these sizes, then the drawing is scaled down to the text column when it is wider.
+  diagramFontSize: 16,
+  diagramSpacing: 'normal',
+  diagramTheme: 'neutral',
+  diagramLineWidth: 1,
 };
 
 // Personal defaults from the gitignored `local/` folder (see local/README.md), resolved at build time by Vite.

@@ -1,7 +1,9 @@
 // The attributes the studio writes into the Markdown source for a diagram or an image: `width`, `align`,
-// `caption` and the label on a ```mermaid fence line, the same words in braces after an image. Pure:
-// parsing, and the rewriting of one line or one image of a text (what the preview controls do).
+// `caption` and the label on a ```mermaid fence line (plus `font`, the text size of that diagram), the same
+// words in braces after an image. Pure: parsing, and the rewriting of one line or one image of a text (what
+// the preview controls do).
 import { parseLabel } from './crossref.js';
+import { DIAGRAM_FONT_SIZE } from './schema.js';
 import { clamp } from './util.js';
 
 // A caption is one line of text: longer ones are cut.
@@ -17,8 +19,8 @@ export const DIAGRAM_WIDTH_MAX = 100;
 
 // Attributes after the language on the fence line: "width=60% align=left" -> { width: '60%', align: 'left' }.
 // `width` is a share of the text column (10 to 100 %) or an absolute size in mm, `caption` a text shown
-// under the drawing (in double quotes when it holds spaces), `#fig:name` its label for cross-references;
-// anything else is ignored.
+// under the drawing (in double quotes when it holds spaces), `#fig:name` its label for cross-references,
+// `font` the text size of the drawing in px (8 to 40, whole); anything else is ignored.
 export function parseDiagramAttributes(text) {
   const out = {};
   for (const [word, key, value] of String(text ?? '').matchAll(ATTRIBUTE)) {
@@ -38,6 +40,8 @@ export function parseDiagramAttributes(text) {
       else if (mm) out.width = `${clamp(Number(mm[1]), 10, 400)}mm`;
     } else if (key === 'align' && ALIGNMENTS.includes(value)) {
       out.align = value;
+    } else if (key === 'font' && /^\d{1,3}$/.test(value)) {
+      out.font = clamp(Number(value), ...DIAGRAM_FONT_SIZE);
     }
   }
   return out;

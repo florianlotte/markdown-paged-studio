@@ -6,7 +6,7 @@ import { editorText } from './editor.js';
 import { CONFIG_SCHEMA, DEFAULTS, MARGIN_MAX_MM, mergeConfig, PAGE_SIZES, state } from './config.js';
 import { editorSelection, focusEditor, selectInEditor } from './editor.js';
 import { standaloneHtml } from './document.js';
-import { exportImages, replaceImages, sanitizeImages } from './images.js';
+import { exportImages, missingImages, replaceImages, sanitizeImages } from './images.js';
 
 // True when the page was opened by an automation client (?automation=1): the initial preview is skipped.
 export const AUTOMATION = new URLSearchParams(location.search).has('automation');
@@ -29,6 +29,23 @@ export function installAutomationApi() {
       mergeConfig(state, config);
       await replaceImages(sanitizeImages(images), { persist: false });
       return standaloneHtml({ mode });
+    },
+    // The Word file of `config`, as base64 (what page.evaluate can carry), the project embedded unless
+    // `project` is false.
+    async renderDocx(config = {}, { images, project = true } = {}) {
+      mergeConfig(state, DEFAULTS);
+      mergeConfig(state, config);
+      await replaceImages(sanitizeImages(images), { persist: false });
+      const { documentDocx } = await import('./docx-export.js');
+      let bytes = await documentDocx();
+      if (project) {
+        const { attachSources } = await import('./docx-sources.js');
+        bytes = attachSources(bytes, { json: window.studio.source() });
+      }
+      let binary = '';
+      for (let start = 0; start < bytes.length; start += 0x8000)
+        binary += String.fromCharCode(...bytes.subarray(start, start + 0x8000));
+      return { base64: btoa(binary), missing: missingImages() };
     },
     // The editor, for the integration tests: the text of the current file, its selection and the focus.
     editor: {

@@ -177,6 +177,7 @@ test('the settings are grouped by intent, a group folds and stays folded, and Im
   await expect(page.locator('#panel-design summary')).toHaveText([
     'Headers and footers',
     'Numbering',
+    'Diagrams',
     'Code and stylesheet',
   ]);
   await expect(page.locator('#panel-page summary')).toHaveText(['Paper', 'Margins']);
@@ -587,7 +588,7 @@ test('tooltips show on hover and on keyboard focus with the shortcut, ? lists th
   await expect(page.locator('#exportDefault')).toHaveAttribute('title', /^PDF with project/);
   // A control without a shortcut shows its text alone.
   await page.locator('#import').hover();
-  await expect(text).toHaveText(/^A PDF, an HTML/);
+  await expect(text).toHaveText(/^A PDF, a Word file, an HTML/);
   await expect(tooltip.locator('kbd')).toBeHidden();
   await page.mouse.move(5, 400);
   // Keyboard focus shows it at once; a click does not.

@@ -174,6 +174,17 @@ test('serves the other File menu entries and the View menu', async () => {
       'Architecture Report.zip',
       'markdown-paged-studio-project.json',
     ]);
+  // The Word file is built by the page and downloaded the same way.
+  await send('export-docx');
+  await expect
+    .poll(() => app.evaluate(() => globalThis.downloads), { timeout: 30000 })
+    .toEqual([
+      'Architecture Report.html',
+      'Architecture Report.md',
+      'Architecture Report.zip',
+      'markdown-paged-studio-project.json',
+      'Architecture Report.docx',
+    ]);
   const [chooser] = await Promise.all([page.waitForEvent('filechooser'), send('import')]);
   expect(chooser.isMultiple()).toBe(false);
   // The View menu switches the workbench mode.

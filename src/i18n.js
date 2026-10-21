@@ -86,6 +86,19 @@ const TRANSLATIONS = {
     'From level 1 (1, 1.1, 1.1.1)': 'À partir du niveau 1 (1, 1.1, 1.1.1)',
     'From level 2 (level 1 is the title)': 'À partir du niveau 2 (le niveau 1 est le titre)',
     'Number figures and tables': 'Numéroter les figures et les tableaux',
+    Diagrams: 'Diagrammes',
+    'Text size (px)': 'Taille du texte (px)',
+    'Line width (px)': 'Épaisseur des traits (px)',
+    Spacing: 'Espacement',
+    Compact: 'Compact',
+    Standard: 'Standard',
+    Spacious: 'Aéré',
+    Colours: 'Couleurs',
+    Neutral: 'Neutre',
+    Default: 'Par défaut',
+    Forest: 'Forêt',
+    'A diagram wider than the text column is scaled down to fit: larger text and compact spacing keep it readable. font=20 on a fence line sizes the text of one diagram.':
+      'Un diagramme plus large que la colonne de texte est réduit pour y tenir : un texte plus grand et un espacement compact le gardent lisible. font=20 sur la ligne de fence règle le texte d’un seul diagramme.',
     'Figure 1, Table 1, and the references written with @fig: and @tab:.':
       'Figure 1, Tableau 1, et les références écrites avec @fig: et @tab:.',
     'Header name': "Nom d'en-tête",
@@ -297,6 +310,19 @@ const TRANSLATIONS = {
     'Document reset: the sample is back': "Document réinitialisé : l'exemple est de retour",
     Undo: 'Annuler',
     'Import…': 'Importer…',
+    'Word with project': 'Word avec projet',
+    'A .docx for Word or LibreOffice, project embedded: the file reopens in the studio':
+      'Un .docx pour Word ou LibreOffice, projet inclus : le fichier se rouvre dans le studio',
+    'Word only': 'Word seul',
+    'The document alone, as a .docx': 'Le document seul, en .docx',
+    'Exporting the Word file…': 'Export du fichier Word…',
+    'Word file saved with its project': 'Fichier Word enregistré avec son projet',
+    'Word file saved': 'Fichier Word enregistré',
+    'Word export failed: {error}': "L'export Word a échoué : {error}",
+    'this Word file holds no project: import a Word file exported with its project':
+      'ce fichier Word ne contient pas de projet : importez un fichier Word exporté avec son projet',
+    'A PDF, a Word file, an HTML, a Markdown, a zip or a project exported by the studio':
+      'Un PDF, un fichier Word, un HTML, un Markdown, un zip ou un projet exportés par le studio',
     'A PDF, an HTML, a Markdown, a zip or a project exported by the studio':
       'Un PDF, un HTML, un Markdown, un zip ou un projet exportés par le studio',
     'Markdown files (zip)': 'Fichiers Markdown (zip)',

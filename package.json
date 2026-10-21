@@ -1,6 +1,6 @@
 {
   "name": "markdown-paged-studio",
-  "version": "1.30.0",
+  "version": "1.31.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -20,7 +20,7 @@
     "test:desktop": "playwright test --config playwright.desktop.config.js",
     "mcp": "node mcp/server.mjs",
     "test:mcp": "node --test tests/mcp.test.mjs",
-    "test:unit": "node --test tests/schema.test.mjs tests/headings.test.mjs tests/i18n.test.mjs tests/shortcuts.test.mjs tests/markdown.test.mjs tests/images.test.mjs tests/fonts.test.mjs tests/repo.test.mjs tests/conformance.test.mjs tests/pdf-sources.test.mjs tests/markdown-sources.test.mjs tests/files.test.mjs tests/archive.test.mjs tests/math-core.test.mjs tests/crossref.test.mjs tests/escape.test.mjs tests/diagram-labels.test.mjs tests/prettify.test.mjs tests/util.test.mjs",
+    "test:unit": "node --test tests/schema.test.mjs tests/headings.test.mjs tests/i18n.test.mjs tests/shortcuts.test.mjs tests/markdown.test.mjs tests/images.test.mjs tests/fonts.test.mjs tests/repo.test.mjs tests/conformance.test.mjs tests/pdf-sources.test.mjs tests/markdown-sources.test.mjs tests/files.test.mjs tests/archive.test.mjs tests/math-core.test.mjs tests/crossref.test.mjs tests/escape.test.mjs tests/diagram-labels.test.mjs tests/prettify.test.mjs tests/util.test.mjs tests/docx-units.test.mjs tests/docx-sources.test.mjs tests/mathml-omml.test.mjs",
     "screenshots": "node scripts/screenshots.mjs",
     "conformance": "node scripts/conformance.mjs"
   },
@@ -34,6 +34,7 @@
     "@codemirror/view": "^6.43.13",
     "@lezer/highlight": "^1.2.5",
     "@modelcontextprotocol/sdk": "^1.31.0",
+    "docx": "^9.13.0",
     "fflate": "^0.8.3",
     "highlight.js": "^11.12.0",
     "katex": "^0.18.10",

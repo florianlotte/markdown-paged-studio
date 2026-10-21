@@ -122,6 +122,17 @@ async function renderPdf(config, images, { project = true } = {}) {
   });
 }
 
+// The Word file of a document, built by the page (docx-export.js), the project embedded unless asked not to.
+async function renderDocx(config, images, { project = true } = {}) {
+  return withStudio(async page => {
+    const { base64, missing } = await page.evaluate(
+      ([cfg, files, withProject]) => window.studio.renderDocx(cfg, { images: files, project: withProject }),
+      [config, images, project],
+    );
+    return { docx: Buffer.from(base64, 'base64'), missing };
+  });
+}
+
 // Image files the tools may read. Only image types, of a bounded size; MPS_INPUT_DIR confines the reads to
 // one folder, as MPS_OUTPUT_DIR does for the writes.
 const INPUT_DIR = process.env.MPS_INPUT_DIR ? path.resolve(process.env.MPS_INPUT_DIR) : null;
@@ -235,6 +246,24 @@ const configShape = {
     .boolean()
     .optional()
     .describe('Facing pages: left-hand pages swap the left and right margins and the margin boxes'),
+  diagramFontSize: z
+    .number()
+    .int()
+    .min(8)
+    .max(40)
+    .optional()
+    .describe('Text size of the diagrams in px (16 by default); a diagram wider than the column is scaled down'),
+  diagramSpacing: z
+    .enum(['compact', 'normal', 'wide'])
+    .optional()
+    .describe('Space between the nodes of the diagrams: compact keeps a wide diagram readable'),
+  diagramTheme: z.enum(['neutral', 'default', 'forest', 'dark']).optional().describe('Colour theme of the diagrams'),
+  diagramLineWidth: z
+    .number()
+    .min(1)
+    .max(6)
+    .optional()
+    .describe('Width of the arrows and links of the diagrams in px (1 by default)'),
 };
 
 const markdownField = z
@@ -243,7 +272,8 @@ const markdownField = z
   .describe(
     'The report body in Markdown: CommonMark and GitHub Flavored Markdown (tables, strikethrough, task lists, ' +
       'autolinks); raw HTML is shown as text, never rendered. ```mermaid fences become diagrams; size one with ' +
-      'attributes on its opening line, e.g. ```mermaid width=60% align=left (width: 10-100% or mm). Local ' +
+      'attributes on its opening line, e.g. ```mermaid width=60% align=left (width: 10-100% or mm; font=20 sets ' +
+      'the text size of that diagram in px). Local ' +
       'images are passed through `images` and sized the same way: ![Alt](photo.png){width=60% align=center}. An ' +
       'image alone on its line is centered unless align says left or right; inside a sentence, align=left or ' +
       'align=right floats it with the text around, align=center puts it on its own line. A caption goes in ' +
@@ -328,6 +358,43 @@ server.registerTool(
 );
 
 server.registerTool(
+  'render_docx',
+  {
+    title: 'Render a Markdown report to Word (.docx)',
+    description:
+      'Same document as render_pdf, as a native Word file: heading styles, lists, tables, footnotes, running ' +
+      'header and page numbers, a table of contents Word fills on opening, images, diagrams (SVG with a PNG ' +
+      'for older versions) and formulas as Word equations. The custom CSS of the config is not applied. ' +
+      'Writes the file to output_path and returns its path and size. Unless project is false, the file ' +
+      'carries its project in a custom XML part, so the studio can reopen and edit it.',
+    inputSchema: {
+      markdown: markdownField,
+      config: configField,
+      output_path: z
+        .string()
+        .min(1)
+        .describe('Where to write the .docx (absolute, or relative to MPS_OUTPUT_DIR or the server cwd)'),
+      overwrite: z.boolean().optional().describe('Replace the file if it already exists (default: refuse)'),
+      images: imagesField,
+      project: z
+        .boolean()
+        .optional()
+        .describe('Embed the project (settings, Markdown, images) so the studio can reopen it (default: true)'),
+    },
+  },
+  async ({ markdown, config, output_path, overwrite, images, project = true }) => {
+    try {
+      const { docx, missing } = await renderDocx({ ...config, markdown }, await readImages(images), { project });
+      const target = await writeOutput(output_path, docx, { overwrite });
+      const result = { path: target, bytes: docx.length, missing_images: missing, editable: project };
+      return { content: [{ type: 'text', text: JSON.stringify(result) }], structuredContent: result };
+    } catch (error) {
+      return toolError(error);
+    }
+  },
+);
+
+server.registerTool(
   'render_html',
   {
     title: 'Render a Markdown report to standalone HTML',
@@ -365,7 +432,7 @@ server.registerTool(
     title: 'Describe the document settings',
     description:
       'Returns the current default settings (including personal defaults from local/) and the accepted ' +
-      'keys, page sizes and margin limits. Call it before render_pdf to know what can be customised.',
+      'keys, page sizes and margin limits. Call it before render_pdf or render_docx to know what can be customised.',
     inputSchema: {},
   },
   async () => {

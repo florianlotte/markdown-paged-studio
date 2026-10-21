@@ -10,6 +10,7 @@ import {
   bindExports,
   download,
   exportArchive,
+  exportDocx,
   exportName,
   exportHtml,
   exportMarkdown,
@@ -235,6 +236,8 @@ function bindDesktop() {
   window.desktop.onCommand(command => {
     if (command === 'export-pdf') exportPdfDirect({ project: true });
     else if (command === 'export-pdf-plain') exportPdfDirect({ project: false });
+    else if (command === 'export-docx') exportDocx({ project: true });
+    else if (command === 'export-docx-plain') exportDocx({ project: false });
     else if (command === 'export-html') guarded(exportHtml, 'Export failed: {error}')();
     else if (command === 'export-markdown') guarded(exportMarkdown, 'Export failed: {error}')();
     else if (command === 'export-archive') guarded(exportArchive, 'Export failed: {error}')();

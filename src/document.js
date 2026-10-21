@@ -32,7 +32,7 @@ export function documentLanguage() {
 
 // Colours of the highlighted code, per theme: [text, background, comment, keyword, string, number, title,
 // attribute, built-in, deletion, addition].
-const CODE_COLORS = {
+export const CODE_COLORS = {
   light: ['#24292f', '#f5f6f8', '#6e7781', '#cf222e', '#0a3069', '#0550ae', '#8250df', '#116329', '#953800'],
   dark: ['#e6edf3', '#161b22', '#8b949e', '#ff7b72', '#a5d6ff', '#79c0ff', '#d2a8ff', '#7ee787', '#ffa657'],
 };
@@ -248,7 +248,12 @@ export async function documentHtml({ sourceLines = false } = {}) {
     numberFigures: state.numberFigures,
   });
   const root = fragmentOf(await renderMath(rendered));
-  await renderDiagrams(root);
+  await renderDiagrams(root, {
+    fontSize: state.diagramFontSize,
+    spacing: state.diagramSpacing,
+    theme: state.diagramTheme,
+    lineWidth: state.diagramLineWidth,
+  });
   await highlightCode(root, state.codeTheme);
   const body = root.innerHTML;
   return `${cover}<article class="document-content" lang="${lang}">${body}</article>`;

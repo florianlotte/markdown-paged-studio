@@ -8,6 +8,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { after, before, test } from 'node:test';
 import { png } from './helpers/png.mjs';
+import { strFromU8, unzipSync } from 'fflate';
 import { readSources } from '../src/pdf-sources.js';
 
 const dir = mkdtempSync(path.join(tmpdir(), 'mps-mcp-'));
@@ -25,7 +26,7 @@ const markdown =
 
 test('lists the tools and the CSS contract resource', async () => {
   const { tools } = await client.listTools();
-  assert.deepEqual(tools.map(t => t.name).sort(), ['describe_config', 'render_html', 'render_pdf']);
+  assert.deepEqual(tools.map(t => t.name).sort(), ['describe_config', 'render_docx', 'render_html', 'render_pdf']);
   const { resources } = await client.listResources();
   assert.equal(resources[0].uri, 'studio://css-contract');
   const contract = await client.readResource({ uri: 'studio://css-contract' });
@@ -75,6 +76,51 @@ test('render_pdf writes a paginated PDF honouring the config', async () => {
   assert.equal(bare.isError, undefined, JSON.stringify(bare.content));
   assert.equal(JSON.parse(bare.content[0].text).editable, false);
   assert.equal(await readSources(readFileSync(plain)), null);
+});
+
+test('render_docx writes a Word file with the document and its project', async () => {
+  const output = path.join(dir, 'report.docx');
+  const result = await client.callTool({
+    name: 'render_docx',
+    arguments: {
+      markdown: '# Word report\n\nA note[^1] and $x^2$.\n\n[^1]: Note.\n\n```mermaid\nflowchart LR\n  A --> B\n```\n',
+      config: { title: 'Word report', author: 'Robot', language: 'fr' },
+      output_path: output,
+    },
+  });
+  assert.equal(result.isError, undefined, JSON.stringify(result.content));
+  const info = JSON.parse(result.content[0].text);
+  assert.equal(info.path, output);
+  assert.equal(info.editable, true);
+  assert.deepEqual(info.missing_images, []);
+  const entries = unzipSync(new Uint8Array(readFileSync(output)));
+  const body = strFromU8(entries['word/document.xml']);
+  assert.match(body, /<w:pStyle w:val="Heading1"\/>/);
+  assert.match(body, /Word report/);
+  assert.match(body, /<w:footnoteReference w:id="1"\/>/);
+  assert.match(body, /<m:oMath /);
+  assert.ok(
+    Object.keys(entries).some(name => /^word\/media\/.*\.svg$/.test(name)),
+    'the diagram is an SVG',
+  );
+  assert.equal(info.bytes, readFileSync(output).length);
+  const custom = Object.keys(entries).find(name => /^customXml\/item\d+\.xml$/.test(name));
+  assert.match(strFromU8(entries[custom]), /urn:markdown-paged-studio:project/);
+  assert.match(strFromU8(entries[custom]), /Robot/);
+
+  // Without the project, no custom part; an existing file is only replaced with overwrite.
+  const again = await client.callTool({
+    name: 'render_docx',
+    arguments: { markdown: '# Plain\n', output_path: output, project: false },
+  });
+  assert.equal(again.isError, true);
+  assert.match(again.content[0].text, /overwrite/);
+  const replaced = await client.callTool({
+    name: 'render_docx',
+    arguments: { markdown: '# Plain\n', output_path: output, project: false, overwrite: true },
+  });
+  assert.equal(replaced.isError, undefined, JSON.stringify(replaced.content));
+  assert.ok(!Object.keys(unzipSync(new Uint8Array(readFileSync(output)))).some(name => name.startsWith('customXml/')));
 });
 
 test('render_html returns a standalone document with the diagram and French quotes', async () => {
@@ -139,6 +185,23 @@ test('diagrams honour the size and alignment of their fence line', async () => {
     /class="mermaid-diagram is-sized"[^>]*style="--diagram-width: 40%"[^>]*data-align="left"[^>]*><svg/,
   );
   assert.doesNotMatch(html, /diagram-tools/);
+});
+
+test('the diagram settings and the font attribute size the text of the drawings', async () => {
+  const result = await client.callTool({
+    name: 'render_html',
+    arguments: {
+      markdown:
+        '# Sized\n\n```mermaid\nflowchart LR\n  A --> B\n```\n\n```mermaid font=32\nflowchart LR\n  C --> D\n```\n',
+      config: { diagramFontSize: 24, diagramLineWidth: 4 },
+    },
+  });
+  assert.equal(result.isError, undefined, JSON.stringify(result.content));
+  const html = result.content[0].text;
+  assert.match(html, /font-size:\s*24px/);
+  assert.match(html, /font-size:\s*32px/);
+  assert.doesNotMatch(html, /data-font/);
+  assert.match(html, /stroke-width:\s*4px/);
 });
 
 test('images are read from disk and matched to the Markdown by file name', async () => {
