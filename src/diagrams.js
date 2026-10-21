@@ -6,6 +6,7 @@
 import { escapeHtml } from './escape.js';
 import { markLabels, stripMarks, styleLabels } from './diagram-labels.js';
 import { outputOf, rootOf } from './fragment.js';
+import { wantedWidth } from './docx-units.js';
 import { lazy } from './util.js';
 
 // Mermaid weighs several MB, so it is only loaded the first time a document contains a diagram.
@@ -23,6 +24,9 @@ const SPACINGS = {
 // whatever the text size: at a larger size a word of eight letters would be cut in two. Both follow the
 // text size here, so a label keeps its lines and a node its shape; 16 gives Mermaid's own values.
 const LABEL_WIDTH = 120;
+// The width in px of the text column of the default page (A4, margins of 18 mm), the width a chart is
+// drawn at when the document gives none.
+const COLUMN_WIDTH = 658;
 
 // The Mermaid configuration for a document: `fontSize` in px (16 is Mermaid's default), `spacing` one of
 // SPACINGS or `normal`, `theme` a Mermaid theme name, `lineWidth` the stroke of the edges in px (1 by
@@ -33,8 +37,17 @@ const LABEL_WIDTH = 120;
 // pixels that ignore the text size: the bars (20 px), their gap, the paddings and the margin of its
 // title follow it here, as do the texts Mermaid sizes outside its configuration through `themeCSS`,
 // which it scopes to each drawing (the axis, 10 px as an attribute; the title, 18 px; the vertical
-// labels, 15 px).
-export function mermaidConfig({ fontSize = 16, spacing = 'normal', theme = 'neutral', lineWidth = 1 } = {}) {
+// labels, 15 px). `width` is the width in px the drawing is shown at: a Gantt chart and an XY chart fill
+// a width rather than take the size of their content (Mermaid draws a Gantt chart as wide as the element
+// it renders in, the body of the page here), and the CSS then scales them to the column, text included;
+// drawn at that width they are shown at scale 1 and their text has the size asked, like a flowchart.
+export function mermaidConfig({
+  fontSize = 16,
+  spacing = 'normal',
+  theme = 'neutral',
+  lineWidth = 1,
+  width = COLUMN_WIDTH,
+} = {}) {
   const scaled = size => Math.round((fontSize * size) / 16);
   const config = {
     startOnLoad: false,
@@ -56,7 +69,9 @@ export function mermaidConfig({ fontSize = 16, spacing = 'normal', theme = 'neut
       rightPadding: scaled(75),
       gridLineStartPadding: scaled(35),
       titleTopMargin: scaled(25),
+      useWidth: width,
     },
+    xyChart: { width },
     themeCSS: [
       `.grid .tick text { font-size: ${scaled(10)}px; }`,
       `.titleText { font-size: ${scaled(18)}px; }`,
@@ -123,19 +138,29 @@ async function diagramSvg(mermaid, source, config) {
 
 // Replaces every mermaid placeholder with its rendered SVG, in an HTML string or in a template made by
 // fragmentOf() (returned as given). Nothing changes when there is no diagram. `options` are those of
-// mermaidConfig(); a placeholder whose fence line sets `font=` carries it as `data-font` and keeps its own
-// text size.
-export async function renderDiagrams(html, options = {}) {
+// mermaidConfig(), plus `columnWidth`, the text column of the page in px: a diagram is drawn at that width
+// or, when its fence line sets `width=` (the `--diagram-width` of the placeholder), at the width it asks
+// for, so a chart that fills its width is shown at scale 1. A placeholder whose fence line sets `font=`
+// carries it as `data-font` and keeps its own text size.
+export async function renderDiagrams(html, { columnWidth = COLUMN_WIDTH, ...options } = {}) {
   const root = rootOf(html);
   if (!root.content.querySelector('.mermaid-diagram')) return html;
   const mermaid = await loadMermaid();
-  const config = mermaidConfig(options);
+  const column = Math.round(columnWidth);
+  const config = mermaidConfig({ ...options, width: column });
   for (const node of root.content.querySelectorAll('.mermaid-diagram')) {
     const source = node.dataset.source ?? '';
     const font = Number(node.dataset.font);
+    const wanted = wantedWidth(node.style.getPropertyValue('--diagram-width').trim(), column);
+    const width = wanted ? Math.min(column, Math.max(1, Math.round(wanted))) : column;
     delete node.dataset.source;
     delete node.dataset.font;
-    node.innerHTML = await diagramSvg(mermaid, source, font ? mermaidConfig({ ...options, fontSize: font }) : config);
+    const own = font || width !== column;
+    node.innerHTML = await diagramSvg(
+      mermaid,
+      source,
+      own ? mermaidConfig({ ...options, fontSize: font || options.fontSize, width }) : config,
+    );
     if (node.dataset.caption || node.dataset.captionLabel) {
       const caption = document.createElement('div');
       caption.className = 'diagram-caption';

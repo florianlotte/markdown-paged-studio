@@ -1,7 +1,7 @@
 // Unit tests of the measures of the Word export: page geometry, unit conversions and the fitting of a drawing.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { emu, fitDrawing, halfPoints, pageGeometry, pxOfMm, twips } from '../src/docx-units.js';
+import { emu, fitDrawing, halfPoints, pageGeometry, pxOfMm, twips, wantedWidth } from '../src/docx-units.js';
 
 test('units convert from the document to OOXML', () => {
   assert.equal(twips(25.4), 1440);
@@ -25,6 +25,15 @@ test('the page geometry gives the column and the text area of the page', () => {
     pageGeometry({ pageSize: 'Tabloid', marginTop: 0, marginRight: 100, marginBottom: 0, marginLeft: 100 }).column,
     20,
   );
+});
+
+test('the wanted width of a drawing is read as a share of the column or in mm', () => {
+  assert.equal(wantedWidth('60%', 643), 385.8);
+  assert.equal(Math.round(wantedWidth('80mm', 643)), 302);
+  assert.equal(wantedWidth(undefined, 643), null);
+  assert.equal(wantedWidth('', 643), null);
+  assert.equal(wantedWidth('wide', 643), null);
+  assert.equal(wantedWidth('300px', 643), null);
 });
 
 test('a drawing is fitted to the column, the text area and the wanted width, proportions kept', () => {

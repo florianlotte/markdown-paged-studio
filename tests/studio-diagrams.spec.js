@@ -332,6 +332,59 @@ test('a Gantt chart follows the diagram text size as a whole', async ({ page }) 
   await expect.poll(() => ganttStyle(page)).toEqual({ bar: 40, axis: 20, title: 36, section: 22 });
 });
 
+// The width a chart of the preview is drawn at (its viewBox, in px) and the height on screen of its first
+// bar in the px of the page: 20 px at a text size of 16 when the chart is shown at scale 1. The bar is
+// measured against the text column of the page, 174 mm (657.6 px) on the default page, as the engines
+// disagree on the zoom of the preview in the rectangles they report.
+function ganttScale(page) {
+  return page.evaluate(() => {
+    const svg = document.querySelector('#preview .mermaid-diagram > svg');
+    const column = svg.closest('.pagedjs_page_content').getBoundingClientRect().width;
+    return {
+      drawn: Math.round(svg.viewBox.baseVal.width),
+      bar: Math.round((svg.querySelector('rect.task').getBoundingClientRect().height / column) * 657.6),
+    };
+  });
+}
+
+// Mermaid draws a Gantt chart as wide as the element it renders in, the body of the page: the chart was
+// then scaled down to the text column, its text with it, and its size changed with the window.
+test('a Gantt chart is drawn at the width of its column, whatever the window', async ({ page }) => {
+  await openFreshStudio(page);
+  await setMarkdown(page, '# Plan\n\n' + GANTT);
+  await expect(page.locator('#preview .mermaid-diagram > svg')).toHaveCount(1);
+  await expect(page.locator('#preview')).not.toHaveClass(/is-stale/);
+  // A4 with margins of 18 mm: a column of 174 mm, 658 px.
+  expect(await ganttScale(page)).toEqual({ drawn: 658, bar: 20 });
+  expect(await diagramGeometry(page)).toEqual({ percent: 100, left: 0, right: 0 });
+
+  await page.setViewportSize({ width: 900, height: 800 });
+  await setMarkdown(page, '# Plan again\n\n' + GANTT);
+  await expect(page.locator('#preview .document-content h1')).toHaveText('Plan again');
+  await expect(page.locator('#preview')).not.toHaveClass(/is-stale/);
+  expect(await ganttScale(page)).toEqual({ drawn: 658, bar: 20 });
+
+  // The width of the fence line is the width the chart is drawn at, so its text keeps its size.
+  await setMarkdown(page, '# Plan\n\n' + GANTT.replace('```mermaid', '```mermaid width=50%'));
+  await expect.poll(() => diagramGeometry(page)).toEqual({ percent: 50, left: 25, right: 25 });
+  expect(await ganttScale(page)).toEqual({ drawn: 329, bar: 20 });
+  await setMarkdown(page, '# Plan\n\n' + GANTT.replace('```mermaid', '```mermaid width=80mm'));
+  await expect.poll(async () => (await ganttScale(page)).drawn).toBe(302);
+  expect(await ganttScale(page)).toEqual({ drawn: 302, bar: 20 });
+
+  // A larger text size shows on screen as asked, and so does an XY chart, drawn at the column too.
+  await setMarkdown(page, '# Plan\n\n' + GANTT);
+  await page.locator('#tabDesign').click();
+  await page.locator('#diagramFontSize').fill('32');
+  await expect.poll(() => ganttScale(page)).toEqual({ drawn: 658, bar: 40 });
+  await setMarkdown(page, '# Sales\n\n```mermaid\nxychart-beta\n  x-axis [a, b, c]\n  bar [3, 5, 2]\n```\n');
+  await expect
+    .poll(() =>
+      page.evaluate(() => Math.round(document.querySelector('#preview .mermaid-diagram > svg').viewBox.baseVal.width)),
+    )
+    .toBe(658);
+});
+
 // Mermaid draws the today marker of a Gantt chart at today's date even when it lies outside the drawing,
 // where the SVG clips it. Paged.js walks the drawing when the chart starts a page, took that line for the
 // overflow of the page, and cut the chart there: a second copy of the drawing on the next page and the

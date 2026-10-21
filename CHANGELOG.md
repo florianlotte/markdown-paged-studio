@@ -7,6 +7,12 @@ All notable changes to Markdown Paged Studio are listed here, newest first. The 
 
 ## [Unreleased]
 
+## [1.34.0] - 2026-10-21
+
+### Fixed
+
+- The text of a Gantt chart was shown at about half the size asked by the diagram settings, and that size changed with the window: Mermaid draws a Gantt chart as wide as the page it renders in, and the chart was then scaled down to the text column. A Gantt chart and an XY chart are now drawn at the width they are shown at, the text column or the `width=` of their fence line, so their text has the size of every other diagram, in the preview, the exports and the MCP server alike.
+
 ## [1.33.0] - 2026-10-21
 
 ### Fixed
@@ -631,7 +637,8 @@ All notable changes to Markdown Paged Studio are listed here, newest first. The 
 - Portable desktop app for Windows, Linux and macOS with direct PDF export.
 - Docker image, Playwright integration tests and CI.
 
-[Unreleased]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.33.0...HEAD
+[Unreleased]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.34.0...HEAD
+[1.34.0]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.33.0...v1.34.0
 [1.33.0]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.32.0...v1.33.0
 [1.32.0]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.31.0...v1.32.0
 [1.31.0]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.30.0...v1.31.0

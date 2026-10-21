@@ -22,17 +22,23 @@ export function pageGeometry({ pageSize, marginTop, marginRight, marginBottom, m
   return { width, height, marginTop, marginRight, marginBottom, marginLeft, column, textHeight };
 }
 
+// The width in px a drawing is shown at when its source asks for `wanted` (a share of the column, "60%",
+// or a size in mm, "50mm"), in a column of `columnPx` px; null when nothing (or nothing readable) is asked.
+export function wantedWidth(wanted, columnPx) {
+  const percent = /^(\d+(?:\.\d+)?)%$/.exec(wanted ?? '');
+  const mm = /^(\d+(?:\.\d+)?)mm$/.exec(wanted ?? '');
+  if (percent) return (columnPx * Number(percent[1])) / 100;
+  if (mm) return pxOfMm(Number(mm[1]));
+  return null;
+}
+
 // The size in px of a drawing of `width` × `height` px shown at `wanted` (a share of the column, "60%", a
 // size in mm, "50mm", or nothing for its natural size), never wider than the column nor taller than the
 // text area less `reserve` (all in mm), its proportions kept.
 export function fitDrawing({ width, height }, wanted, { column, textHeight }, { reserve = 12 } = {}) {
   const ratio = width > 0 && height > 0 ? height / width : 0.75;
   const columnPx = pxOfMm(column);
-  let target = width > 0 ? width : columnPx;
-  const percent = /^(\d+(?:\.\d+)?)%$/.exec(wanted ?? '');
-  const mm = /^(\d+(?:\.\d+)?)mm$/.exec(wanted ?? '');
-  if (percent) target = (columnPx * Number(percent[1])) / 100;
-  else if (mm) target = pxOfMm(Number(mm[1]));
+  let target = wantedWidth(wanted, columnPx) ?? (width > 0 ? width : columnPx);
   target = Math.min(target, columnPx);
   const maxHeight = pxOfMm(Math.max(1, textHeight - reserve));
   if (target * ratio > maxHeight) target = Math.floor(maxHeight / ratio);

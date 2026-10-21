@@ -9,6 +9,7 @@ import { fragmentOf } from './fragment.js';
 import { highlightCode } from './code-highlight.js';
 import { md } from './markdown.js';
 import { renderDiagrams } from './diagrams.js';
+import { pageGeometry, pxOfMm } from './docx-units.js';
 import { lazy } from './util.js';
 import { inlineMathCss, renderMath } from './math.js';
 
@@ -259,6 +260,8 @@ export async function documentHtml({ sourceLines = false } = {}) {
     spacing: state.diagramSpacing,
     theme: state.diagramTheme,
     lineWidth: state.diagramLineWidth,
+    // The text column in px: a chart that fills its width is drawn at that width, so it is shown at scale 1.
+    columnWidth: pxOfMm(pageGeometry(state).column),
   });
   await highlightCode(root, state.codeTheme);
   const body = root.innerHTML;
