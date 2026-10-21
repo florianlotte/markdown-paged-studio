@@ -300,9 +300,20 @@ test('the editor and the preview scroll together, and a double-click on a block 
   await expect(page.locator('#syncScroll')).toHaveAttribute('aria-pressed', 'true');
   expect(await top(shell)).toBe(0);
 
-  // The editor drives: the preview shows the part being read in the editor.
+  // The editor drives: the preview shows the part being read in the editor. WebKit scrolls a wheel turn
+  // progressively: the editor is read once it has stopped moving, or the part read would be a passing one.
   await over(scroller);
   await page.mouse.wheel(0, 1500);
+  await expect.poll(() => top(scroller)).toBeGreaterThan(300);
+  let last = -1;
+  await expect
+    .poll(async () => {
+      const now = await top(scroller);
+      const settled = now === last;
+      last = now;
+      return settled;
+    })
+    .toBe(true);
   await expect.poll(() => top(shell)).toBeGreaterThan(300);
   const part = /^## (Part \d+)$/.exec((await visibleLines()).find(line => /^## Part/.test(line)) ?? '')?.[1];
   expect(part).toBeTruthy();
