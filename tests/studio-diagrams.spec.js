@@ -1,5 +1,8 @@
 // Integration tests of the Mermaid diagrams: size and alignment, and their controls in the preview.
 import { test, expect } from '@playwright/test';
+
+const GANTT =
+  '```mermaid\ngantt\n  title Plan\n  dateFormat YYYY-MM-DD\n  section Build\n  Write :a, 2026-01-01, 10d\n  Review :after a, 5d\n```\n';
 import { readFileSync } from 'node:fs';
 import {
   centre,
@@ -248,6 +251,22 @@ test('HTML tags in diagram labels are formatted or dropped', async ({ page }) =>
 // the zoom of the preview as 16.0083px), the size it was drawn at, the fill of its first node. Mermaid gives
 // short labels a uniform node width, so a larger text shows in the height of the drawing and the spacing in
 // its width.
+// A Gantt chart of the preview: the height of its first bar, in the units of its drawing, and the text
+// sizes Mermaid fixes in pixels (the axis, the title) and the ones it takes from its configuration (a
+// section title), all in whole pixels.
+function ganttStyle(page) {
+  return page.evaluate(() => {
+    const svg = document.querySelector('#preview .mermaid-diagram > svg');
+    const pixels = node => (node ? Math.round(parseFloat(getComputedStyle(node).fontSize)) : null);
+    return {
+      bar: Math.round(parseFloat(svg.querySelector('rect.task').getAttribute('height'))),
+      axis: pixels(svg.querySelector('.grid .tick text')),
+      title: pixels(svg.querySelector('.titleText')),
+      section: pixels(svg.querySelector('.sectionTitle')),
+    };
+  });
+}
+
 function drawingStyle(page, index = 0) {
   return page.evaluate(index => {
     const svg = document.querySelectorAll('#preview .mermaid-diagram > svg')[index];
@@ -298,4 +317,21 @@ test('the diagram settings and the font attribute change the drawings', async ({
   // A typed size is clamped like an imported one.
   await page.locator('#diagramFontSize').fill('99');
   await expect.poll(async () => (await drawingStyle(page)).fontSize).toBe(40);
+});
+
+test('a Gantt chart follows the diagram text size as a whole', async ({ page, browserName }) => {
+  test.skip(
+    browserName === 'webkit',
+    'Paged.js splits a Gantt chart over two pages in WebKit and the copy loses the styles of the drawing',
+  );
+  await openFreshStudio(page);
+  await setMarkdown(page, '# Plan\n\n' + GANTT);
+  await expect(page.locator('#preview .mermaid-diagram > svg')).toHaveCount(1);
+  await expect(page.locator('#preview')).not.toHaveClass(/is-stale/);
+  // At 16 px the chart is drawn with Mermaid's own sizes: bars of 20, an axis of 10, a title of 18.
+  expect(await ganttStyle(page)).toEqual({ bar: 20, axis: 10, title: 18, section: 11 });
+
+  await page.locator('#tabDesign').click();
+  await page.locator('#diagramFontSize').fill('32');
+  await expect.poll(() => ganttStyle(page)).toEqual({ bar: 40, axis: 20, title: 36, section: 22 });
 });

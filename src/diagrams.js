@@ -29,7 +29,11 @@ const LABEL_WIDTH = 120;
 // default: the theme variable `strokeWidth`, read by flowcharts, class and state diagrams). Mermaid keeps
 // two sizes: the numeric `fontSize` it measures the text with and the `themeVariables.fontSize` its
 // stylesheet writes; the actors and notes of sequence diagrams (14 by default) and Gantt charts (11)
-// have their own, scaled here so 16 gives Mermaid's defaults everywhere.
+// have their own, scaled here so 16 gives Mermaid's defaults everywhere. A Gantt chart is drawn in
+// pixels that ignore the text size: the bars (20 px), their gap, the paddings and the margin of its
+// title follow it here, as do the texts Mermaid sizes outside its configuration through `themeCSS`,
+// which it scopes to each drawing (the axis, 10 px as an attribute; the title, 18 px; the vertical
+// labels, 15 px).
 export function mermaidConfig({ fontSize = 16, spacing = 'normal', theme = 'neutral', lineWidth = 1 } = {}) {
   const scaled = size => Math.round((fontSize * size) / 16);
   const config = {
@@ -42,7 +46,22 @@ export function mermaidConfig({ fontSize = 16, spacing = 'normal', theme = 'neut
     fontSize,
     themeVariables: { fontSize: `${fontSize}px`, strokeWidth: lineWidth },
     sequence: { actorFontSize: scaled(14), messageFontSize: fontSize, noteFontSize: scaled(14) },
-    gantt: { fontSize: scaled(11) },
+    gantt: {
+      fontSize: scaled(11),
+      sectionFontSize: scaled(11),
+      barHeight: scaled(20),
+      barGap: scaled(4),
+      topPadding: scaled(50),
+      leftPadding: scaled(75),
+      rightPadding: scaled(75),
+      gridLineStartPadding: scaled(35),
+      titleTopMargin: scaled(25),
+    },
+    themeCSS: [
+      `.grid .tick text { font-size: ${scaled(10)}px; }`,
+      `.titleText { font-size: ${scaled(18)}px; }`,
+      `.vertText { font-size: ${scaled(15)}px; }`,
+    ].join(' '),
   };
   const {
     nodeSpacing,

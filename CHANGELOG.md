@@ -7,6 +7,12 @@ All notable changes to Markdown Paged Studio are listed here, newest first. The 
 
 ## [Unreleased]
 
+## [1.32.0] - 2026-10-21
+
+### Fixed
+
+- A Gantt chart now follows the diagram text size as a whole: its bars, their spacing, the axis, the title and the section titles grow with it, where only the task labels did before.
+
 ## [1.31.0] - 2026-10-21
 
 ### Added
@@ -619,7 +625,8 @@ All notable changes to Markdown Paged Studio are listed here, newest first. The 
 - Portable desktop app for Windows, Linux and macOS with direct PDF export.
 - Docker image, Playwright integration tests and CI.
 
-[Unreleased]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.31.0...HEAD
+[Unreleased]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.32.0...HEAD
+[1.32.0]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.31.0...v1.32.0
 [1.31.0]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.30.0...v1.31.0
 [1.30.0]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.29.0...v1.30.0
 [1.29.0]: https://github.com/florianlotte/markdown-paged-studio/compare/v1.28.0...v1.29.0
