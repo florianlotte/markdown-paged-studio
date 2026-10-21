@@ -244,20 +244,22 @@ test('HTML tags in diagram labels are formatted or dropped', async ({ page }) =>
   expect(labels.map(label => label.marks)).toEqual([false, false]);
 });
 
-// A drawing of the preview: its text size, the size it was drawn at, the fill of its first node and the
-// stroke of its first edge. Mermaid gives short labels a uniform node width, so a larger text shows in the
-// height of the drawing and the spacing in its width.
+// A drawing of the preview: its text size and stroke width in whole pixels (Firefox computes a size under
+// the zoom of the preview as 16.0083px), the size it was drawn at, the fill of its first node. Mermaid gives
+// short labels a uniform node width, so a larger text shows in the height of the drawing and the spacing in
+// its width.
 function drawingStyle(page, index = 0) {
   return page.evaluate(index => {
     const svg = document.querySelectorAll('#preview .mermaid-diagram > svg')[index];
     const node = svg.querySelector('.node rect, .node path, .node polygon');
     const edge = svg.querySelector('.edgePath .path, .flowchart-link');
+    const pixels = value => Math.round(parseFloat(value));
     return {
-      fontSize: getComputedStyle(svg).fontSize,
+      fontSize: pixels(getComputedStyle(svg).fontSize),
       width: svg.viewBox.baseVal.width,
       height: svg.viewBox.baseVal.height,
       fill: node ? getComputedStyle(node).fill : null,
-      stroke: edge ? getComputedStyle(edge).strokeWidth : null,
+      stroke: edge ? pixels(getComputedStyle(edge).strokeWidth) : null,
     };
   }, index);
 }
@@ -272,16 +274,16 @@ test('the diagram settings and the font attribute change the drawings', async ({
   await expect(page.locator('#preview')).not.toHaveClass(/is-stale/);
   await expect(page.locator('#preview .mermaid-diagram > svg')).toHaveCount(2);
   const initial = await drawingStyle(page);
-  expect(initial).toMatchObject({ fontSize: '16px', stroke: '1px' });
+  expect(initial).toMatchObject({ fontSize: 16, stroke: 1 });
   // The second diagram keeps the size of its fence line whatever the document asks.
-  expect(await drawingStyle(page, 1)).toMatchObject({ fontSize: '24px' });
+  expect(await drawingStyle(page, 1)).toMatchObject({ fontSize: 24 });
 
   await page.locator('#tabDesign').click();
   await page.locator('#diagramFontSize').fill('32');
-  await expect.poll(async () => (await drawingStyle(page)).fontSize).toBe('32px');
+  await expect.poll(async () => (await drawingStyle(page)).fontSize).toBe(32);
   const larger = await drawingStyle(page);
   expect(larger.height).toBeGreaterThan(initial.height);
-  expect(await drawingStyle(page, 1)).toMatchObject({ fontSize: '24px' });
+  expect(await drawingStyle(page, 1)).toMatchObject({ fontSize: 24 });
 
   await page.locator('#diagramSpacing').selectOption('compact');
   await expect.poll(async () => (await drawingStyle(page)).width).toBeLessThan(larger.width);
@@ -290,10 +292,10 @@ test('the diagram settings and the font attribute change the drawings', async ({
   await expect.poll(async () => (await drawingStyle(page)).fill).not.toBe(initial.fill);
 
   await page.locator('#diagramLineWidth').fill('4');
-  await expect.poll(async () => (await drawingStyle(page)).stroke).toBe('4px');
-  expect(await drawingStyle(page, 1)).toMatchObject({ stroke: '4px' });
+  await expect.poll(async () => (await drawingStyle(page)).stroke).toBe(4);
+  expect(await drawingStyle(page, 1)).toMatchObject({ stroke: 4 });
 
   // A typed size is clamped like an imported one.
   await page.locator('#diagramFontSize').fill('99');
-  await expect.poll(async () => (await drawingStyle(page)).fontSize).toBe('40px');
+  await expect.poll(async () => (await drawingStyle(page)).fontSize).toBe(40);
 });
